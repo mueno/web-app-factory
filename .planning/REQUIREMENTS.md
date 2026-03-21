@@ -12,7 +12,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PIPE-01**: Pipeline executes phases in order defined by YAML contract, blocking on gate failure
 - [x] **PIPE-02**: Pipeline state persists to `state.json` and `activity-log.jsonl`, surviving interruption
 - [x] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
-- [ ] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
+- [x] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
 - [x] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
 - [ ] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
 - [ ] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CONT-01**: YAML contract defines all phases with purpose, deliverables, quality criteria, and gate types
 - [x] **CONT-02**: Each deliverable has `quality_criteria` array driving content verification (not just file existence)
 - [x] **CONT-03**: Contract validated against JSON schema at pipeline startup
-- [ ] **CONT-04**: Quality self-assessment JSON generated before every gate submission
+- [x] **CONT-04**: Quality self-assessment JSON generated before every gate submission
 
 ### Spec Agent
 
@@ -116,14 +116,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-01 | Phase 1 | Complete |
 | PIPE-02 | Phase 1 | Complete |
 | PIPE-03 | Phase 1 | Complete |
-| PIPE-04 | Phase 1 | Pending |
+| PIPE-04 | Phase 1 | Complete |
 | PIPE-05 | Phase 1 | Complete |
 | PIPE-06 | Phase 1 | Pending |
 | PIPE-07 | Phase 1 | Pending |
 | CONT-01 | Phase 1 | Complete |
 | CONT-02 | Phase 1 | Complete |
 | CONT-03 | Phase 1 | Complete |
-| CONT-04 | Phase 1 | Pending |
+| CONT-04 | Phase 1 | Complete |
 | SPEC-01 | Phase 2 | Pending |
 | SPEC-02 | Phase 2 | Pending |
 | SPEC-03 | Phase 2 | Pending |

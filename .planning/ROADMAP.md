@@ -29,7 +29,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. MCP approval gate tools are reachable and a human approval sign-off unblocks the waiting phase
   4. Attempting to skip a phase or directly edit a guarded file causes the governance monitor to reject the operation
   5. Startup preflight fails with a clear error if Node.js, Python, or Vercel CLI are missing from the environment
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 Plans:
 - [ ] 01-01-PLAN.md — Project skeleton, YAML contract, JSON schema, contract validation
@@ -81,7 +81,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 2/4 | In Progress|  |
+| 1. Infrastructure | 3/4 | In Progress|  |
 | 2. Spec | 0/TBD | Not started | - |
 | 3. Build | 0/TBD | Not started | - |
 | 4. Ship | 0/TBD | Not started | - |
