@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Active
-stopped_at: Completed 05-01-PLAN.md
-last_updated: "2026-03-21T21:15:13.352Z"
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-03-21T21:29:05.253Z"
 last_activity: 2026-03-22 — Plan 04-02 complete; 378 tests passing
 progress:
   total_phases: 6
-  completed_phases: 5
-  total_plans: 14
-  completed_plans: 14
+  completed_phases: 6
+  total_plans: 15
+  completed_plans: 15
   percent: 100
 ---
 
@@ -64,6 +64,7 @@ Progress: [██████████] 100%
 | Phase 04-ship P02 | 6 | 2 tasks | 8 files |
 | Phase 04-ship P03 | 7 | 2 tasks | 6 files |
 | Phase 05-build-pipeline-fix P01 | 15 | 2 tasks | 4 files |
+| Phase 06-contract-alignment P01 | 117 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -116,6 +117,7 @@ Recent decisions affecting current work:
 - [Phase 04-ship]: gate_security_headers and gate_link_integrity run once (no retry) -- config/structural fixes
 - [Phase 04-ship]: Phase3ShipExecutor self-registers as phase '3' at module import; 10 sub-steps end-to-end
 - [Phase 05-build-pipeline-fix]: Phase 2b nextjs_dir = ctx.project_dir.parent / ctx.app_name — mirrors Phase 2a pattern; GovernanceMonitor.blocking=False in contract runner to avoid fast_phase_completion false positives
+- [Phase 06-contract-alignment]: Phase 3 YAML deliverable paths corrected to match executor output (deployment.json, src/app/privacy/page.tsx, src/app/terms/page.tsx); mcp_approval gate removed from Phase 3 YAML to prevent duplicate human-approval per run
 
 ### Pending Todos
 
@@ -129,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T21:12:27.171Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-03-21T21:29:05.250Z
+Stopped at: Completed 06-01-PLAN.md
 Resume file: None
