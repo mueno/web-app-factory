@@ -38,6 +38,7 @@ from tools.quality_self_assessment import generate_quality_self_assessment
 # Each module registers its executor at import time; the pipeline runner
 # uses get_executor(phase_id) to look them up from the registry.
 import tools.phase_executors.phase_1a_executor  # noqa: F401
+import tools.phase_executors.phase_1b_executor  # noqa: F401
 
 
 # Default contract path relative to the project root
