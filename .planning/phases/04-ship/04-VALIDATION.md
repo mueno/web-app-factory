@@ -2,7 +2,7 @@
 phase: 4
 slug: ship
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-22
 ---
@@ -19,7 +19,7 @@ created: 2026-03-22
 |----------|-------|
 | **Framework** | pytest 9.x (uv) |
 | **Config file** | `[tool.pytest.ini_options]` in pyproject.toml |
-| **Quick run command** | `uv run pytest tests/test_phase_3_executor.py tests/test_lighthouse_gate.py tests/test_accessibility_gate.py tests/test_security_headers_gate.py tests/test_link_integrity_gate.py tests/test_deployment_gate.py -x -q` |
+| **Quick run command** | `uv run pytest tests/test_phase_3_executor.py tests/test_lighthouse_gate.py tests/test_accessibility_gate.py tests/test_security_headers_gate.py tests/test_link_integrity_gate.py tests/test_deployment_gate.py tests/test_legal_gate.py -x -q` |
 | **Full suite command** | `uv run pytest -q` |
 | **Estimated runtime** | ~15 seconds |
 
@@ -38,26 +38,28 @@ created: 2026-03-22
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | GATE-02 | unit | `uv run pytest tests/test_lighthouse_gate.py -x` | ❌ W0 | ⬜ pending |
-| 04-01-02 | 01 | 1 | GATE-07 | unit | `uv run pytest tests/test_accessibility_gate.py -x` | ❌ W0 | ⬜ pending |
-| 04-01-03 | 01 | 1 | GATE-03 | unit | `uv run pytest tests/test_security_headers_gate.py -x` | ❌ W0 | ⬜ pending |
-| 04-01-04 | 01 | 1 | GATE-04 | unit | `uv run pytest tests/test_link_integrity_gate.py -x` | ❌ W0 | ⬜ pending |
-| 04-01-05 | 01 | 1 | DEPL-03 | unit | `uv run pytest tests/test_deployment_gate.py -x` | ❌ W0 | ⬜ pending |
-| 04-02-01 | 02 | 1 | DEPL-01, DEPL-02, DEPL-04 | unit | `uv run pytest tests/test_phase_3_executor.py -x` | ❌ W0 | ⬜ pending |
-| 04-02-02 | 02 | 1 | LEGL-01, LEGL-02, LEGL-03 | unit | `uv run pytest tests/test_phase_3_executor.py -x` | ❌ W0 | ⬜ pending |
-| 04-03-01 | 03 | 2 | ALL | integration | `uv run pytest tests/test_contract_runner.py -x` | ✅ | ⬜ pending |
+| 04-01-01 | 01 | 1 | DEPL-01 | unit | `uv run pytest tests/test_deploy_agent_runner.py -x` | W0 | pending |
+| 04-01-02 | 01 | 1 | DEPL-03 | unit | `uv run pytest tests/test_deployment_gate.py tests/test_mcp_approval_gate.py -x` | W0 | pending |
+| 04-01-03 | 01 | 1 | DEPL-04 | unit | `uv run pytest tests/test_contract_runner.py tests/test_factory_cli.py -x` | exists | pending |
+| 04-02-01 | 02 | 1 | GATE-02, GATE-03 | unit | `uv run pytest tests/test_lighthouse_gate.py tests/test_security_headers_gate.py -x` | W0 | pending |
+| 04-02-02 | 02 | 1 | GATE-04, GATE-07 | unit | `uv run pytest tests/test_accessibility_gate.py tests/test_link_integrity_gate.py -x` | W0 | pending |
+| 04-03-01 | 03 | 2 | LEGL-01, LEGL-02, LEGL-03 | unit | `uv run pytest tests/test_legal_gate.py tests/test_phase_3_executor.py -x` | W0 | pending |
+| 04-03-02 | 03 | 2 | ALL | integration | `uv run pytest tests/test_contract_runner.py -x` | exists | pending |
 
-*Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+*Status: pending / green / red / flaky*
 
 ---
 
 ## Wave 0 Requirements
 
+- [ ] `tests/test_deploy_agent_runner.py` — Deploy agent runner (mock SDK, verify options)
+- [ ] `tests/test_deployment_gate.py` — Deployment gate (HTTP 200 check, URL capture)
+- [ ] `tests/test_mcp_approval_gate.py` — MCP approval gate (approve/reject/exception)
 - [ ] `tests/test_lighthouse_gate.py` — Lighthouse gate (score parsing, threshold failure, subprocess timeout)
 - [ ] `tests/test_accessibility_gate.py` — axe-core gate (critical violations filter, zero violations pass)
 - [ ] `tests/test_security_headers_gate.py` — Security headers gate (missing header detection, all-present pass)
 - [ ] `tests/test_link_integrity_gate.py` — Link integrity gate (404 detection, 200/301 pass)
-- [ ] `tests/test_deployment_gate.py` — Deployment gate (HTTP 200 check, URL capture)
+- [ ] `tests/test_legal_gate.py` — Legal gate (file presence, placeholder detection, feature reference)
 - [ ] `tests/test_phase_3_executor.py` — Phase 3 executor tests (sub-step flow, retry logic, legal generation, deploy)
 
 ---
@@ -74,11 +76,11 @@ created: 2026-03-22
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
