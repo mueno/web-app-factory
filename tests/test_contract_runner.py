@@ -12,6 +12,305 @@ CONTRACT_PATH = str(
 )
 
 
+# ---------------------------------------------------------------------------
+# Executor registration tests (Task 2)
+# ---------------------------------------------------------------------------
+
+class TestExecutorRegistration:
+    """Verify that importing contract_pipeline_runner triggers 2a and 2b registration."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_executor_registration_2a(self):
+        """After importing contract_pipeline_runner, get_executor('2a') is not None.
+
+        Reload both the executor module and the runner to re-trigger module-level
+        self-registration after _clear_registry().
+        """
+        import importlib
+        import tools.phase_executors.phase_2a_executor as mod_2a
+        import tools.contract_pipeline_runner  # noqa: F401
+        importlib.reload(mod_2a)
+        importlib.reload(tools.contract_pipeline_runner)
+        from tools.phase_executors.registry import get_executor
+        assert get_executor("2a") is not None
+
+    def test_executor_registration_2b(self):
+        """After importing contract_pipeline_runner, get_executor('2b') is not None.
+
+        Reload both the executor module and the runner to re-trigger module-level
+        self-registration after _clear_registry().
+        """
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod_2b
+        import tools.contract_pipeline_runner  # noqa: F401
+        importlib.reload(mod_2b)
+        importlib.reload(tools.contract_pipeline_runner)
+        from tools.phase_executors.registry import get_executor
+        assert get_executor("2b") is not None
+
+
+# ---------------------------------------------------------------------------
+# Gate dispatch tests (Task 2)
+# ---------------------------------------------------------------------------
+
+class TestGateDispatch:
+    """Verify _run_gate_checks dispatches to gate executors by gate type."""
+
+    def _make_build_gate_phase(self) -> dict:
+        """Create a contract_phase dict with a 'build' gate."""
+        return {
+            "id": "2a",
+            "gates": [
+                {
+                    "type": "build",
+                    "conditions": {
+                        "commands": ["npm run build"],
+                    },
+                }
+            ],
+        }
+
+    def _make_static_analysis_gate_phase(self) -> dict:
+        """Create a contract_phase dict with a 'static_analysis' gate."""
+        return {
+            "id": "2b",
+            "gates": [
+                {
+                    "type": "static_analysis",
+                    "conditions": {},
+                }
+            ],
+        }
+
+    def _make_artifact_gate_phase(self, tmp_path: Path) -> dict:
+        """Create a contract_phase dict with an 'artifact' gate and a real file."""
+        required_file = "docs/pipeline/prd.md"
+        (tmp_path / "docs" / "pipeline").mkdir(parents=True)
+        (tmp_path / required_file).write_text("# PRD", encoding="utf-8")
+        return {
+            "id": "1b",
+            "gates": [
+                {
+                    "type": "artifact",
+                    "conditions": {
+                        "required_files": [required_file],
+                    },
+                }
+            ],
+        }
+
+    def _make_tool_invocation_gate_phase(self, tmp_path: Path) -> dict:
+        """Create a contract_phase dict with a 'tool_invocation' gate and a real marker."""
+        docs_dir = tmp_path / "docs" / "pipeline"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        (docs_dir / "output.md").write_text("go_no_go: Go", encoding="utf-8")
+        return {
+            "id": "1a",
+            "gates": [
+                {
+                    "type": "tool_invocation",
+                    "conditions": {
+                        "required_output_markers": ["go_no_go: Go"],
+                    },
+                }
+            ],
+        }
+
+    def test_gate_dispatch_build(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='build' to run_build_gate."""
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        passed_result = GateResult(
+            gate_type="build",
+            phase_id="2a",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+        contract_phase = self._make_build_gate_phase()
+
+        with patch("tools.contract_pipeline_runner.run_build_gate", return_value=passed_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert mock_gate.called
+        mock_gate.assert_called_once_with(str(tmp_path), phase_id="2a")
+        assert passed is True
+        assert issues == []
+
+    def test_gate_dispatch_build_failure(self, tmp_path):
+        """_run_gate_checks propagates run_build_gate issues on failure."""
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        failed_result = GateResult(
+            gate_type="build",
+            phase_id="2a",
+            passed=False,
+            status="BLOCKED",
+            severity="BLOCK",
+            confidence=0.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=["npm run build exited with code 1"],
+        )
+
+        contract_phase = self._make_build_gate_phase()
+
+        with patch("tools.contract_pipeline_runner.run_build_gate", return_value=failed_result):
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert "npm run build exited with code 1" in issues
+
+    def test_gate_dispatch_static_analysis(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='static_analysis' to run_static_analysis_gate."""
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        passed_result = GateResult(
+            gate_type="static_analysis",
+            phase_id="2b",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+        contract_phase = self._make_static_analysis_gate_phase()
+
+        with patch(
+            "tools.contract_pipeline_runner.run_static_analysis_gate",
+            return_value=passed_result
+        ) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert mock_gate.called
+        mock_gate.assert_called_once_with(str(tmp_path), phase_id="2b")
+        assert passed is True
+        assert issues == []
+
+    def test_gate_dispatch_static_analysis_failure(self, tmp_path):
+        """_run_gate_checks propagates run_static_analysis_gate issues on failure."""
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        failed_result = GateResult(
+            gate_type="static_analysis",
+            phase_id="2b",
+            passed=False,
+            status="BLOCKED",
+            severity="BLOCK",
+            confidence=0.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=["src/app/layout.tsx:1: 'use client' directive found in server component file"],
+        )
+
+        contract_phase = self._make_static_analysis_gate_phase()
+
+        with patch(
+            "tools.contract_pipeline_runner.run_static_analysis_gate",
+            return_value=failed_result
+        ):
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert any("use client" in issue for issue in issues)
+
+    def test_gate_dispatch_unknown_type(self, tmp_path):
+        """_run_gate_checks returns failure with descriptive message for unknown gate type."""
+        contract_phase = {
+            "id": "1a",
+            "gates": [
+                {
+                    "type": "unknown_gate_xyz",
+                    "conditions": {},
+                }
+            ],
+        }
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert len(issues) > 0
+        # Should describe the unknown gate type
+        assert any("unknown_gate_xyz" in issue.lower() or "unknown" in issue.lower() for issue in issues)
+
+    def test_gate_dispatch_artifact_regression(self, tmp_path):
+        """Existing artifact gate (required_files) behavior still works correctly."""
+        contract_phase = self._make_artifact_gate_phase(tmp_path)
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        assert issues == []
+
+    def test_gate_dispatch_artifact_regression_missing_file(self, tmp_path):
+        """Artifact gate fails correctly when required file is missing."""
+        contract_phase = {
+            "id": "1b",
+            "gates": [
+                {
+                    "type": "artifact",
+                    "conditions": {
+                        "required_files": ["docs/pipeline/nonexistent.md"],
+                    },
+                }
+            ],
+        }
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert any("nonexistent.md" in issue for issue in issues)
+
+    def test_gate_dispatch_tool_invocation_regression(self, tmp_path):
+        """Existing tool_invocation gate (required_output_markers) behavior still works."""
+        contract_phase = self._make_tool_invocation_gate_phase(tmp_path)
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        assert issues == []
+
+    def test_gate_dispatch_tool_invocation_regression_missing_marker(self, tmp_path):
+        """Tool invocation gate fails when marker is missing from docs/pipeline/."""
+        (tmp_path / "docs" / "pipeline").mkdir(parents=True)
+        contract_phase = {
+            "id": "1a",
+            "gates": [
+                {
+                    "type": "tool_invocation",
+                    "conditions": {
+                        "required_output_markers": ["go_no_go: Go"],
+                    },
+                }
+            ],
+        }
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert any("go_no_go" in issue for issue in issues)
+
+
 def _make_stub_executor(phase_id: str, success: bool):
     """Create a real PhaseExecutor subclass stub for the given phase."""
     from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult

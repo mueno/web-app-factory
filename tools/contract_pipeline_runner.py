@@ -33,12 +33,16 @@ from tools.pipeline_state import (
 from tools.phase_executors.base import PhaseContext, PhaseResult
 from tools.phase_executors.registry import get_executor
 from tools.quality_self_assessment import generate_quality_self_assessment
+from tools.gates.build_gate import run_build_gate
+from tools.gates.static_analysis_gate import run_static_analysis_gate
 
 # Import executor modules to trigger self-registration via register() calls.
 # Each module registers its executor at import time; the pipeline runner
 # uses get_executor(phase_id) to look them up from the registry.
 import tools.phase_executors.phase_1a_executor  # noqa: F401
 import tools.phase_executors.phase_1b_executor  # noqa: F401
+import tools.phase_executors.phase_2a_executor  # noqa: F401
+import tools.phase_executors.phase_2b_executor  # noqa: F401
 
 
 # Default contract path relative to the project root
@@ -110,38 +114,66 @@ def _run_gate_checks(
     contract_phase: dict[str, Any],
     project_dir: str,
 ) -> tuple[bool, list[str]]:
-    """Run artifact existence and content marker gate checks.
+    """Run gate checks dispatched by gate type.
 
     Returns (passed, issues_list).
-    Implements minimal gate checking: required_files existence + output_markers.
+
+    Dispatches based on gate type:
+    - "artifact": checks required_files existence (file presence gate)
+    - "tool_invocation": checks required_output_markers in docs/pipeline/
+    - "build": calls run_build_gate() — runs npm build + tsc --noEmit
+    - "static_analysis": calls run_static_analysis_gate() — checks 'use client' + secrets
+    - unknown types: fail-closed with a descriptive issue message (gate_policy)
     """
     issues: list[str] = []
+    phase_id = contract_phase.get("id", "unknown")
 
     for gate in contract_phase.get("gates", []):
+        gate_type = gate.get("type", "")
         conditions = gate.get("conditions", {})
 
-        # Check required files exist
-        for rel_path in conditions.get("required_files", []):
-            full_path = Path(project_dir) / rel_path
-            if not full_path.exists():
-                issues.append(f"Required file missing: {rel_path}")
+        if gate_type == "artifact":
+            # Check required files exist
+            for rel_path in conditions.get("required_files", []):
+                full_path = Path(project_dir) / rel_path
+                if not full_path.exists():
+                    issues.append(f"Required file missing: {rel_path}")
 
-        # Check required output markers in files
-        for marker in conditions.get("required_output_markers", []):
-            found = False
-            # Search across all files in docs/pipeline/
-            docs_dir = Path(project_dir) / "docs" / "pipeline"
-            if docs_dir.exists():
-                for f in docs_dir.rglob("*"):
-                    if f.is_file():
-                        try:
-                            if marker in f.read_text(encoding="utf-8", errors="replace"):
-                                found = True
-                                break
-                        except OSError:
-                            pass
-            if not found:
-                issues.append(f"Required output marker not found: {marker!r}")
+        elif gate_type == "tool_invocation":
+            # Check required output markers in files under docs/pipeline/
+            for marker in conditions.get("required_output_markers", []):
+                found = False
+                docs_dir = Path(project_dir) / "docs" / "pipeline"
+                if docs_dir.exists():
+                    for f in docs_dir.rglob("*"):
+                        if f.is_file():
+                            try:
+                                if marker in f.read_text(encoding="utf-8", errors="replace"):
+                                    found = True
+                                    break
+                            except OSError:
+                                pass
+                if not found:
+                    issues.append(f"Required output marker not found: {marker!r}")
+
+        elif gate_type == "build":
+            # Dispatch to build gate executor: runs npm build + tsc --noEmit
+            gate_result = run_build_gate(project_dir, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "static_analysis":
+            # Dispatch to static analysis gate: checks 'use client' placement + secrets
+            gate_result = run_static_analysis_gate(project_dir, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        else:
+            # Unknown gate type: fail-closed per gate_policy (GATE-00 guard)
+            issues.append(
+                f"Unknown gate type: {gate_type!r} in phase {phase_id} — "
+                f"gate check blocked (fail-closed policy)"
+            )
 
     return len(issues) == 0, issues
 
