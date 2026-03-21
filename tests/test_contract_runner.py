@@ -911,6 +911,41 @@ class TestGovernanceIntegration:
         )
 
 
+class TestPhase3ContractAlignment:
+    """Regression tests for Phase 3 contract alignment (CONT-04).
+
+    Prevents path drift and duplicate mcp_approval gate from being re-introduced.
+    """
+
+    _CONTRACT_PATH = Path(__file__).parent.parent / "contracts" / "pipeline-contract.web.v1.yaml"
+
+    def _load_phase_3(self) -> dict:
+        """Load the live YAML contract and return the Phase 3 config."""
+        import yaml
+
+        contract = yaml.safe_load(self._CONTRACT_PATH.read_text(encoding="utf-8"))
+        phase_3 = next(
+            (p for p in contract["phases"] if str(p["id"]) == "3"),
+            None,
+        )
+        assert phase_3 is not None, "Phase '3' not found in contract YAML"
+        return phase_3
+
+    def test_phase3_no_mcp_approval_gate_in_yaml(self) -> None:
+        """Phase 3 gates in the live YAML do NOT include type 'mcp_approval'.
+
+        The Phase3ShipExecutor already calls run_mcp_approval_gate() internally
+        (sub-step 9). Having a second mcp_approval gate in the YAML causes
+        _run_gate_checks() to dispatch a duplicate human-approval request.
+        """
+        phase_3 = self._load_phase_3()
+        gate_types = [g["type"] for g in phase_3.get("gates", [])]
+        assert "mcp_approval" not in gate_types, (
+            f"Phase 3 gates must NOT contain 'mcp_approval' — the executor already "
+            f"handles it internally. Current gate types: {gate_types}"
+        )
+
+
 class TestExecutorRegistrationPhase3:
     """Verify Phase 3 executor self-registers via contract_pipeline_runner import."""
 

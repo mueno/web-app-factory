@@ -134,3 +134,47 @@ class TestGenerateQualitySelfAssessment:
         )
         assert result["phase_id"] == "99"
         assert result["deliverables"] == []
+
+    def test_phase_3_deliverable_paths_match_executor(self, tmp_path: Path) -> None:
+        """Phase 3 deliverables in self-assessment use the paths the executor actually writes.
+
+        Regression guard for CONT-04: deliverable paths in the YAML contract must match
+        what phase_3_executor.py and legal_gate.py produce on disk.
+        """
+        result = generate_quality_self_assessment(
+            phase_id="3",
+            project_dir=str(tmp_path),
+            contract_path=str(CONTRACT_PATH),
+        )
+        assert len(result["deliverables"]) == 3, (
+            f"Expected 3 Phase 3 deliverables, got {len(result['deliverables'])}: "
+            f"{[d['path'] for d in result['deliverables']]}"
+        )
+        paths = {d["path"] for d in result["deliverables"]}
+        expected_paths = {
+            "docs/pipeline/deployment.json",
+            "src/app/privacy/page.tsx",
+            "src/app/terms/page.tsx",
+        }
+        assert paths == expected_paths, (
+            f"Phase 3 deliverable paths do not match executor output.\n"
+            f"  Expected: {expected_paths}\n"
+            f"  Got:      {paths}"
+        )
+
+    def test_phase_3_no_old_legal_paths(self, tmp_path: Path) -> None:
+        """Phase 3 assessment output does NOT contain old docs/pipeline/legal/ paths.
+
+        Regression guard: prevents reversion to the pre-fix paths that caused
+        quality self-assessment to always report legal deliverables as missing.
+        """
+        result = generate_quality_self_assessment(
+            phase_id="3",
+            project_dir=str(tmp_path),
+            contract_path=str(CONTRACT_PATH),
+        )
+        for deliverable in result["deliverables"]:
+            assert "docs/pipeline/legal/" not in deliverable["path"], (
+                f"Old legal path found in Phase 3 deliverable: {deliverable['path']!r}. "
+                "Contract must use src/app/privacy/page.tsx and src/app/terms/page.tsx."
+            )
