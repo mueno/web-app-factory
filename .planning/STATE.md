@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Active
-stopped_at: Completed 03-build-03-01-PLAN.md
-last_updated: "2026-03-21T14:13:13.250Z"
+stopped_at: Completed 03-build-03-03-PLAN.md
+last_updated: "2026-03-21T14:21:18.828Z"
 last_activity: 2026-03-21 — Plan 02-03 complete; 146 tests passing
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
   percent: 50
 ---
 
@@ -59,6 +59,7 @@ Progress: [█████░░░░░] 50%
 | Phase 02-spec P03 | 4 | 1 task | 3 files |
 | Phase 03-build P02 | 12 | 2 tasks | 4 files |
 | Phase 03-build P01 | 4 | 2 tasks | 5 files |
+| Phase 03-build P03 | 15 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -99,6 +100,9 @@ Recent decisions affecting current work:
 - [Phase 03-build]: cwd=project_dir sandboxes build agent to generated project directory
 - [Phase 03-build]: max_turns=50 for build agent vs 25 for spec agent — code generation needs more iterations
 - [Phase 03-build]: --disable-git flag (not --no-git) is the correct create-next-app flag
+- [Phase 03-build]: Phase 2b agent prompt injects full PRD + screen-spec content (not paths) — content injection pattern
+- [Phase 03-build]: error.tsx per route segment with async data gets 'use client' directive (BILD-06)
+- [Phase 03-build]: _run_gate_checks dispatches by gate.type field; unknown types fail-closed per gate_policy
 
 ### Pending Todos
 
@@ -112,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T14:13:13.247Z
-Stopped at: Completed 03-build-03-01-PLAN.md
+Last session: 2026-03-21T14:21:18.825Z
+Stopped at: Completed 03-build-03-03-PLAN.md
 Resume file: None

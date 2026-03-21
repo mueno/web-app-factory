@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Infrastructure** - Pipeline plumbing forked and running — CLI, state, MCP, governance (completed 2026-03-21)
 - [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
-- [ ] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates
+- [x] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates (completed 2026-03-21)
 - [ ] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment
 
 ## Phase Details
@@ -63,7 +63,7 @@ Plans:
   4. The static analysis gate fails if `"use client"` appears in `layout.tsx` or `page.tsx`
   5. The static analysis gate fails if any environment variable matching `NEXT_PUBLIC_` + secret-name pattern is detected
   6. No npm packages are installed without prior validation against the npm registry (hallucination prevention)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 03-01-PLAN.md — Build agent runner, BUILD_AGENT system prompt, Phase 2a scaffold executor
@@ -93,5 +93,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
-| 3. Build | 2/3 | In Progress|  |
+| 3. Build | 3/3 | Complete   | 2026-03-21 |
 | 4. Ship | 0/TBD | Not started | - |

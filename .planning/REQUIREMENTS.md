@@ -34,12 +34,12 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Build Agent
 
 - [x] **BILD-01**: Phase 2a scaffolds Next.js project via `create-next-app` with TypeScript, Tailwind v4, App Router
-- [ ] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
+- [x] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
 - [x] **BILD-03**: Generated app passes `next build` production build without errors
 - [x] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
 - [x] **BILD-05**: Generated app is responsive (mobile-first Tailwind classes)
 - [x] **BILD-06**: Generated app includes error boundaries (`error.tsx`, `not-found.tsx`)
-- [ ] **BILD-07**: npm packages validated against registry before install (hallucination prevention)
+- [x] **BILD-07**: npm packages validated against registry before install (hallucination prevention)
 
 ### Quality Gates
 
@@ -129,12 +129,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPEC-03 | Phase 2 | Complete |
 | SPEC-04 | Phase 2 | Complete |
 | BILD-01 | Phase 3 | Complete |
-| BILD-02 | Phase 3 | Pending |
+| BILD-02 | Phase 3 | Complete |
 | BILD-03 | Phase 3 | Complete |
 | BILD-04 | Phase 3 | Complete |
 | BILD-05 | Phase 3 | Complete |
 | BILD-06 | Phase 3 | Complete |
-| BILD-07 | Phase 3 | Pending |
+| BILD-07 | Phase 3 | Complete |
 | GATE-01 | Phase 3 | Complete |
 | GATE-02 | Phase 4 | Pending |
 | GATE-03 | Phase 4 | Pending |
