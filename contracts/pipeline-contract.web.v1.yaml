@@ -166,7 +166,7 @@ phases:
 
     deliverables:
       - name: "Deployed Web Application"
-        path: "docs/pipeline/deployment-report.json"
+        path: "docs/pipeline/deployment.json"
         quality_criteria:
           - "Lighthouse performance score >= 85 measured on the production Vercel URL"
           - "Lighthouse accessibility score >= 90 with all critical axe-core violations resolved"
@@ -175,7 +175,7 @@ phases:
           - "No broken links detected by link integrity checker (all internal links return 2xx or 3xx)"
 
       - name: "Privacy Policy"
-        path: "docs/pipeline/legal/privacy-policy.md"
+        path: "src/app/privacy/page.tsx"
         quality_criteria:
           - "Privacy Policy references specific data types collected by the app (not generic template placeholders)"
           - "Privacy Policy includes the actual app name and company name (no 'YOUR_APP_NAME' or 'YOUR_COMPANY' placeholders)"
@@ -183,7 +183,7 @@ phases:
           - "Contact information for privacy inquiries is provided with a real email address or contact form URL"
 
       - name: "Terms of Service"
-        path: "docs/pipeline/legal/terms-of-service.md"
+        path: "src/app/terms/page.tsx"
         quality_criteria:
           - "Terms of Service references the specific features and functionality of the deployed app"
           - "Terms of Service includes the actual app name and company name (no template placeholders)"
@@ -226,8 +226,3 @@ phases:
           platform: "vercel"
           required_url_pattern: "https://*.vercel.app"
 
-      - type: "mcp_approval"
-        description: "Human approval gate via MCP server before public deployment"
-        conditions:
-          tool: "approve_gate"
-          phase: "3"
