@@ -464,3 +464,296 @@ class TestRunPipeline:
         assert "1b" in called_order
 
         _clear_registry()
+
+
+# ---------------------------------------------------------------------------
+# New gate dispatch tests (Task 2 — Phase 04-03)
+# ---------------------------------------------------------------------------
+
+
+def _make_passing_gate_result(gate_type: str = "test") -> object:
+    """Create a GateResult with passed=True for testing."""
+    from tools.gates.gate_result import GateResult
+    from datetime import datetime, timezone
+    return GateResult(
+        gate_type=gate_type,
+        phase_id="3",
+        passed=True,
+        status="PASS",
+        severity="INFO",
+        confidence=1.0,
+        checked_at=datetime.now(timezone.utc).isoformat(),
+        issues=[],
+    )
+
+
+def _make_failing_gate_result(gate_type: str = "test") -> object:
+    """Create a GateResult with passed=False for testing."""
+    from tools.gates.gate_result import GateResult
+    from datetime import datetime, timezone
+    return GateResult(
+        gate_type=gate_type,
+        phase_id="3",
+        passed=False,
+        status="BLOCKED",
+        severity="BLOCK",
+        confidence=0.0,
+        checked_at=datetime.now(timezone.utc).isoformat(),
+        issues=[f"{gate_type} check failed"],
+    )
+
+
+def _make_deployment_json(tmp_path: Path, preview_url: str = "https://test.vercel.app") -> None:
+    """Create docs/pipeline/deployment.json with the given preview_url."""
+    import json
+    pipeline_dir = tmp_path / "docs" / "pipeline"
+    pipeline_dir.mkdir(parents=True, exist_ok=True)
+    (pipeline_dir / "deployment.json").write_text(
+        json.dumps({"preview_url": preview_url, "platform": "vercel"}),
+        encoding="utf-8",
+    )
+
+
+class TestReadDeploymentUrl:
+    """Tests for the _read_deployment_url helper."""
+
+    def test_read_deployment_url_success(self, tmp_path):
+        """deployment.json exists with URL -> returns URL string."""
+        expected_url = "https://myapp-abc.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        from tools.contract_pipeline_runner import _read_deployment_url
+        url = _read_deployment_url(str(tmp_path))
+
+        assert url == expected_url
+
+    def test_read_deployment_url_missing_file(self, tmp_path):
+        """deployment.json missing -> ValueError raised."""
+        from tools.contract_pipeline_runner import _read_deployment_url
+
+        with pytest.raises(ValueError, match="deployment.json not found"):
+            _read_deployment_url(str(tmp_path))
+
+    def test_read_deployment_url_missing_field(self, tmp_path):
+        """deployment.json exists but preview_url field empty -> ValueError."""
+        import json
+        pipeline_dir = tmp_path / "docs" / "pipeline"
+        pipeline_dir.mkdir(parents=True, exist_ok=True)
+        (pipeline_dir / "deployment.json").write_text(
+            json.dumps({"platform": "vercel"}),  # no preview_url
+            encoding="utf-8",
+        )
+
+        from tools.contract_pipeline_runner import _read_deployment_url
+
+        with pytest.raises(ValueError, match="preview_url"):
+            _read_deployment_url(str(tmp_path))
+
+
+class TestNewGateDispatch:
+    """Test that _run_gate_checks dispatches to the 7 new gate types."""
+
+    def test_gate_dispatch_lighthouse(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='lighthouse' to run_lighthouse_gate."""
+        _make_deployment_json(tmp_path)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "lighthouse", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("lighthouse")
+
+        with patch("tools.contract_pipeline_runner._run_gate_checks.__module__") if False else \
+             patch("tools.gates.lighthouse_gate.run_lighthouse_gate", return_value=passing_result):
+            # Import inside context to pick up new dispatch logic
+            from tools.contract_pipeline_runner import _run_gate_checks
+            with patch("tools.contract_pipeline_runner.run_lighthouse_gate",
+                       return_value=passing_result, create=True):
+                pass  # won't hit this — we need lazy import patching
+
+        # Re-approach: patch the module path for lazy import
+        with patch("tools.gates.lighthouse_gate.run_lighthouse_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        assert issues == []
+
+    def test_gate_dispatch_lighthouse_calls_with_url(self, tmp_path):
+        """Lighthouse gate is called with URL from deployment.json."""
+        expected_url = "https://lh-test.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "lighthouse", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("lighthouse")
+
+        with patch("tools.gates.lighthouse_gate.run_lighthouse_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        mock_gate.assert_called_once_with(
+            url=expected_url,
+            thresholds=None,
+            phase_id="3",
+        )
+
+    def test_gate_dispatch_accessibility(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='accessibility' to run_accessibility_gate."""
+        expected_url = "https://a11y-test.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "accessibility", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("accessibility")
+
+        with patch("tools.gates.accessibility_gate.run_accessibility_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(url=expected_url, phase_id="3")
+
+    def test_gate_dispatch_security_headers(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='security_headers' to run_security_headers_gate."""
+        expected_url = "https://sec-test.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "security_headers", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("security_headers")
+
+        with patch("tools.gates.security_headers_gate.run_security_headers_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(url=expected_url, phase_id="3")
+
+    def test_gate_dispatch_link_integrity(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='link_integrity' to run_link_integrity_gate."""
+        expected_url = "https://link-test.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "link_integrity", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("link_integrity")
+
+        with patch("tools.gates.link_integrity_gate.run_link_integrity_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(url=expected_url, phase_id="3")
+
+    def test_gate_dispatch_deployment(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='deployment' to run_deployment_gate."""
+        expected_url = "https://depl-test.vercel.app"
+        _make_deployment_json(tmp_path, preview_url=expected_url)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "deployment", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("deployment")
+
+        with patch("tools.gates.deployment_gate.run_deployment_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(url=expected_url, phase_id="3")
+
+    def test_gate_dispatch_mcp_approval(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='mcp_approval' to run_mcp_approval_gate."""
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "mcp_approval", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("mcp_approval")
+
+        with patch("tools.gates.mcp_approval_gate.run_mcp_approval_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(phase_id="3", project_dir=str(tmp_path))
+
+    def test_gate_dispatch_legal(self, tmp_path):
+        """_run_gate_checks dispatches gate_type='legal' to run_legal_gate."""
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "legal", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("legal")
+
+        with patch("tools.gates.legal_gate.run_legal_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        mock_gate.assert_called_once_with(project_dir=str(tmp_path), phase_id="3")
+
+    def test_gate_dispatch_lighthouse_failure_propagates(self, tmp_path):
+        """Lighthouse gate failure issues are propagated to _run_gate_checks."""
+        _make_deployment_json(tmp_path)
+
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "lighthouse", "conditions": {}}],
+        }
+        failing_result = _make_failing_gate_result("lighthouse")
+
+        with patch("tools.gates.lighthouse_gate.run_lighthouse_gate", return_value=failing_result):
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert len(issues) >= 1
+        assert any("lighthouse" in issue.lower() for issue in issues)
+
+    def test_gate_dispatch_missing_deployment_json(self, tmp_path):
+        """URL-dependent gates fail with descriptive error when deployment.json missing."""
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "lighthouse", "conditions": {}}],
+        }
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is False
+        assert len(issues) >= 1
+        assert any("deployment.json" in issue or "deployment" in issue.lower() for issue in issues)
+
+
+class TestExecutorRegistrationPhase3:
+    """Verify Phase 3 executor self-registers via contract_pipeline_runner import."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_executor_registration_phase_3(self):
+        """After importing contract_pipeline_runner, get_executor('3') is not None."""
+        import importlib
+        import tools.phase_executors.phase_3_executor as mod_3
+        import tools.contract_pipeline_runner  # noqa: F401
+        importlib.reload(mod_3)
+        importlib.reload(tools.contract_pipeline_runner)
+        from tools.phase_executors.registry import get_executor
+        executor = get_executor("3")
+        assert executor is not None
+        assert executor.phase_id == "3"
+
+    def teardown_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()

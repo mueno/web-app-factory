@@ -124,9 +124,15 @@ class TestPhase3ExecutorProperties:
         assert executor.sub_steps == expected
 
     def test_self_registration(self):
-        """Phase3ShipExecutor self-registers as phase '3' on import."""
-        from tools.phase_executors.registry import get_executor
-        import tools.phase_executors.phase_3_executor  # noqa: F401
+        """Phase3ShipExecutor self-registers as phase '3' on module import/reload."""
+        import importlib
+        from tools.phase_executors.registry import _clear_registry, get_executor
+        import tools.phase_executors.phase_3_executor as mod_3
+
+        # Clear and reload to re-trigger module-level self-registration
+        _clear_registry()
+        importlib.reload(mod_3)
+
         executor = get_executor("3")
         assert executor is not None
         assert executor.phase_id == "3"

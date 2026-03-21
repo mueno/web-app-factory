@@ -43,6 +43,7 @@ import tools.phase_executors.phase_1a_executor  # noqa: F401
 import tools.phase_executors.phase_1b_executor  # noqa: F401
 import tools.phase_executors.phase_2a_executor  # noqa: F401
 import tools.phase_executors.phase_2b_executor  # noqa: F401
+import tools.phase_executors.phase_3_executor  # noqa: F401 -- self-registers as phase "3"
 
 
 # Default contract path relative to the project root
@@ -110,6 +111,39 @@ def _get_contract_phase(contract: dict[str, Any], phase_id: str) -> dict[str, An
     return None
 
 
+def _read_deployment_url(project_dir: str) -> str:
+    """Read the Vercel preview URL from docs/pipeline/deployment.json.
+
+    Args:
+        project_dir: Root directory of the generated project.
+
+    Returns:
+        The preview_url field from deployment.json.
+
+    Raises:
+        ValueError: If deployment.json is missing or preview_url field not found.
+    """
+    deployment_path = Path(project_dir) / "docs" / "pipeline" / "deployment.json"
+    if not deployment_path.exists():
+        raise ValueError(
+            f"deployment.json not found at {deployment_path}. "
+            "Run the deploy_preview sub-step first."
+        )
+    try:
+        data = json.loads(deployment_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        raise ValueError(
+            f"Failed to read deployment.json: {type(exc).__name__}"
+        ) from exc
+
+    preview_url = data.get("preview_url")
+    if not preview_url:
+        raise ValueError(
+            "preview_url field missing or empty in deployment.json"
+        )
+    return preview_url
+
+
 def _run_gate_checks(
     contract_phase: dict[str, Any],
     project_dir: str,
@@ -165,6 +199,77 @@ def _run_gate_checks(
         elif gate_type == "static_analysis":
             # Dispatch to static analysis gate: checks 'use client' placement + secrets
             gate_result = run_static_analysis_gate(project_dir, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "lighthouse":
+            from tools.gates.lighthouse_gate import run_lighthouse_gate
+            try:
+                deployment_url = _read_deployment_url(project_dir)
+            except ValueError as exc:
+                issues.append(str(exc))
+                continue
+            gate_result = run_lighthouse_gate(
+                url=deployment_url,
+                thresholds=conditions.get("thresholds"),
+                phase_id=phase_id,
+            )
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "accessibility":
+            from tools.gates.accessibility_gate import run_accessibility_gate
+            try:
+                deployment_url = _read_deployment_url(project_dir)
+            except ValueError as exc:
+                issues.append(str(exc))
+                continue
+            gate_result = run_accessibility_gate(url=deployment_url, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "security_headers":
+            from tools.gates.security_headers_gate import run_security_headers_gate
+            try:
+                deployment_url = _read_deployment_url(project_dir)
+            except ValueError as exc:
+                issues.append(str(exc))
+                continue
+            gate_result = run_security_headers_gate(url=deployment_url, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "link_integrity":
+            from tools.gates.link_integrity_gate import run_link_integrity_gate
+            try:
+                deployment_url = _read_deployment_url(project_dir)
+            except ValueError as exc:
+                issues.append(str(exc))
+                continue
+            gate_result = run_link_integrity_gate(url=deployment_url, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "deployment":
+            from tools.gates.deployment_gate import run_deployment_gate
+            try:
+                deployment_url = _read_deployment_url(project_dir)
+            except ValueError as exc:
+                issues.append(str(exc))
+                continue
+            gate_result = run_deployment_gate(url=deployment_url, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "mcp_approval":
+            from tools.gates.mcp_approval_gate import run_mcp_approval_gate
+            gate_result = run_mcp_approval_gate(phase_id=phase_id, project_dir=project_dir)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
+        elif gate_type == "legal":
+            from tools.gates.legal_gate import run_legal_gate
+            gate_result = run_legal_gate(project_dir=project_dir, phase_id=phase_id)
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
