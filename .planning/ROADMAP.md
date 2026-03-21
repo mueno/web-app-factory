@@ -82,7 +82,7 @@ Plans:
   5. Privacy Policy and Terms of Service documents are present, reference actual app features, and are linked from the deployed app
   6. The Vercel deployment URL is captured in `docs/pipeline/deployment.json` and returns HTTP 200 within 30 seconds
   7. A human MCP approval sign-off is required before the production deploy proceeds
-**Plans:** 3 plans
+**Plans:** 2/3 plans executed
 
 Plans:
 - [ ] 04-01-PLAN.md — Deploy infrastructure: deploy-agent runner, DEPLOY_AGENT prompt, deployment gate, MCP approval gate, CLI flags
@@ -99,4 +99,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
 | 3. Build | 3/3 | Complete    | 2026-03-21 |
-| 4. Ship | 0/3 | In progress | - |
+| 4. Ship | 2/3 | In Progress|  |
