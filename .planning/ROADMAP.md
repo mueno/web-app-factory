@@ -63,7 +63,12 @@ Plans:
   4. The static analysis gate fails if `"use client"` appears in `layout.tsx` or `page.tsx`
   5. The static analysis gate fails if any environment variable matching `NEXT_PUBLIC_` + secret-name pattern is detected
   6. No npm packages are installed without prior validation against the npm registry (hallucination prevention)
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Build agent runner, BUILD_AGENT system prompt, Phase 2a scaffold executor
+- [ ] 03-02-PLAN.md — Build gate and static analysis gate executors
+- [ ] 03-03-PLAN.md — Phase 2b code generation executor and pipeline integration
 
 ### Phase 4: Ship
 **Goal**: The deployed application meets quality thresholds, has legally compliant documents, and is live at a Vercel URL
@@ -88,5 +93,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
-| 3. Build | 0/TBD | Not started | - |
+| 3. Build | 0/3 | Planning complete | - |
 | 4. Ship | 0/TBD | Not started | - |
