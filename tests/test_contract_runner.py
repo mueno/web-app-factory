@@ -961,55 +961,56 @@ class TestNextjsDirPropagationToPhase3:
         so Phase 3 executor can use it as cwd for all Vercel CLI subprocess calls.
         """
         from tools.contract_pipeline_runner import load_contract, run_pipeline
+        from tools.phase_executors.registry import _clear_registry, register
+        from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult
         import tools.phase_executors.phase_3_executor  # ensure Phase 3 is registered
 
         captured_contexts: list = []
 
-        def capture_ctx(ctx):
-            captured_contexts.append(ctx)
-            from tools.phase_executors.base import PhaseResult
-            return PhaseResult(phase_id=ctx.phase_id, success=False, error="test stop")
+        # Build a capturing executor for phase 3 that records the ctx and stops
+        class CapturingPhase3Executor(PhaseExecutor):
+            @property
+            def phase_id(self) -> str:
+                return "3"
 
-        # Patch Phase 3 executor to capture the context it receives
-        with patch(
-            "tools.phase_executors.phase_3_executor.Phase3ShipExecutor.execute",
-            side_effect=capture_ctx,
-        ):
-            from tools.phase_executors.registry import _clear_registry, register
-            _clear_registry()
+            @property
+            def sub_steps(self) -> list:
+                return []
 
-            # Register stub executors for phases 1a, 1b, 2a, 2b so pipeline reaches phase 3
-            from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult
+            def execute(self, ctx: PhaseContext) -> PhaseResult:
+                captured_contexts.append(ctx)
+                return PhaseResult(phase_id="3", success=False, error="test stop")
 
-            for pid in ["1a", "1b", "2a", "2b"]:
-                class _StubExec(PhaseExecutor):
-                    _pid = pid
+        _clear_registry()
 
-                    @property
-                    def phase_id(self):
-                        return self._pid
+        # Register stub executors for phases 1a, 1b, 2a, 2b
+        for pid in ["1a", "1b", "2a", "2b"]:
+            class _StubExec(PhaseExecutor):
+                _pid = pid
 
-                    @property
-                    def sub_steps(self):
-                        return []
+                @property
+                def phase_id(self):
+                    return self._pid
 
-                    def execute(self, ctx):
-                        return PhaseResult(phase_id=self._pid, success=True)
+                @property
+                def sub_steps(self):
+                    return []
 
-                register(_StubExec())
+                def execute(self, ctx):
+                    return PhaseResult(phase_id=self._pid, success=True)
 
-            # Re-import phase_3 to trigger its self-registration
-            import importlib
-            import tools.phase_executors.phase_3_executor as mod_3
-            importlib.reload(mod_3)
+            register(_StubExec())
 
-            contract = load_contract(CONTRACT_PATH)
-            run_pipeline(
-                contract=contract,
-                project_dir=str(tmp_path),
-                idea="A weight tracking app",
-                skip_gates=True,
-            )
+        # Register capturing Phase 3 executor (overrides any registered phase 3)
+        register(CapturingPhase3Executor())
+
+        contract = load_contract(CONTRACT_PATH)
+        run_pipeline(
+            contract=contract,
+            project_dir=str(tmp_path),
+            idea="A weight tracking app",
+            skip_gates=True,
+        )
 
         # Find the Phase 3 context
         phase3_ctx = next(
@@ -1027,6 +1028,8 @@ class TestNextjsDirPropagationToPhase3:
         assert phase3_ctx.extra["nextjs_dir"], (
             "nextjs_dir is present in PhaseContext.extra but is empty"
         )
+
+        _clear_registry()
 
 
 class TestNewGateDispatchLegalNextjsDir:

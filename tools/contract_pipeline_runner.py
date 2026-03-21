@@ -285,7 +285,11 @@ def _run_gate_checks(
 
         elif gate_type == "legal":
             from tools.gates.legal_gate import run_legal_gate
-            gate_result = run_legal_gate(project_dir=project_dir, phase_id=phase_id)
+            # Use nextjs_dir when provided: legal files are written into the
+            # Next.js project (src/app/privacy/page.tsx, src/app/terms/page.tsx),
+            # not the pipeline root.
+            legal_dir = nextjs_dir if nextjs_dir else project_dir
+            gate_result = run_legal_gate(project_dir=legal_dir, phase_id=phase_id)
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
@@ -411,7 +415,7 @@ def run_pipeline(
             phases_skipped.append(phase_id)
             continue
 
-        # Build context (company_name and contact_email forwarded via extra)
+        # Build context (company_name, contact_email, and nextjs_dir forwarded via extra)
         ctx = PhaseContext(
             run_id=run_id,
             phase_id=phase_id,
@@ -421,6 +425,7 @@ def run_pipeline(
             extra={
                 "company_name": company_name,
                 "contact_email": contact_email,
+                "nextjs_dir": nextjs_dir,
             },
         )
 

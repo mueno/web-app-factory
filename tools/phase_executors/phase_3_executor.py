@@ -263,10 +263,11 @@ class Phase3ShipExecutor(PhaseExecutor):
 
     def _provision(self, ctx: PhaseContext) -> SubStepResult:
         """Step 1: vercel link --yes to auto-provision Vercel project."""
+        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
         try:
             proc = subprocess.run(
                 ["vercel", "link", "--yes"],
-                cwd=str(ctx.project_dir),
+                cwd=nextjs_dir,
                 timeout=60,
                 capture_output=True,
                 text=True,
@@ -306,10 +307,11 @@ class Phase3ShipExecutor(PhaseExecutor):
         Parses stdout with regex to extract the Vercel preview URL per
         RESEARCH.md Pitfall 5: use regex, not just stdout.strip().
         """
+        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
         try:
             proc = subprocess.run(
                 ["vercel", "--yes"],
-                cwd=str(ctx.project_dir),
+                cwd=nextjs_dir,
                 timeout=300,
                 capture_output=True,
                 text=True,
@@ -434,11 +436,12 @@ Both pages must be React Server Components (no "use client") with TypeScript.
 Use the exact company name and email provided above — never use placeholders.
 """
 
+        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
         try:
             agent_result = run_deploy_agent(
                 prompt=prompt,
                 system_prompt=DEPLOY_AGENT.system_prompt,
-                project_dir=str(ctx.project_dir),
+                project_dir=nextjs_dir,
             )
         except Exception as exc:
             return SubStepResult(
@@ -455,8 +458,9 @@ Use the exact company name and email provided above — never use placeholders.
 
     def _gate_legal(self, ctx: PhaseContext) -> SubStepResult:
         """Step 4: Validate legal documents (no retry — requires regeneration on failure)."""
+        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
         try:
-            gate_result = run_legal_gate(str(ctx.project_dir), phase_id="3")
+            gate_result = run_legal_gate(nextjs_dir, phase_id="3")
         except Exception as exc:
             return SubStepResult(
                 sub_step_id="gate_legal",
@@ -551,11 +555,12 @@ Please:
 
 Focus only on fixing the specific issues listed. Do not change unrelated code.
 """
+            nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
             try:
                 run_deploy_agent(
                     prompt=fix_prompt,
                     system_prompt=DEPLOY_AGENT.system_prompt,
-                    project_dir=str(ctx.project_dir),
+                    project_dir=nextjs_dir,
                 )
             except Exception as exc:
                 logger.warning("Deploy agent fix failed: %s", type(exc).__name__)
@@ -564,7 +569,7 @@ Focus only on fixing the specific issues listed. Do not change unrelated code.
             try:
                 proc = subprocess.run(
                     ["vercel", "--yes"],
-                    cwd=str(ctx.project_dir),
+                    cwd=nextjs_dir,
                     timeout=300,
                     capture_output=True,
                     text=True,
@@ -667,11 +672,12 @@ Focus only on fixing the specific issues listed. Do not change unrelated code.
     def _deploy_production(self, ctx: PhaseContext) -> SubStepResult:
         """Step 10: vercel promote {preview_url} --yes --timeout=5m to production."""
         preview_url = self._preview_url
+        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
 
         try:
             proc = subprocess.run(
                 ["vercel", "promote", preview_url, "--yes", "--timeout=5m"],
-                cwd=str(ctx.project_dir),
+                cwd=nextjs_dir,
                 timeout=360,
                 capture_output=True,
                 text=True,
