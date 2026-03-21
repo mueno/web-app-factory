@@ -128,6 +128,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Write structured pipeline result JSON to this path",
     )
+    parser.add_argument(
+        "--company-name",
+        dest="company_name",
+        metavar="NAME",
+        default=None,
+        help="Company name for legal documents (required for legal gate to pass)",
+    )
+    parser.add_argument(
+        "--contact-email",
+        dest="contact_email",
+        metavar="EMAIL",
+        default=None,
+        help="Contact email for legal documents (required for legal gate to pass)",
+    )
 
     ns = parser.parse_args(argv)
 
@@ -216,6 +230,8 @@ def main(argv: list[str] | None = None) -> int:
         dry_run=False,
         skip_gates=args.unsafe_no_gates,
         contract_path=contract_path,
+        company_name=args.company_name,
+        contact_email=args.contact_email,
     )
 
     if args.output_json:

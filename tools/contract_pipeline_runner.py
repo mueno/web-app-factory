@@ -187,6 +187,8 @@ def run_pipeline(
     dry_run: bool = False,
     skip_gates: bool = False,
     contract_path: Optional[str] = None,
+    company_name: Optional[str] = None,
+    contact_email: Optional[str] = None,
 ) -> dict[str, Any]:
     """Execute the pipeline from contract definition.
 
@@ -198,6 +200,10 @@ def run_pipeline(
         dry_run: If True, validate and report without executing phases.
         skip_gates: If True, skip gate checks (for testing/debugging).
         contract_path: Path to contract YAML file (for quality assessment).
+        company_name: Company name for legal document generation (optional).
+            If provided, passed to Phase 3 executor via PhaseContext.extra.
+        contact_email: Contact email for legal document generation (optional).
+            If provided, passed to Phase 3 executor via PhaseContext.extra.
 
     Returns:
         Summary dict with keys: status, run_id, phases_executed, phases_skipped,
@@ -271,13 +277,17 @@ def run_pipeline(
             phases_skipped.append(phase_id)
             continue
 
-        # Build context
+        # Build context (company_name and contact_email forwarded via extra)
         ctx = PhaseContext(
             run_id=run_id,
             phase_id=phase_id,
             project_dir=Path(project_dir),
             idea=idea,
             app_name=app_name,
+            extra={
+                "company_name": company_name,
+                "contact_email": contact_email,
+            },
         )
 
         # Execute phase
