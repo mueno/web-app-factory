@@ -2,7 +2,7 @@
 phase: 2
 slug: spec
 status: draft
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-03-21
 ---
@@ -38,13 +38,14 @@ created: 2026-03-21
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 02-01-01 | 01 | 0 | SPEC-01 | unit | `uv run pytest tests/test_phase_1a_executor.py -x` | ❌ W0 | ⬜ pending |
-| 02-01-02 | 01 | 0 | SPEC-01 | unit | `uv run pytest tests/test_phase_1a_executor.py::test_go_no_go_field_parseable -x` | ❌ W0 | ⬜ pending |
-| 02-01-03 | 01 | 0 | SPEC-02 | unit | `uv run pytest tests/test_phase_1b_executor.py::test_prd_has_moscow_labels -x` | ❌ W0 | ⬜ pending |
-| 02-01-04 | 01 | 0 | SPEC-02 | unit | `uv run pytest tests/test_phase_1b_executor.py::test_component_name_cross_reference -x` | ❌ W0 | ⬜ pending |
-| 02-01-05 | 01 | 0 | SPEC-03 | unit | `uv run pytest tests/test_phase_1a_executor.py::test_feasibility_evaluates_rendering_strategy -x` | ❌ W0 | ⬜ pending |
-| 02-01-06 | 01 | 0 | SPEC-04 | unit | `uv run pytest tests/test_phase_spec_agent.py::test_no_ios_references_in_system_prompt -x` | ❌ W0 | ⬜ pending |
-| 02-01-07 | 01 | 0 | SPEC-04 | integration | `uv run pytest tests/test_phase_spec_agent.py::test_smoke_sample_idea -x` | ❌ W0 | ⬜ pending |
+| 02-01-01 | 01 | 1 | SPEC-04 | unit | `uv run pytest tests/test_phase_spec_agent.py -x` | created in Plan 01 | ⬜ pending |
+| 02-02-01 | 02 | 2 | SPEC-01 | unit | `uv run pytest tests/test_phase_1a_executor.py -x` | created in Plan 02 | ⬜ pending |
+| 02-02-02 | 02 | 2 | SPEC-03 | unit | `uv run pytest tests/test_phase_1a_executor.py::test_feasibility_evaluates_rendering_strategy -x` | created in Plan 02 | ⬜ pending |
+| 02-02-03 | 02 | 2 | SPEC-01 | unit | `uv run pytest tests/test_phase_1a_executor.py::test_go_no_go_field_parseable -x` | created in Plan 02 | ⬜ pending |
+| 02-03-01 | 03 | 3 | SPEC-02 | unit | `uv run pytest tests/test_phase_1b_executor.py::test_prd_has_moscow_labels -x` | created in Plan 03 | ⬜ pending |
+| 02-03-02 | 03 | 3 | SPEC-02 | unit | `uv run pytest tests/test_phase_1b_executor.py::test_component_name_cross_reference -x` | created in Plan 03 | ⬜ pending |
+| 02-03-03 | 03 | 3 | SPEC-02 | unit | `uv run pytest tests/test_phase_1b_executor.py::test_phase_1a_context_injected_in_prompt -x` | created in Plan 03 | ⬜ pending |
+| 02-01-02 | 01 | 1 | SPEC-04 | integration | `uv run pytest tests/test_phase_spec_agent.py::test_smoke_sample_idea -x` | created in Plan 01 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -52,10 +53,9 @@ created: 2026-03-21
 
 ## Wave 0 Requirements
 
-- [ ] `tests/test_phase_1a_executor.py` — stubs for SPEC-01, SPEC-03 (requires mocked claude_agent_sdk query)
-- [ ] `tests/test_phase_1b_executor.py` — stubs for SPEC-02 (requires mocked claude_agent_sdk query)
-- [ ] `tests/test_phase_spec_agent.py` — stubs for SPEC-04 (system prompt validation + smoke test)
-- [ ] Mock fixture for `claude_agent_sdk.query` in `conftest.py` — returns canned `ResultMessage` for unit tests
+- [ ] `mock_agent_query` fixture in `tests/conftest.py` — patches `claude_agent_sdk.query` with canned `ResultMessage` for unit tests (created in Plan 01, Task 1)
+
+*Wave 0 scope is limited to the mock fixture. SPEC-01/03 test files are created inside Plan 02 (TDD). SPEC-02 test files are created inside Plan 03 (TDD). SPEC-04 test files are created inside Plan 01 (TDD).*
 
 *Existing infrastructure reused: `tmp_project_dir` and `sample_contract_path` fixtures from Phase 1*
 
@@ -71,11 +71,11 @@ created: 2026-03-21
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 10s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 10s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending

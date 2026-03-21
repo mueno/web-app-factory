@@ -42,8 +42,8 @@ Plans:
 **Depends on**: Phase 1
 **Requirements**: SPEC-01, SPEC-02, SPEC-03, SPEC-04
 **Success Criteria** (what must be TRUE):
-  1. Phase 1a generates a Go/No-Go decision with named competitor analysis and a defined target user — readable as a real business decision document, not a placeholder
-  2. Phase 1b produces a PRD with MoSCoW-classified requirements, a component inventory, and a tech feasibility memo that references the actual app being built
+  1. Phase 1a generates a Go/No-Go decision with named competitor analysis, a defined target user, and a tech feasibility memo that references the actual app being built — readable as a real business decision document, not a placeholder
+  2. Phase 1b produces a PRD with MoSCoW-classified requirements, a component inventory, and a screen specification with component names cross-referenced against the PRD
   3. The spec agent prompt contains no iOS-specific references and is validated by running a smoke test against a sample idea
 **Plans:** 3 plans
 
