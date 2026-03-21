@@ -13,7 +13,7 @@ Web App Factory transforms a natural-language app idea into a deployed, producti
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Infrastructure** - Pipeline plumbing forked and running — CLI, state, MCP, governance (completed 2026-03-21)
-- [ ] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD
+- [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
 - [ ] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates
 - [ ] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment
 
@@ -45,7 +45,7 @@ Plans:
   1. Phase 1a generates a Go/No-Go decision with named competitor analysis, a defined target user, and a tech feasibility memo that references the actual app being built — readable as a real business decision document, not a placeholder
   2. Phase 1b produces a PRD with MoSCoW-classified requirements, a component inventory, and a screen specification with component names cross-referenced against the PRD
   3. The spec agent prompt contains no iOS-specific references and is validated by running a smoke test against a sample idea
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 02-01-PLAN.md — Spec agent definition, shared runner utility, test mock infrastructure
@@ -87,6 +87,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
-| 2. Spec | 2/3 | In Progress|  |
+| 2. Spec | 3/3 | Complete   | 2026-03-21 |
 | 3. Build | 0/TBD | Not started | - |
 | 4. Ship | 0/TBD | Not started | - |

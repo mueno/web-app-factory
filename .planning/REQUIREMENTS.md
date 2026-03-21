@@ -27,7 +27,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Spec Agent
 
 - [x] **SPEC-01**: Phase 1a validates idea with market research, competitor analysis, and Go/No-Go decision
-- [ ] **SPEC-02**: Phase 1b generates structured PRD with MoSCoW classification and component inventory
+- [x] **SPEC-02**: Phase 1b generates structured PRD with MoSCoW classification and component inventory
 - [x] **SPEC-03**: Phase 1b produces tech feasibility memo evaluating implementation approach
 - [x] **SPEC-04**: Spec agent uses Claude Agent SDK with web-specific system prompt (no iOS references)
 
@@ -125,7 +125,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CONT-03 | Phase 1 | Complete |
 | CONT-04 | Phase 1 | Complete |
 | SPEC-01 | Phase 2 | Complete |
-| SPEC-02 | Phase 2 | Pending |
+| SPEC-02 | Phase 2 | Complete |
 | SPEC-03 | Phase 2 | Complete |
 | SPEC-04 | Phase 2 | Complete |
 | BILD-01 | Phase 3 | Pending |
