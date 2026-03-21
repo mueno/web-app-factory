@@ -27,7 +27,10 @@ import pytest
 
 def _make_ctx(tmp_path: Path) -> "PhaseContext":
     from tools.phase_executors.base import PhaseContext
-    project_dir = tmp_path / "myapp"
+    # Use "pipeline-root" as project_dir name so it differs from app_name "myapp".
+    # This lets tests distinguish between ctx.project_dir (pipeline root) and
+    # ctx.project_dir.parent / ctx.app_name (the actual Next.js project).
+    project_dir = tmp_path / "pipeline-root"
     (project_dir / "docs" / "pipeline").mkdir(parents=True)
     return PhaseContext(
         run_id="test-run-2b",
@@ -447,8 +450,13 @@ class TestPhase2bBuildExecutorSuccess:
 
         assert assess_mock.called
 
-    def test_execute_passes_project_dir_to_run_build_agent(self, tmp_path):
-        """execute() passes project_dir to run_build_agent."""
+    def test_execute_passes_nextjs_dir_to_run_build_agent(self, tmp_path):
+        """execute() passes the Next.js project dir (not pipeline root) to run_build_agent.
+
+        BILD-02: ctx.project_dir is the pipeline root ("pipeline-root").
+        The Next.js project lives at ctx.project_dir.parent / ctx.app_name ("myapp").
+        The executor must pass str(nextjs_dir), NOT str(ctx.project_dir).
+        """
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
@@ -464,12 +472,21 @@ class TestPhase2bBuildExecutorSuccess:
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         call_kwargs = run_agent_mock.call_args
-        # project_dir should be passed
         assert call_kwargs is not None
-        # Check that project_dir argument was included (positional or keyword)
+
         args, kwargs = call_kwargs
-        all_args = list(args) + list(kwargs.values())
-        assert any(str(ctx.project_dir) in str(a) for a in all_args)
+        # project_dir should be passed as keyword argument
+        actual_project_dir = kwargs.get("project_dir")
+
+        # Expected: the Next.js project dir (sibling of pipeline root, named after app_name)
+        expected_nextjs_dir = str(ctx.project_dir.parent / ctx.app_name)
+        # The pipeline root is different from the nextjs dir
+        pipeline_root = str(ctx.project_dir)
+
+        assert actual_project_dir == expected_nextjs_dir, (
+            f"run_build_agent should receive the Next.js project dir ({expected_nextjs_dir!r}), "
+            f"not the pipeline root ({pipeline_root!r}). Got: {actual_project_dir!r}"
+        )
 
     def test_execute_uses_error_tsx_instruction_for_async_data_routes(self, tmp_path):
         """BILD-06: agent prompt must mention 'use client' for error.tsx."""

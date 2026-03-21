@@ -735,6 +735,182 @@ class TestNewGateDispatch:
         assert any("deployment.json" in issue or "deployment" in issue.lower() for issue in issues)
 
 
+# ---------------------------------------------------------------------------
+# nextjs_dir gate dispatch tests (Phase 05-01 — BILD-02/03/04)
+# ---------------------------------------------------------------------------
+
+
+class TestNextjsDirGateDispatch:
+    """Verify _run_gate_checks passes nextjs_dir to build and static_analysis gates."""
+
+    def _make_build_gate_phase(self) -> dict:
+        """Create a contract_phase dict with a 'build' gate."""
+        return {
+            "id": "2a",
+            "gates": [
+                {
+                    "type": "build",
+                    "conditions": {"commands": ["npm run build"]},
+                }
+            ],
+        }
+
+    def _make_static_analysis_gate_phase(self) -> dict:
+        """Create a contract_phase dict with a 'static_analysis' gate."""
+        return {
+            "id": "2b",
+            "gates": [
+                {
+                    "type": "static_analysis",
+                    "conditions": {},
+                }
+            ],
+        }
+
+    def _make_passing_build_gate_result(self) -> object:
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+        return GateResult(
+            gate_type="build",
+            phase_id="2a",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+    def _make_passing_static_analysis_result(self) -> object:
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+        return GateResult(
+            gate_type="static_analysis",
+            phase_id="2b",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+    def test_build_gate_receives_nextjs_dir(self, tmp_path):
+        """_run_gate_checks passes nextjs_dir (not project_dir) to build gate when nextjs_dir provided.
+
+        BILD-03: The build gate must receive the Next.js project directory so that
+        npm run build and tsc --noEmit run inside the directory that has package.json.
+        """
+        contract_phase = self._make_build_gate_phase()
+        nextjs_dir = str(tmp_path / "nextjs-app")
+        pipeline_dir = str(tmp_path / "pipeline-root")
+        passed_result = self._make_passing_build_gate_result()
+
+        with patch("tools.contract_pipeline_runner.run_build_gate", return_value=passed_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, pipeline_dir, nextjs_dir=nextjs_dir)
+
+        # Gate should have been called with nextjs_dir, NOT pipeline_dir
+        mock_gate.assert_called_once_with(nextjs_dir, phase_id="2a")
+        assert passed is True
+
+    def test_static_analysis_gate_receives_nextjs_dir(self, tmp_path):
+        """_run_gate_checks passes nextjs_dir (not project_dir) to static_analysis gate.
+
+        BILD-04: The static analysis gate must receive the Next.js project directory
+        so that src/app/layout.tsx and page.tsx are scanned in the generated project.
+        """
+        contract_phase = self._make_static_analysis_gate_phase()
+        nextjs_dir = str(tmp_path / "nextjs-app")
+        pipeline_dir = str(tmp_path / "pipeline-root")
+        passed_result = self._make_passing_static_analysis_result()
+
+        with patch(
+            "tools.contract_pipeline_runner.run_static_analysis_gate",
+            return_value=passed_result,
+        ) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, pipeline_dir, nextjs_dir=nextjs_dir)
+
+        # Gate should have been called with nextjs_dir, NOT pipeline_dir
+        mock_gate.assert_called_once_with(nextjs_dir, phase_id="2b")
+        assert passed is True
+
+    def test_build_gate_falls_back_to_project_dir_when_no_nextjs_dir(self, tmp_path):
+        """_run_gate_checks falls back to project_dir when nextjs_dir is not provided.
+
+        Backward-compatibility: when called without nextjs_dir, behavior is unchanged.
+        """
+        contract_phase = self._make_build_gate_phase()
+        pipeline_dir = str(tmp_path)
+        passed_result = self._make_passing_build_gate_result()
+
+        with patch("tools.contract_pipeline_runner.run_build_gate", return_value=passed_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(contract_phase, pipeline_dir)
+
+        mock_gate.assert_called_once_with(pipeline_dir, phase_id="2a")
+        assert passed is True
+
+
+# ---------------------------------------------------------------------------
+# GovernanceMonitor integration tests (Phase 05-01 — PIPE-05)
+# ---------------------------------------------------------------------------
+
+
+class TestGovernanceIntegration:
+    """Verify GovernanceMonitor is instantiated in run_pipeline."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def teardown_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_governance_monitor_instantiated_in_run_pipeline(self, tmp_path):
+        """run_pipeline() instantiates GovernanceMonitor with blocking=False.
+
+        PIPE-05: GovernanceMonitor must be wired into the live pipeline runner so
+        that phase-skip enforcement and phase lifecycle tracking are active.
+        """
+        from tools.contract_pipeline_runner import load_contract, run_pipeline
+        from tools.phase_executors.registry import register
+
+        # Register a stub for "1a" only — all other phases skip (no executor)
+        register(_make_stub_executor("1a", success=True))
+
+        contract = load_contract(CONTRACT_PATH)
+
+        with patch(
+            "tools.contract_pipeline_runner.GovernanceMonitor"
+        ) as MockGovernanceMonitor:
+            mock_monitor_instance = MagicMock()
+            MockGovernanceMonitor.return_value = mock_monitor_instance
+
+            result = run_pipeline(
+                contract=contract,
+                project_dir=str(tmp_path),
+                idea="test governance integration",
+                skip_gates=True,
+            )
+
+        # GovernanceMonitor must have been instantiated
+        assert MockGovernanceMonitor.called, (
+            "GovernanceMonitor was not instantiated in run_pipeline(). "
+            "PIPE-05 requires GovernanceMonitor to be wired into the live pipeline."
+        )
+
+        # Must be instantiated with blocking=False
+        call_kwargs = MockGovernanceMonitor.call_args
+        assert call_kwargs is not None
+        _, kwargs = call_kwargs
+        assert kwargs.get("blocking") is False, (
+            f"GovernanceMonitor must be called with blocking=False, got: {kwargs!r}"
+        )
+
+
 class TestExecutorRegistrationPhase3:
     """Verify Phase 3 executor self-registers via contract_pipeline_runner import."""
 
