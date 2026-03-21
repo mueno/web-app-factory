@@ -13,7 +13,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PIPE-02**: Pipeline state persists to `state.json` and `activity-log.jsonl`, surviving interruption
 - [x] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
 - [x] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
-- [x] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
+- [ ] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
 - [x] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
 - [x] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
 
@@ -22,7 +22,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **CONT-01**: YAML contract defines all phases with purpose, deliverables, quality criteria, and gate types
 - [x] **CONT-02**: Each deliverable has `quality_criteria` array driving content verification (not just file existence)
 - [x] **CONT-03**: Contract validated against JSON schema at pipeline startup
-- [x] **CONT-04**: Quality self-assessment JSON generated before every gate submission
+- [ ] **CONT-04**: Quality self-assessment JSON generated before every gate submission
 
 ### Spec Agent
 
@@ -34,9 +34,9 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Build Agent
 
 - [x] **BILD-01**: Phase 2a scaffolds Next.js project via `create-next-app` with TypeScript, Tailwind v4, App Router
-- [x] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
-- [x] **BILD-03**: Generated app passes `next build` production build without errors
-- [x] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
+- [ ] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
+- [ ] **BILD-03**: Generated app passes `next build` production build without errors
+- [ ] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
 - [x] **BILD-05**: Generated app is responsive (mobile-first Tailwind classes)
 - [x] **BILD-06**: Generated app includes error boundaries (`error.tsx`, `not-found.tsx`)
 - [x] **BILD-07**: npm packages validated against registry before install (hallucination prevention)
@@ -117,21 +117,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-02 | Phase 1 | Complete |
 | PIPE-03 | Phase 1 | Complete |
 | PIPE-04 | Phase 1 | Complete |
-| PIPE-05 | Phase 1 | Complete |
+| PIPE-05 | Phase 5 | Pending |
 | PIPE-06 | Phase 1 | Complete |
 | PIPE-07 | Phase 1 | Complete |
 | CONT-01 | Phase 1 | Complete |
 | CONT-02 | Phase 1 | Complete |
 | CONT-03 | Phase 1 | Complete |
-| CONT-04 | Phase 1 | Complete |
+| CONT-04 | Phase 6 | Pending |
 | SPEC-01 | Phase 2 | Complete |
 | SPEC-02 | Phase 2 | Complete |
 | SPEC-03 | Phase 2 | Complete |
 | SPEC-04 | Phase 2 | Complete |
 | BILD-01 | Phase 3 | Complete |
-| BILD-02 | Phase 3 | Complete |
-| BILD-03 | Phase 3 | Complete |
-| BILD-04 | Phase 3 | Complete |
+| BILD-02 | Phase 5 | Pending |
+| BILD-03 | Phase 5 | Pending |
+| BILD-04 | Phase 5 | Pending |
 | BILD-05 | Phase 3 | Complete |
 | BILD-06 | Phase 3 | Complete |
 | BILD-07 | Phase 3 | Complete |
@@ -157,4 +157,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-21 after roadmap creation*
+*Last updated: 2026-03-22 after gap closure phase creation (PIPE-05, CONT-04, BILD-02/03/04 reset to Pending)*

@@ -16,6 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
 - [x] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates (completed 2026-03-21)
 - [x] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment (completed 2026-03-21)
+- [ ] **Phase 5: Build Pipeline Directory Fix + Governance Wiring** - Fix Phase 2a→2b project_dir handoff, wire GovernanceMonitor into live pipeline (gap closure)
+- [ ] **Phase 6: Contract Alignment + Ship Fixes** - Align YAML contract paths with implementation, remove duplicate MCP approval gate (gap closure)
 
 ## Phase Details
 
@@ -89,10 +91,38 @@ Plans:
 - [ ] 04-02-PLAN.md — Quality gates: Lighthouse, accessibility (axe-core), security headers, link integrity
 - [ ] 04-03-PLAN.md — Phase 3 executor, legal doc generation, gate dispatch wiring
 
+### Phase 5: Build Pipeline Directory Fix + Governance Wiring
+**Goal**: The build pipeline correctly propagates the Next.js project directory from Phase 2a scaffold through Phase 2b code generation and build gates, and the GovernanceMonitor enforces phase ordering at runtime
+**Depends on**: Phase 4
+**Requirements**: BILD-02, BILD-03, BILD-04, PIPE-05
+**Gap Closure**: Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 2a stores the scaffolded Next.js project path in PhaseResult or state, and Phase 2b receives it as the build agent's working directory
+  2. The build gate runs `npm run build` and `tsc --noEmit` inside the scaffolded Next.js project directory, not the pipeline project_dir
+  3. GovernanceMonitor is instantiated in contract_pipeline_runner.py and blocks phase-skip attempts at runtime
+  4. All existing tests continue to pass after directory handoff changes
+
+Plans:
+- [ ] 05-01-PLAN.md — project_dir propagation, Phase 2a/2b executor fixes, build gate directory fix, GovernanceMonitor wiring
+
+### Phase 6: Contract Alignment + Ship Fixes
+**Goal**: The YAML contract deliverable paths match what executors actually produce, and the MCP approval gate is invoked exactly once
+**Depends on**: Phase 5
+**Requirements**: CONT-04
+**Gap Closure**: Closes gaps from v1.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Contract legal deliverable paths match the TSX pages that Phase 3 executor generates (`src/app/privacy/page.tsx`, `src/app/terms/page.tsx`)
+  2. Contract deployment deliverable path matches the actual file name (`deployment.json`)
+  3. The MCP approval gate is invoked exactly once per pipeline run (either from Phase 3 executor or from contract gate dispatch, not both)
+  4. Quality self-assessment for Phase 3 correctly reports all deliverables as present (no false "pending" from path mismatches)
+
+Plans:
+- [ ] 06-01-PLAN.md — YAML contract path fixes, duplicate MCP approval removal, self-assessment verification
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -100,3 +130,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
 | 3. Build | 3/3 | Complete    | 2026-03-21 |
 | 4. Ship | 3/3 | Complete   | 2026-03-21 |
+| 5. Build Pipeline Fix | 0/1 | Pending    | — |
+| 6. Contract Alignment | 0/1 | Pending    | — |
