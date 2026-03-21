@@ -29,7 +29,15 @@ def mock_agent_query():
     """
     from claude_agent_sdk.types import ResultMessage
 
-    canned_result = ResultMessage(result="mocked agent output")
+    canned_result = ResultMessage(
+        subtype="result",
+        duration_ms=100,
+        duration_api_ms=100,
+        is_error=False,
+        num_turns=1,
+        session_id="test-session-id",
+        result="mocked agent output",
+    )
 
     async def fake_query(*args, **kwargs):
         yield canned_result
