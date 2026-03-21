@@ -946,6 +946,123 @@ class TestPhase3ContractAlignment:
         )
 
 
+# ---------------------------------------------------------------------------
+# nextjs_dir propagation integration tests (Phase 07-01 — SC-6)
+# ---------------------------------------------------------------------------
+
+
+class TestNextjsDirPropagationToPhase3:
+    """Test 1 (integration): run_pipeline passes nextjs_dir in PhaseContext.extra to Phase 3."""
+
+    def test_phase3_context_receives_nextjs_dir(self, tmp_path):
+        """run_pipeline builds PhaseContext with nextjs_dir in extra for Phase 3 executor.
+
+        SC-6: The contract runner must propagate nextjs_dir through PhaseContext.extra
+        so Phase 3 executor can use it as cwd for all Vercel CLI subprocess calls.
+        """
+        from tools.contract_pipeline_runner import load_contract, run_pipeline
+        import tools.phase_executors.phase_3_executor  # ensure Phase 3 is registered
+
+        captured_contexts: list = []
+
+        def capture_ctx(ctx):
+            captured_contexts.append(ctx)
+            from tools.phase_executors.base import PhaseResult
+            return PhaseResult(phase_id=ctx.phase_id, success=False, error="test stop")
+
+        # Patch Phase 3 executor to capture the context it receives
+        with patch(
+            "tools.phase_executors.phase_3_executor.Phase3ShipExecutor.execute",
+            side_effect=capture_ctx,
+        ):
+            from tools.phase_executors.registry import _clear_registry, register
+            _clear_registry()
+
+            # Register stub executors for phases 1a, 1b, 2a, 2b so pipeline reaches phase 3
+            from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult
+
+            for pid in ["1a", "1b", "2a", "2b"]:
+                class _StubExec(PhaseExecutor):
+                    _pid = pid
+
+                    @property
+                    def phase_id(self):
+                        return self._pid
+
+                    @property
+                    def sub_steps(self):
+                        return []
+
+                    def execute(self, ctx):
+                        return PhaseResult(phase_id=self._pid, success=True)
+
+                register(_StubExec())
+
+            # Re-import phase_3 to trigger its self-registration
+            import importlib
+            import tools.phase_executors.phase_3_executor as mod_3
+            importlib.reload(mod_3)
+
+            contract = load_contract(CONTRACT_PATH)
+            run_pipeline(
+                contract=contract,
+                project_dir=str(tmp_path),
+                idea="A weight tracking app",
+                skip_gates=True,
+            )
+
+        # Find the Phase 3 context
+        phase3_ctx = next(
+            (c for c in captured_contexts if c.phase_id == "3"),
+            None,
+        )
+        assert phase3_ctx is not None, (
+            "Phase 3 executor was never called — pipeline did not reach phase 3"
+        )
+        assert "nextjs_dir" in phase3_ctx.extra, (
+            "nextjs_dir missing from PhaseContext.extra — "
+            "contract runner did not propagate nextjs_dir to Phase 3 executor. "
+            "DEPL-01/LEGL-01: add '\"nextjs_dir\": nextjs_dir' to the extra dict in run_pipeline()."
+        )
+        assert phase3_ctx.extra["nextjs_dir"], (
+            "nextjs_dir is present in PhaseContext.extra but is empty"
+        )
+
+
+class TestNewGateDispatchLegalNextjsDir:
+    """Test 8 (contract runner): _run_gate_checks legal dispatch uses nextjs_dir."""
+
+    def test_legal_gate_dispatch_uses_nextjs_dir(self, tmp_path):
+        """_run_gate_checks passes nextjs_dir (not project_dir) to run_legal_gate.
+
+        When nextjs_dir is provided, the legal gate must receive it instead of
+        the pipeline root, because legal files are written into the Next.js project.
+        """
+        contract_phase = {
+            "id": "3",
+            "gates": [{"type": "legal", "conditions": {}}],
+        }
+        passing_result = _make_passing_gate_result("legal")
+
+        with patch("tools.gates.legal_gate.run_legal_gate", return_value=passing_result) as mock_gate:
+            from tools.contract_pipeline_runner import _run_gate_checks
+            passed, issues = _run_gate_checks(
+                contract_phase,
+                str(tmp_path),
+                nextjs_dir="/fake/nextjs",
+            )
+
+        assert mock_gate.called, "run_legal_gate was not called"
+        # Verify run_legal_gate was called with nextjs_dir, NOT project_dir
+        call_kwargs = mock_gate.call_args[1]
+        project_dir_received = call_kwargs.get("project_dir")
+        assert project_dir_received == "/fake/nextjs", (
+            f"Expected run_legal_gate(project_dir='/fake/nextjs', ...), "
+            f"got project_dir={project_dir_received!r}. "
+            "The legal gate dispatch in _run_gate_checks must use nextjs_dir when provided."
+        )
+
+
 class TestExecutorRegistrationPhase3:
     """Verify Phase 3 executor self-registers via contract_pipeline_runner import."""
 

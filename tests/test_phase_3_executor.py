@@ -716,6 +716,183 @@ class TestFullHappyPath:
                 f"Sub-step '{step_result.sub_step_id}' was not successful: {step_result.error}"
             )
 
+
+# ---------------------------------------------------------------------------
+# nextjs_dir cwd propagation tests (Phase 07-01 — DEPL-01, LEGL-01/02/03)
+# ---------------------------------------------------------------------------
+
+
+class TestProvisionNextjsDir:
+    """Test 2: provision uses nextjs_dir from ctx.extra as cwd."""
+
+    def test_provision_uses_nextjs_dir_as_cwd(self, tmp_path):
+        """_provision cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
+        executor = Phase3ShipExecutor()
+
+        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+            mock_run.return_value = _mock_subprocess_success()
+            executor._provision(ctx)
+
+        # subprocess.run must have been called with cwd="/fake/nextjs" (not str(tmp_path))
+        assert mock_run.called, "subprocess.run was not called"
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs.get("cwd") == "/fake/nextjs", (
+            f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
+            "DEPL-01: _provision must use nextjs_dir (from ctx.extra) as cwd."
+        )
+
+
+class TestDeployPreviewNextjsDir:
+    """Test 3: deploy_preview uses nextjs_dir from ctx.extra as cwd."""
+
+    def test_deploy_preview_uses_nextjs_dir_as_cwd(self, tmp_path):
+        """_deploy_preview cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
+        executor = Phase3ShipExecutor()
+
+        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+            mock_run.return_value = _mock_subprocess_success(
+                stdout="https://test-app.vercel.app"
+            )
+            executor._deploy_preview(ctx)
+
+        assert mock_run.called, "subprocess.run was not called"
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs.get("cwd") == "/fake/nextjs", (
+            f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
+            "DEPL-01: _deploy_preview must use nextjs_dir (from ctx.extra) as cwd."
+        )
+
+
+class TestGenerateLegalNextjsDir:
+    """Test 4: _generate_legal uses nextjs_dir as project_dir for deploy agent."""
+
+    def test_legal_generation_uses_nextjs_dir(self, tmp_path):
+        """run_deploy_agent receives nextjs_dir as project_dir, not ctx.project_dir."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(
+            tmp_path,
+            extra={
+                "nextjs_dir": "/fake/nextjs",
+                "company_name": "AllNew LLC",
+                "contact_email": "hi@allnew.jp",
+            },
+        )
+        executor = Phase3ShipExecutor()
+        executor._preview_url = "https://test.vercel.app"
+
+        # Create PRD so _generate_legal doesn't skip for missing PRD
+        prd_dir = tmp_path / "docs" / "pipeline"
+        prd_dir.mkdir(parents=True, exist_ok=True)
+        (prd_dir / "prd.md").write_text("# PRD\n\n## Features\n\n- Feature\n", encoding="utf-8")
+
+        with patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent:
+            mock_agent.return_value = "Legal docs generated"
+            executor._generate_legal(ctx)
+
+        assert mock_agent.called, "run_deploy_agent was not called"
+        call_kwargs = mock_agent.call_args[1]
+        assert call_kwargs.get("project_dir") == "/fake/nextjs", (
+            f"Expected project_dir='/fake/nextjs', got project_dir={call_kwargs.get('project_dir')!r}. "
+            "LEGL-01: _generate_legal must pass nextjs_dir as project_dir to deploy agent."
+        )
+
+
+class TestGateLegalNextjsDir:
+    """Test 5: _gate_legal uses nextjs_dir as the directory arg to run_legal_gate."""
+
+    def test_legal_gate_uses_nextjs_dir(self, tmp_path):
+        """run_legal_gate receives nextjs_dir as first positional arg, not str(ctx.project_dir)."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
+        executor = Phase3ShipExecutor()
+
+        passing_result = _make_passing_gate_result("legal")
+
+        with patch("tools.phase_executors.phase_3_executor.run_legal_gate") as mock_gate:
+            mock_gate.return_value = passing_result
+            executor._gate_legal(ctx)
+
+        assert mock_gate.called, "run_legal_gate was not called"
+        # The first positional arg must be nextjs_dir
+        call_args = mock_gate.call_args[0]
+        assert call_args[0] == "/fake/nextjs", (
+            f"Expected run_legal_gate('/fake/nextjs', ...), got first arg={call_args[0]!r}. "
+            "LEGL-03: _gate_legal must pass nextjs_dir (not ctx.project_dir) to run_legal_gate."
+        )
+
+
+class TestGateRetryNextjsDir:
+    """Test 6: _run_gate_with_retry re-deploy subprocess uses nextjs_dir as cwd."""
+
+    def test_retry_redeploy_uses_nextjs_dir_as_cwd(self, tmp_path):
+        """After gate failure, the re-deploy subprocess.run uses cwd=nextjs_dir."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
+        executor = Phase3ShipExecutor()
+        executor._preview_url = "https://test.vercel.app"
+
+        # Gate fails first, passes second time (triggers 1 retry + redeploy)
+        failing_result = _make_failing_gate_result("lighthouse")
+        passing_result = _make_passing_gate_result("lighthouse")
+        call_count = [0]
+
+        def gate_fn(url: str):
+            call_count[0] += 1
+            if call_count[0] < 2:
+                return failing_result
+            return passing_result
+
+        with patch("tools.phase_executors.phase_3_executor.run_deploy_agent"), \
+             patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub:
+            mock_sub.return_value = _mock_subprocess_success(
+                stdout="https://myapp-new.vercel.app"
+            )
+            executor._run_gate_with_retry(
+                gate_fn=gate_fn,
+                gate_name="gate_lighthouse",
+                preview_url="https://test.vercel.app",
+                ctx=ctx,
+                max_retries=3,
+            )
+
+        # At least one subprocess.run call (re-deploy) must have cwd="/fake/nextjs"
+        assert mock_sub.called, "subprocess.run was not called during retry"
+        redeploy_cwds = [
+            call[1].get("cwd")
+            for call in mock_sub.call_args_list
+        ]
+        assert "/fake/nextjs" in redeploy_cwds, (
+            f"Expected at least one subprocess.run call with cwd='/fake/nextjs', "
+            f"got cwds={redeploy_cwds!r}. "
+            "DEPL-01: retry redeploy must use nextjs_dir (from ctx.extra) as cwd."
+        )
+
+
+class TestDeployProductionNextjsDir:
+    """Test 7: _deploy_production uses nextjs_dir as cwd."""
+
+    def test_deploy_production_uses_nextjs_dir_as_cwd(self, tmp_path):
+        """_deploy_production cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
+        executor = Phase3ShipExecutor()
+        executor._preview_url = "https://test.vercel.app"
+
+        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+            mock_run.return_value = _mock_subprocess_success()
+            executor._deploy_production(ctx)
+
+        assert mock_run.called, "subprocess.run was not called"
+        call_kwargs = mock_run.call_args[1]
+        assert call_kwargs.get("cwd") == "/fake/nextjs", (
+            f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
+            "DEPL-01: _deploy_production must use nextjs_dir (from ctx.extra) as cwd."
+        )
+
     def test_quality_self_assessment_generated(self, tmp_path):
         """Quality self-assessment is generated after all sub-steps."""
         from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
