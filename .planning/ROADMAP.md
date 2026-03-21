@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Infrastructure** - Pipeline plumbing forked and running — CLI, state, MCP, governance (completed 2026-03-21)
 - [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
 - [x] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates (completed 2026-03-21)
-- [ ] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment
+- [x] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment (completed 2026-03-21)
 
 ## Phase Details
 
@@ -82,7 +82,7 @@ Plans:
   5. Privacy Policy and Terms of Service documents are present, reference actual app features, and are linked from the deployed app
   6. The Vercel deployment URL is captured in `docs/pipeline/deployment.json` and returns HTTP 200 within 30 seconds
   7. A human MCP approval sign-off is required before the production deploy proceeds
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 04-01-PLAN.md — Deploy infrastructure: deploy-agent runner, DEPLOY_AGENT prompt, deployment gate, MCP approval gate, CLI flags
@@ -99,4 +99,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
 | 3. Build | 3/3 | Complete    | 2026-03-21 |
-| 4. Ship | 2/3 | In Progress|  |
+| 4. Ship | 3/3 | Complete   | 2026-03-21 |

@@ -53,9 +53,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Legal
 
-- [ ] **LEGL-01**: Legal phase generates Privacy Policy from web-adapted template
-- [ ] **LEGL-02**: Legal phase generates Terms of Service from web-adapted template
-- [ ] **LEGL-03**: Legal documents reference actual app features from build output
+- [x] **LEGL-01**: Legal phase generates Privacy Policy from web-adapted template
+- [x] **LEGL-02**: Legal phase generates Terms of Service from web-adapted template
+- [x] **LEGL-03**: Legal documents reference actual app features from build output
 
 ### Deployment
 
@@ -142,9 +142,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GATE-05 | Phase 3 | Complete |
 | GATE-06 | Phase 3 | Complete |
 | GATE-07 | Phase 4 | Complete |
-| LEGL-01 | Phase 4 | Pending |
-| LEGL-02 | Phase 4 | Pending |
-| LEGL-03 | Phase 4 | Pending |
+| LEGL-01 | Phase 4 | Complete |
+| LEGL-02 | Phase 4 | Complete |
+| LEGL-03 | Phase 4 | Complete |
 | DEPL-01 | Phase 4 | Complete |
 | DEPL-02 | Phase 4 | Complete |
 | DEPL-03 | Phase 4 | Complete |
