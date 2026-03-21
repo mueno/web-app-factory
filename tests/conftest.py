@@ -47,3 +47,33 @@ def mock_agent_query():
         side_effect=fake_query,
     ) as mock:
         yield mock
+
+
+@pytest.fixture
+def mock_build_agent_query():
+    """Patch claude_agent_sdk.query in build_agent_runner to return a canned ResultMessage.
+
+    Returns a ResultMessage with result="mocked build agent output" as a single-item
+    async iterator. Available for all Phase 3+ executor tests that need to run
+    build agent logic without hitting the real Claude API.
+    """
+    from claude_agent_sdk.types import ResultMessage
+
+    canned_result = ResultMessage(
+        subtype="result",
+        duration_ms=100,
+        duration_api_ms=100,
+        is_error=False,
+        num_turns=3,
+        session_id="build-test-session-id",
+        result="mocked build agent output",
+    )
+
+    async def fake_query(*args, **kwargs):
+        yield canned_result
+
+    with patch(
+        "tools.phase_executors.build_agent_runner.query",
+        side_effect=fake_query,
+    ) as mock:
+        yield mock
