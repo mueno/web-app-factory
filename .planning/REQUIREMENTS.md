@@ -19,9 +19,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Contract Design
 
-- [ ] **CONT-01**: YAML contract defines all phases with purpose, deliverables, quality criteria, and gate types
-- [ ] **CONT-02**: Each deliverable has `quality_criteria` array driving content verification (not just file existence)
-- [ ] **CONT-03**: Contract validated against JSON schema at pipeline startup
+- [x] **CONT-01**: YAML contract defines all phases with purpose, deliverables, quality criteria, and gate types
+- [x] **CONT-02**: Each deliverable has `quality_criteria` array driving content verification (not just file existence)
+- [x] **CONT-03**: Contract validated against JSON schema at pipeline startup
 - [ ] **CONT-04**: Quality self-assessment JSON generated before every gate submission
 
 ### Spec Agent
@@ -120,9 +120,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-05 | Phase 1 | Pending |
 | PIPE-06 | Phase 1 | Pending |
 | PIPE-07 | Phase 1 | Pending |
-| CONT-01 | Phase 1 | Pending |
-| CONT-02 | Phase 1 | Pending |
-| CONT-03 | Phase 1 | Pending |
+| CONT-01 | Phase 1 | Complete |
+| CONT-02 | Phase 1 | Complete |
+| CONT-03 | Phase 1 | Complete |
 | CONT-04 | Phase 1 | Pending |
 | SPEC-01 | Phase 2 | Pending |
 | SPEC-02 | Phase 2 | Pending |
