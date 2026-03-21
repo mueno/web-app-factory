@@ -37,10 +37,17 @@ def test_governance_violation_error_is_exception():
 
 
 def test_governance_monitor_phase_order_violation(tmp_path):
-    """Starting '2a' before '1b' is complete must raise GovernanceViolationError."""
-    monitor = GovernanceMonitor(run_id="test-run-001", project_dir=str(tmp_path))
+    """Starting '2a' before '1b' is complete must raise GovernanceViolationError.
 
-    # Complete 1a only, then try to start 2a (skipping 1b)
+    Uses blocking=False to avoid fast_phase_completion triggering during test
+    setup, then re-enables blocking for the order violation check.
+    """
+    # Use non-blocking monitor so fast_phase_completion doesn't interfere
+    monitor = GovernanceMonitor(
+        run_id="test-run-001", project_dir=str(tmp_path), blocking=False
+    )
+
+    # Complete 1a only (non-blocking to avoid fast_phase_completion)
     monitor.on_tool_use(
         "mcp__factory__phase_reporter",
         {"phase": "1a", "status": "start"},
@@ -50,6 +57,8 @@ def test_governance_monitor_phase_order_violation(tmp_path):
         {"phase": "1a", "status": "complete"},
     )
 
+    # Now re-enable blocking and try to start 2a (skipping 1b)
+    monitor.blocking = True
     with pytest.raises(GovernanceViolationError) as exc_info:
         monitor.on_tool_use(
             "mcp__factory__phase_reporter",
@@ -59,8 +68,14 @@ def test_governance_monitor_phase_order_violation(tmp_path):
 
 
 def test_governance_monitor_valid_phase_order_does_not_raise(tmp_path):
-    """Executing phases in valid order must not raise."""
-    monitor = GovernanceMonitor(run_id="test-run-002", project_dir=str(tmp_path))
+    """Executing phases in valid order must not raise.
+
+    Uses blocking=False to avoid fast_phase_completion during rapid test
+    execution, since the monitor is designed for long-running real phases.
+    """
+    monitor = GovernanceMonitor(
+        run_id="test-run-002", project_dir=str(tmp_path), blocking=False
+    )
 
     # 1a start -> complete -> 1b start: this is valid
     monitor.on_tool_use(
@@ -71,7 +86,7 @@ def test_governance_monitor_valid_phase_order_does_not_raise(tmp_path):
         "mcp__factory__phase_reporter",
         {"phase": "1a", "status": "complete"},
     )
-    # Should not raise
+    # Should not raise — 1b follows 1a in correct order
     monitor.on_tool_use(
         "mcp__factory__phase_reporter",
         {"phase": "1b", "status": "start"},
