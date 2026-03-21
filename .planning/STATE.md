@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: active
-stopped_at: Completed 01-infrastructure-03-PLAN.md
-last_updated: "2026-03-21T12:35:01Z"
-last_activity: 2026-03-21 — Plan 03 complete; MCP server, quality assessment, error router, agent stubs, phase stubs
+status: Active
+stopped_at: Completed 01-infrastructure-04-PLAN.md
+last_updated: "2026-03-21T12:43:22.576Z"
+last_activity: 2026-03-21 — Plan 03 complete; 58 tests passing
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 25
 ---
 
@@ -53,6 +53,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 01-infrastructure P01 | 3 | 2 tasks | 14 files |
 | Phase 01-infrastructure P02 | 7 | 2 tasks | 8 files |
 | Phase 01-infrastructure P03 | 5 | 3 tasks | 8 files |
+| Phase 01-infrastructure P04 | 251 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 01-infrastructure]: iOS tools stripped from MCP server (9 tools removed); project_dir bridge to state.json preserved verbatim
 - [Phase 01-infrastructure]: ship-agent renamed to deploy-agent in error_router.py (web deploy != iOS ship)
 - [Phase 01-infrastructure]: Phase stub executors do not auto-register at module import (registry stays empty until Phase 2+)
+- [Phase 01-infrastructure]: Claude CLI checked via --version not -p (avoids known subprocess hang bug in issue 24481)
+- [Phase 01-infrastructure]: run_pipeline uses resume_run_id + state inspection to skip completed phases (not just position)
 
 ### Pending Todos
 
@@ -87,6 +90,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T12:35:01Z
-Stopped at: Completed 01-infrastructure-03-PLAN.md
+Last session: 2026-03-21T12:43:22.574Z
+Stopped at: Completed 01-infrastructure-04-PLAN.md
 Resume file: None

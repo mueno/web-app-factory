@@ -14,8 +14,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
 - [x] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
 - [x] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
-- [ ] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
-- [ ] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
+- [x] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
+- [x] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
 
 ### Contract Design
 
@@ -118,8 +118,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PIPE-03 | Phase 1 | Complete |
 | PIPE-04 | Phase 1 | Complete |
 | PIPE-05 | Phase 1 | Complete |
-| PIPE-06 | Phase 1 | Pending |
-| PIPE-07 | Phase 1 | Pending |
+| PIPE-06 | Phase 1 | Complete |
+| PIPE-07 | Phase 1 | Complete |
 | CONT-01 | Phase 1 | Complete |
 | CONT-02 | Phase 1 | Complete |
 | CONT-03 | Phase 1 | Complete |
