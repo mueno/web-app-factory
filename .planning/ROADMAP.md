@@ -93,5 +93,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
-| 3. Build | 3/3 | Complete   | 2026-03-21 |
+| 3. Build | 3/3 | Complete    | 2026-03-21 |
 | 4. Ship | 0/TBD | Not started | - |
