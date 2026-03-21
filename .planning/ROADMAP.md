@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
 - [x] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates (completed 2026-03-21)
 - [x] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment (completed 2026-03-21)
-- [ ] **Phase 5: Build Pipeline Directory Fix + Governance Wiring** - Fix Phase 2a→2b project_dir handoff, wire GovernanceMonitor into live pipeline (gap closure)
+- [x] **Phase 5: Build Pipeline Directory Fix + Governance Wiring** - Fix Phase 2a→2b project_dir handoff, wire GovernanceMonitor into live pipeline (gap closure) (completed 2026-03-21)
 - [ ] **Phase 6: Contract Alignment + Ship Fixes** - Align YAML contract paths with implementation, remove duplicate MCP approval gate (gap closure)
 
 ## Phase Details
@@ -130,5 +130,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 2. Spec | 3/3 | Complete    | 2026-03-21 |
 | 3. Build | 3/3 | Complete    | 2026-03-21 |
 | 4. Ship | 3/3 | Complete   | 2026-03-21 |
-| 5. Build Pipeline Fix | 0/1 | Pending    | — |
+| 5. Build Pipeline Fix | 1/1 | Complete   | 2026-03-21 |
 | 6. Contract Alignment | 0/1 | Pending    | — |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Active
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-21T15:58:45.242Z"
+stopped_at: Completed 05-01-PLAN.md
+last_updated: "2026-03-21T21:12:27.174Z"
 last_activity: 2026-03-22 — Plan 04-02 complete; 378 tests passing
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 13
-  completed_plans: 13
+  total_phases: 6
+  completed_phases: 5
+  total_plans: 14
+  completed_plans: 14
   percent: 100
 ---
 
@@ -63,6 +63,7 @@ Progress: [██████████] 100%
 | Phase 04-ship P01 | 5 | 3 tasks | 9 files |
 | Phase 04-ship P02 | 6 | 2 tasks | 8 files |
 | Phase 04-ship P03 | 7 | 2 tasks | 6 files |
+| Phase 05-build-pipeline-fix P01 | 15 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -114,6 +115,7 @@ Recent decisions affecting current work:
 - [Phase 04-ship]: Legal gate feature reference is advisory-only; placeholders are blocking
 - [Phase 04-ship]: gate_security_headers and gate_link_integrity run once (no retry) -- config/structural fixes
 - [Phase 04-ship]: Phase3ShipExecutor self-registers as phase '3' at module import; 10 sub-steps end-to-end
+- [Phase 05-build-pipeline-fix]: Phase 2b nextjs_dir = ctx.project_dir.parent / ctx.app_name — mirrors Phase 2a pattern; GovernanceMonitor.blocking=False in contract runner to avoid fast_phase_completion false positives
 
 ### Pending Todos
 
@@ -127,6 +129,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T15:52:26.439Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-03-21T21:12:27.171Z
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
