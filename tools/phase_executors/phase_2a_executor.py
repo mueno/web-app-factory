@@ -1,0 +1,341 @@
+# Copyright 2026 AllNew LLC. All rights reserved.
+"""Phase 2a executor: Next.js Project Scaffolding.
+
+Scaffolds a new Next.js application via `npx create-next-app@latest` subprocess
+and then customizes the scaffold using the build agent (Claude Agent SDK).
+
+Two-step approach per CONTEXT.md locked decision:
+  Step 1 (deterministic subprocess): run `npx create-next-app@latest` with
+    explicit flags for reproducible project structure. Uses --disable-git (NOT
+    --no-git which does not exist) and --yes to suppress interactive prompts.
+  Step 2 (agent customization): run build agent to replace boilerplate, set
+    TypeScript strict mode, add error.tsx and not-found.tsx.
+
+This two-step approach prevents the agent from hallucinating the project
+structure (subprocess gives deterministic scaffold), while allowing agent
+customization for project-specific boilerplate replacement.
+
+Self-registers in the executor registry at module import time so
+contract_pipeline_runner.py only needs to import this module once.
+
+Security note: all file paths are rooted in project_dir which is resolved
+and validated by PhaseContext.__post_init__. The build agent is sandboxed
+to the generated project directory via cwd in ClaudeAgentOptions.
+"""
+
+from __future__ import annotations
+
+import logging
+import subprocess
+from pathlib import Path
+
+from agents.definitions import BUILD_AGENT
+from tools.phase_executors.base import PhaseContext, PhaseExecutor, PhaseResult, SubStepResult
+from tools.phase_executors.build_agent_runner import (
+    build_phase_system_prompt,
+    load_phase_quality_criteria,
+    run_build_agent,
+)
+from tools.phase_executors.registry import get_executor, register
+from tools.quality_self_assessment import generate_quality_self_assessment
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Default contract path (absolute — resolves relative to this file)
+# ---------------------------------------------------------------------------
+_DEFAULT_CONTRACT_PATH = (
+    Path(__file__).resolve().parent.parent.parent
+    / "contracts"
+    / "pipeline-contract.web.v1.yaml"
+)
+
+# create-next-app subprocess timeout (seconds)
+_SCAFFOLD_TIMEOUT = 180
+
+
+# ---------------------------------------------------------------------------
+# Phase 2a Executor
+# ---------------------------------------------------------------------------
+
+
+class Phase2aScaffoldExecutor(PhaseExecutor):
+    """Executor for Phase 2a: Next.js Project Scaffolding.
+
+    Runs `npx create-next-app@latest` as a deterministic subprocess to create
+    the project scaffold, then uses the build agent to customize it.
+    """
+
+    @property
+    def phase_id(self) -> str:
+        """Phase ID for Phase 2a."""
+        return "2a"
+
+    @property
+    def sub_steps(self) -> list:
+        """Ordered sub-steps for Phase 2a."""
+        return ["scaffold", "customize", "self_assess"]
+
+    def execute(self, ctx: PhaseContext) -> PhaseResult:
+        """Execute Phase 2a: scaffold Next.js project and customize it.
+
+        Step 1: Run `npx create-next-app@latest` subprocess with explicit flags
+          to create a reproducible project structure.
+        Step 2: Run build agent to customize the scaffold (replace boilerplate,
+          configure TypeScript strict mode, add error.tsx and not-found.tsx).
+        Step 3: Generate quality self-assessment.
+
+        Args:
+            ctx: Phase execution context with idea, app_name, project_dir.
+
+        Returns:
+            PhaseResult with success=True and artifacts list on success,
+            or success=False with error message on failure.
+        """
+        sub_step_results: list[SubStepResult] = []
+
+        # ── Step 1: Scaffold via create-next-app subprocess ───────────────
+        scaffold_result = self._run_scaffold(ctx)
+        sub_step_results.append(scaffold_result)
+
+        if not scaffold_result.success:
+            return PhaseResult(
+                phase_id="2a",
+                success=False,
+                error=scaffold_result.error,
+                sub_steps=sub_step_results,
+            )
+
+        # ── Step 2: Customize scaffold with build agent ───────────────────
+        customize_result = self._run_customization(ctx)
+        sub_step_results.append(customize_result)
+
+        if not customize_result.success:
+            return PhaseResult(
+                phase_id="2a",
+                success=False,
+                error=customize_result.error,
+                sub_steps=sub_step_results,
+            )
+
+        # ── Step 3: Generate quality self-assessment ──────────────────────
+        contract_path = Path(
+            ctx.extra.get("contract_path", str(_DEFAULT_CONTRACT_PATH))
+        )
+        try:
+            generate_quality_self_assessment(
+                phase_id="2a",
+                project_dir=str(ctx.project_dir),
+                contract_path=str(contract_path),
+            )
+        except Exception as exc:
+            logger.warning("Quality self-assessment generation failed: %s", type(exc).__name__)
+
+        sub_step_results.append(
+            SubStepResult(
+                sub_step_id="self_assess",
+                success=True,
+                notes="Quality self-assessment generated",
+            )
+        )
+
+        # ── Return success ────────────────────────────────────────────────
+        project_dir = ctx.project_dir / ctx.app_name
+        artifacts = [str(project_dir)]
+
+        return PhaseResult(
+            phase_id="2a",
+            success=True,
+            artifacts=artifacts,
+            sub_steps=sub_step_results,
+        )
+
+    # ── Private helpers ───────────────────────────────────────────────────
+
+    def _run_scaffold(self, ctx: PhaseContext) -> SubStepResult:
+        """Run npx create-next-app@latest as a deterministic subprocess.
+
+        Uses --disable-git (NOT --no-git which does not exist) and --yes to
+        suppress interactive prompts.
+
+        Args:
+            ctx: Phase execution context.
+
+        Returns:
+            SubStepResult with success=True on exit code 0, success=False
+            with error containing stderr on non-zero exit.
+        """
+        cmd = [
+            "npx",
+            "create-next-app@latest",
+            ctx.app_name,
+            "--typescript",
+            "--tailwind",
+            "--app",
+            "--src-dir",
+            "--disable-git",
+            "--use-npm",
+            "--yes",
+        ]
+
+        try:
+            proc = subprocess.run(
+                cmd,
+                cwd=str(ctx.project_dir.parent),
+                capture_output=True,
+                text=True,
+                timeout=_SCAFFOLD_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            return SubStepResult(
+                sub_step_id="scaffold",
+                success=False,
+                error=f"create-next-app timed out after {_SCAFFOLD_TIMEOUT}s",
+            )
+        except Exception as exc:
+            return SubStepResult(
+                sub_step_id="scaffold",
+                success=False,
+                error=f"create-next-app subprocess error: {type(exc).__name__}",
+            )
+
+        if proc.returncode != 0:
+            error_msg = proc.stderr.strip() if proc.stderr else f"exit code {proc.returncode}"
+            return SubStepResult(
+                sub_step_id="scaffold",
+                success=False,
+                error=f"create-next-app failed: {error_msg}",
+            )
+
+        project_dir = ctx.project_dir.parent / ctx.app_name
+        return SubStepResult(
+            sub_step_id="scaffold",
+            success=True,
+            artifacts=[str(project_dir)],
+            notes=f"create-next-app completed for {ctx.app_name}",
+        )
+
+    def _run_customization(self, ctx: PhaseContext) -> SubStepResult:
+        """Run build agent to customize the scaffolded project.
+
+        Instructs the agent to:
+        - Replace boilerplate page.tsx with a meaningful landing placeholder
+        - Configure next.config.ts with reactStrictMode: true
+        - Verify TypeScript strict mode is set in tsconfig.json
+        - Add root error.tsx with "use client" directive
+        - Add root not-found.tsx as a server component
+
+        Args:
+            ctx: Phase execution context.
+
+        Returns:
+            SubStepResult with success=True on agent completion, success=False
+            if the agent returns empty output.
+        """
+        contract_path = Path(
+            ctx.extra.get("contract_path", str(_DEFAULT_CONTRACT_PATH))
+        )
+        quality_criteria = load_phase_quality_criteria("2a", contract_path)
+        system_prompt = build_phase_system_prompt(
+            BUILD_AGENT.system_prompt, quality_criteria
+        )
+
+        project_dir = ctx.project_dir.parent / ctx.app_name
+        user_prompt = self._build_customization_prompt(ctx)
+
+        agent_result = run_build_agent(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            project_dir=str(project_dir),
+        )
+
+        if not agent_result:
+            return SubStepResult(
+                sub_step_id="customize",
+                success=False,
+                error="Build agent returned empty result during Phase 2a customization",
+            )
+
+        return SubStepResult(
+            sub_step_id="customize",
+            success=True,
+            artifacts=[str(project_dir / "src" / "app" / "page.tsx")],
+            notes="Scaffold customization completed",
+        )
+
+    def _build_customization_prompt(self, ctx: PhaseContext) -> str:
+        """Construct the customization prompt for the build agent.
+
+        Args:
+            ctx: Phase execution context.
+
+        Returns:
+            Formatted user prompt string.
+        """
+        return f"""\
+You are executing Phase 2a customization: configure the scaffolded Next.js project.
+
+App name: {ctx.app_name}
+App idea: {ctx.idea}
+
+Your tasks:
+1. Replace the boilerplate `src/app/page.tsx` with a minimal but meaningful landing
+   placeholder that reflects the app's purpose. Use the app idea for context.
+   The page should be a React Server Component (no "use client").
+
+2. Update `next.config.ts` to enable reactStrictMode:
+   ```typescript
+   const nextConfig = {{
+     reactStrictMode: true,
+   }};
+   export default nextConfig;
+   ```
+
+3. Verify `tsconfig.json` has strict mode enabled. If it does not have
+   `"strict": true`, add it under `compilerOptions`.
+
+4. Create `src/app/error.tsx` as a client component error boundary:
+   ```typescript
+   "use client";
+
+   export default function Error({{
+     error,
+     reset,
+   }}: {{
+     error: Error & {{ digest?: string }};
+     reset: () => void;
+   }}) {{
+     return (
+       <div>
+         <h2>Something went wrong!</h2>
+         <button onClick={{() => reset()}}>Try again</button>
+       </div>
+     );
+   }}
+   ```
+
+5. Create `src/app/not-found.tsx` as a server component (NO "use client"):
+   ```typescript
+   export default function NotFound() {{
+     return (
+       <div>
+         <h2>Not Found</h2>
+         <p>Could not find the requested resource</p>
+       </div>
+     );
+   }}
+   ```
+
+Keep all files TypeScript-typed with explicit prop interfaces and return types.
+Do not add "use client" to layout.tsx or page.tsx.
+"""
+
+
+# ---------------------------------------------------------------------------
+# Self-registration — runs at module import time (and on importlib.reload)
+# ---------------------------------------------------------------------------
+# Guard: only register if not already registered. This allows tests to clear
+# the registry and re-trigger registration via importlib.reload() without
+# hitting the "duplicate registration" error on the first import.
+if get_executor("2a") is None:
+    register(Phase2aScaffoldExecutor())

@@ -262,7 +262,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             result = mod.Phase2aScaffoldExecutor().execute(ctx)
 
         assert mock_sub.called
@@ -286,7 +286,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -308,7 +308,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -330,7 +330,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -352,7 +352,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -376,7 +376,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -398,7 +398,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc) as mock_sub, \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         call_args = mock_sub.call_args[0][0]
@@ -420,7 +420,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc), \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query) as mock_q, \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         assert mock_q.called, "run_build_agent (via query) must be called after successful subprocess"
@@ -457,7 +457,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc), \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment") as mock_assess:
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment") as mock_assess:
             mod.Phase2aScaffoldExecutor().execute(ctx)
 
         assert mock_assess.called
@@ -478,7 +478,7 @@ class TestPhase2aScaffoldExecutor:
 
         with patch("subprocess.run", return_value=mock_proc), \
              patch("tools.phase_executors.build_agent_runner.query", side_effect=fake_query), \
-             patch("tools.quality_self_assessment.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2a_executor.generate_quality_self_assessment"):
             result = mod.Phase2aScaffoldExecutor().execute(ctx)
 
         assert result.success is True
