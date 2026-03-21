@@ -45,7 +45,12 @@ Plans:
   1. Phase 1a generates a Go/No-Go decision with named competitor analysis and a defined target user — readable as a real business decision document, not a placeholder
   2. Phase 1b produces a PRD with MoSCoW-classified requirements, a component inventory, and a tech feasibility memo that references the actual app being built
   3. The spec agent prompt contains no iOS-specific references and is validated by running a smoke test against a sample idea
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Spec agent definition, shared runner utility, test mock infrastructure
+- [ ] 02-02-PLAN.md — Phase 1a executor: idea validation + tech feasibility memo
+- [ ] 02-03-PLAN.md — Phase 1b executor: PRD + screen specification
 
 ### Phase 3: Build
 **Goal**: The build agent scaffolds and generates a Next.js application that compiles, type-checks, and passes static analysis gates
@@ -82,6 +87,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
-| 2. Spec | 0/TBD | Not started | - |
+| 2. Spec | 0/3 | Not started | - |
 | 3. Build | 0/TBD | Not started | - |
 | 4. Ship | 0/TBD | Not started | - |
