@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Active
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-03-21T21:32:24.642Z"
-last_activity: 2026-03-22 — Plan 04-02 complete; 378 tests passing
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-03-22T07:11:00.000Z"
+last_activity: 2026-03-22 — Plan 07-01 complete; 447 tests passing
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
+  total_phases: 7
+  completed_phases: 7
+  total_plans: 16
+  completed_plans: 16
   percent: 100
 ---
 
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 
 ## Current Position
 
-Phase: 4 of 4 (Ship)
-Plan: 2 of 2 in current phase (04-02 complete — Phase 04 done)
+Phase: 7 of 7 (Ship Directory Fix)
+Plan: 1 of 1 in current phase (07-01 complete — Phase 07 done)
 Status: Active
-Last activity: 2026-03-22 — Plan 04-02 complete; 378 tests passing
+Last activity: 2026-03-22 — Plan 07-01 complete; 447 tests passing
 
 Progress: [██████████] 100%
 
@@ -65,6 +65,7 @@ Progress: [██████████] 100%
 | Phase 04-ship P03 | 7 | 2 tasks | 6 files |
 | Phase 05-build-pipeline-fix P01 | 15 | 2 tasks | 4 files |
 | Phase 06-contract-alignment P01 | 117 | 2 tasks | 3 files |
+| Phase 07-ship-directory-fix P01 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -118,6 +119,7 @@ Recent decisions affecting current work:
 - [Phase 04-ship]: Phase3ShipExecutor self-registers as phase '3' at module import; 10 sub-steps end-to-end
 - [Phase 05-build-pipeline-fix]: Phase 2b nextjs_dir = ctx.project_dir.parent / ctx.app_name — mirrors Phase 2a pattern; GovernanceMonitor.blocking=False in contract runner to avoid fast_phase_completion false positives
 - [Phase 06-contract-alignment]: Phase 3 YAML deliverable paths corrected to match executor output (deployment.json, src/app/privacy/page.tsx, src/app/terms/page.tsx); mcp_approval gate removed from Phase 3 YAML to prevent duplicate human-approval per run
+- [Phase 07-ship-directory-fix]: nextjs_dir propagated from run_pipeline() through PhaseContext.extra to Phase 3 executor; ctx.extra.get("nextjs_dir") or str(ctx.project_dir) fallback pattern ensures backward compatibility; integration test uses CapturingPhase3Executor registered in registry (not class-level patch) to survive module reload
 
 ### Pending Todos
 
