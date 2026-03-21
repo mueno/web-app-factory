@@ -9,11 +9,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Pipeline Infrastructure
 
-- [ ] **PIPE-01**: Pipeline executes phases in order defined by YAML contract, blocking on gate failure
-- [ ] **PIPE-02**: Pipeline state persists to `state.json` and `activity-log.jsonl`, surviving interruption
-- [ ] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
+- [x] **PIPE-01**: Pipeline executes phases in order defined by YAML contract, blocking on gate failure
+- [x] **PIPE-02**: Pipeline state persists to `state.json` and `activity-log.jsonl`, surviving interruption
+- [x] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
 - [ ] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
-- [ ] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
+- [x] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
 - [ ] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
 - [ ] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
 
@@ -113,11 +113,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 1 | Pending |
-| PIPE-02 | Phase 1 | Pending |
-| PIPE-03 | Phase 1 | Pending |
+| PIPE-01 | Phase 1 | Complete |
+| PIPE-02 | Phase 1 | Complete |
+| PIPE-03 | Phase 1 | Complete |
 | PIPE-04 | Phase 1 | Pending |
-| PIPE-05 | Phase 1 | Pending |
+| PIPE-05 | Phase 1 | Complete |
 | PIPE-06 | Phase 1 | Pending |
 | PIPE-07 | Phase 1 | Pending |
 | CONT-01 | Phase 1 | Complete |
