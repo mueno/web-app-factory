@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Active
-stopped_at: Phase 2 plans verified
-last_updated: "2026-03-21T13:17:35.915Z"
-last_activity: 2026-03-21 — Plan 03 complete; 58 tests passing
+stopped_at: "Completed 02-spec/02-01-PLAN.md"
+last_updated: "2026-03-21T13:20:52Z"
+last_activity: 2026-03-21 — Plan 02-01 complete; 109 tests passing
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
-  percent: 25
+  completed_plans: 5
+  percent: 36
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 
 ## Current Position
 
-Phase: 1 of 4 (Infrastructure)
-Plan: 3 of 4 in current phase
+Phase: 2 of 4 (Spec)
+Plan: 1 of 3 in current phase (02-01 complete)
 Status: Active
-Last activity: 2026-03-21 — Plan 03 complete; 58 tests passing
+Last activity: 2026-03-21 — Plan 02-01 complete; 109 tests passing
 
-Progress: [██░░░░░░░░] 25%
+Progress: [███░░░░░░░] 36%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██░░░░░░░░] 25%
 | Phase 01-infrastructure P02 | 7 | 2 tasks | 8 files |
 | Phase 01-infrastructure P03 | 5 | 3 tasks | 8 files |
 | Phase 01-infrastructure P04 | 251 | 2 tasks | 6 files |
+| Phase 02-spec P01 | 10 | 1 task | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,9 @@ Recent decisions affecting current work:
 - [Phase 01-infrastructure]: Phase stub executors do not auto-register at module import (registry stays empty until Phase 2+)
 - [Phase 01-infrastructure]: Claude CLI checked via --version not -p (avoids known subprocess hang bug in issue 24481)
 - [Phase 01-infrastructure]: run_pipeline uses resume_run_id + state inspection to skip completed phases (not just position)
+- [Phase 02-spec]: mock_agent_query fixture passes all 6 required ResultMessage constructor args (subtype, duration_ms, duration_api_ms, is_error, num_turns, session_id)
+- [Phase 02-spec]: run_spec_agent allowed_tools restricted to WebSearch/Read/Write — no shell execution
+- [Phase 02-spec]: asyncio.run() used as sync/async bridge in run_spec_agent (consistent with ios-app-factory pattern)
 
 ### Pending Todos
 
