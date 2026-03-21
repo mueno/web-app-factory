@@ -1,0 +1,233 @@
+version: "1"
+schema: "pipeline-contract"
+
+metadata:
+  created: "2026-03-21"
+  description: "Web application factory pipeline contract defining 5 quality-gated phases from idea to deployed app"
+
+defaults:
+  strict_mode: true
+  gate_policy: fail-closed
+  strict_quality_assessment_required: true
+
+phases:
+  - id: "1a"
+    name: "Idea Validation"
+    purpose: >
+      Validate market viability and technical feasibility of the app idea before committing to full development.
+      Produce a Go/No-Go decision basis with competitor analysis, target user definition, and technical risk assessment.
+
+    deliverables:
+      - name: "Idea Validation Report"
+        path: "docs/pipeline/idea-validation.md"
+        quality_criteria:
+          - "At least 3 named competitor apps are analyzed with specific feature comparisons (not generic categories)"
+          - "Target user persona includes age range, occupation, and a concrete pain point with a real-world example"
+          - "Differentiation strategy is derived from the competitor analysis gaps, not stated generically"
+          - "At least 3 risks are identified with specific mitigation strategies for each"
+          - "Market size estimate is provided with a quantitative basis or cited source"
+
+      - name: "Technical Feasibility Memo"
+        path: "docs/pipeline/tech-feasibility-memo.json"
+        quality_criteria:
+          - "Next.js suitability is evaluated against the specific app requirements (SSR vs SSG vs ISR trade-offs discussed)"
+          - "External API dependencies are listed by name with rate limits or cost implications noted"
+          - "Vercel deployment constraints relevant to the app are assessed (serverless timeout, bundle size, etc.)"
+          - "Browser API requirements (camera, geolocation, etc.) are listed if applicable, with fallback strategy"
+
+    gates:
+      - type: "artifact"
+        description: "Required deliverable files are generated"
+        conditions:
+          required_files:
+            - "docs/pipeline/idea-validation.md"
+            - "docs/pipeline/tech-feasibility-memo.json"
+
+      - type: "tool_invocation"
+        description: "Content validation — deliverables contain required sections"
+        conditions:
+          required_output_markers:
+            - "## Competitors"
+            - "## Target User"
+            - "## Differentiation"
+            - "## Risks"
+
+  - id: "1b"
+    name: "Spec and Design"
+    purpose: >
+      Produce a structured Product Requirements Document (PRD) and detailed screen specification.
+      Define all user-facing screens, component hierarchy, responsive strategy, and routing structure
+      so the build agent has an unambiguous implementation blueprint.
+
+    deliverables:
+      - name: "Product Requirements Document"
+        path: "docs/pipeline/prd.md"
+        quality_criteria:
+          - "Requirements are classified with MoSCoW labels (Must/Should/Could/Won't) and each requirement is individually labeled"
+          - "Component inventory lists every reusable UI component with its hierarchy (parent-child relationships specified)"
+          - "Responsive breakpoint strategy specifies behavior at mobile (< 768px), tablet (768-1024px), and desktop (> 1024px)"
+          - "Route structure lists all pages with their URL paths, dynamic segments, and data requirements"
+          - "Data flow diagram or description shows how data moves between components and external APIs"
+
+      - name: "Screen Specification"
+        path: "docs/pipeline/screen-spec.json"
+        quality_criteria:
+          - "Every screen in the app has a layout description specifying major regions (header, sidebar, main content, footer)"
+          - "Every screen lists its component inventory with component names that match the PRD component inventory"
+          - "Interactive states (loading, error, empty, populated) are specified for every screen with data dependencies"
+          - "Mobile layout differences from desktop are explicitly called out for each screen"
+
+    gates:
+      - type: "artifact"
+        description: "Required deliverable files are generated"
+        conditions:
+          required_files:
+            - "docs/pipeline/prd.md"
+            - "docs/pipeline/screen-spec.json"
+
+      - type: "tool_invocation"
+        description: "PRD contains required structure sections"
+        conditions:
+          required_output_markers:
+            - "Must"
+            - "Should"
+            - "Could"
+            - "Won't"
+
+  - id: "2a"
+    name: "Scaffold"
+    purpose: >
+      Create the Next.js project scaffold using create-next-app with TypeScript, Tailwind CSS v4, and App Router.
+      Establish the directory structure, configuration files, and base layout so the build agent
+      has a compilable baseline to work from.
+
+    deliverables:
+      - name: "Next.js Project Scaffold"
+        path: "src/"
+        quality_criteria:
+          - "TypeScript is configured in strict mode (strict: true in tsconfig.json) and tsc --noEmit passes with zero errors"
+          - "Tailwind CSS v4 is configured and the PostCSS config references @tailwindcss/postcss"
+          - "App Router directory structure includes src/app/layout.tsx that defines root metadata (title, description) and font imports"
+          - "src/app/page.tsx renders a meaningful landing page placeholder (not just create-next-app default boilerplate)"
+          - "next.config.ts configures TypeScript strict checking and exports a NextConfig object with at least one custom setting"
+
+    gates:
+      - type: "build"
+        description: "Project builds successfully and TypeScript passes"
+        conditions:
+          commands:
+            - "npm run build"
+            - "npx tsc --noEmit"
+
+  - id: "2b"
+    name: "Build"
+    purpose: >
+      Generate all pages and components from the PRD and screen specification.
+      The build agent reads the PRD and screen spec, implements each screen as App Router pages
+      with proper component composition, error boundaries, and mobile-first responsive styles.
+
+    deliverables:
+      - name: "Generated Web Application"
+        path: "src/"
+        quality_criteria:
+          - "All screens defined in the screen-spec.json are implemented as Next.js pages with matching routes"
+          - "Every page with async data fetching has an error boundary implemented using error.tsx"
+          - "Mobile-first responsive design is applied — base styles target mobile, md: and lg: prefixes for larger screens"
+          - "No 'use client' directive appears in layout.tsx or root page.tsx (server components by default)"
+          - "No NEXT_PUBLIC_ prefixed environment variable contains sensitive data (API keys, secrets)"
+          - "All components in the PRD component inventory have corresponding .tsx files in src/components/"
+
+    gates:
+      - type: "build"
+        description: "Application builds without errors"
+        conditions:
+          commands:
+            - "npm run build"
+
+      - type: "static_analysis"
+        description: "No client/server boundary violations or secret leaks"
+        conditions:
+          checks:
+            - name: "no_use_client_in_layout"
+              pattern: "use client"
+              files: ["src/app/layout.tsx", "src/app/page.tsx"]
+              must_not_match: true
+            - name: "no_next_public_secrets"
+              pattern: "NEXT_PUBLIC_.*KEY|NEXT_PUBLIC_.*SECRET|NEXT_PUBLIC_.*TOKEN"
+              scope: "src/"
+              must_not_match: true
+
+  - id: "3"
+    name: "Ship"
+    purpose: >
+      Run comprehensive quality gates — performance, accessibility, security, and link integrity —
+      then generate legal documents and deploy to Vercel. The ship phase is the final quality
+      checkpoint before the app is publicly accessible.
+
+    deliverables:
+      - name: "Deployed Web Application"
+        path: "docs/pipeline/deployment-report.json"
+        quality_criteria:
+          - "Lighthouse performance score >= 85 measured on the production Vercel URL"
+          - "Lighthouse accessibility score >= 90 with all critical axe-core violations resolved"
+          - "Lighthouse SEO score >= 85 with meta description and title tag verified"
+          - "Security headers present: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Content-Security-Policy"
+          - "No broken links detected by link integrity checker (all internal links return 2xx or 3xx)"
+
+      - name: "Privacy Policy"
+        path: "docs/pipeline/legal/privacy-policy.md"
+        quality_criteria:
+          - "Privacy Policy references specific data types collected by the app (not generic template placeholders)"
+          - "Privacy Policy includes the actual app name and company name (no 'YOUR_APP_NAME' or 'YOUR_COMPANY' placeholders)"
+          - "Data retention period is specified with a concrete timeframe (e.g., '30 days', 'until account deletion')"
+          - "Contact information for privacy inquiries is provided with a real email address or contact form URL"
+
+      - name: "Terms of Service"
+        path: "docs/pipeline/legal/terms-of-service.md"
+        quality_criteria:
+          - "Terms of Service references the specific features and functionality of the deployed app"
+          - "Terms of Service includes the actual app name and company name (no template placeholders)"
+          - "Governing law and jurisdiction are specified (e.g., 'Laws of the State of California, USA')"
+          - "User account termination conditions are explicitly listed with at least 3 specific grounds"
+
+    gates:
+      - type: "lighthouse"
+        description: "Performance, accessibility, and SEO thresholds met"
+        conditions:
+          thresholds:
+            performance: 85
+            accessibility: 90
+            seo: 85
+
+      - type: "accessibility"
+        description: "Zero axe-core critical violations on all pages"
+        conditions:
+          tool: "axe-core"
+          max_critical_violations: 0
+
+      - type: "security_headers"
+        description: "Required security headers present in HTTP response"
+        conditions:
+          required_headers:
+            - "X-Frame-Options"
+            - "X-Content-Type-Options"
+            - "Referrer-Policy"
+            - "Content-Security-Policy"
+
+      - type: "link_integrity"
+        description: "All internal links resolve successfully"
+        conditions:
+          scope: "internal"
+          allowed_status_codes: [200, 201, 301, 302, 307, 308]
+
+      - type: "deployment"
+        description: "Application successfully deployed to Vercel"
+        conditions:
+          platform: "vercel"
+          required_url_pattern: "https://*.vercel.app"
+
+      - type: "mcp_approval"
+        description: "Human approval gate via MCP server before public deployment"
+        conditions:
+          tool: "approve_gate"
+          phase: "3"

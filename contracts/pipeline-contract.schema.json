@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "pipeline-contract",
+  "title": "Pipeline Contract Schema",
+  "description": "JSON Schema for validating web-app-factory pipeline contract YAML files",
+  "type": "object",
+  "required": ["version", "schema", "phases"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Contract schema version"
+    },
+    "schema": {
+      "type": "string",
+      "const": "pipeline-contract",
+      "description": "Schema identifier — must be 'pipeline-contract'"
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "created": {"type": "string"},
+        "description": {"type": "string"}
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "strict_mode": {"type": "boolean"},
+        "gate_policy": {"type": "string"},
+        "strict_quality_assessment_required": {"type": "boolean"}
+      }
+    },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/phase"
+      }
+    }
+  },
+  "definitions": {
+    "phase": {
+      "type": "object",
+      "required": ["id", "name", "purpose", "deliverables", "gates"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Phase identifier (e.g., '1a', '1b', '2a', '2b', '3')"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable phase name"
+        },
+        "purpose": {
+          "type": "string",
+          "description": "What this phase achieves and why it exists"
+        },
+        "deliverables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/deliverable"
+          }
+        },
+        "gates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/gate"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "deliverable": {
+      "type": "object",
+      "required": ["name", "path", "quality_criteria"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable deliverable name"
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative path where the deliverable is produced"
+        },
+        "quality_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Content-verifying quality criterion (not a simple existence check)"
+          },
+          "description": "List of content-verifying quality criteria — at least one required"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gate": {
+      "type": "object",
+      "required": ["type", "description"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "artifact",
+            "tool_invocation",
+            "build",
+            "static_analysis",
+            "lighthouse",
+            "accessibility",
+            "security_headers",
+            "link_integrity",
+            "deployment",
+            "mcp_approval"
+          ],
+          "description": "Gate type determines which gate runner handles validation"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of what this gate validates"
+        },
+        "conditions": {
+          "type": "object",
+          "description": "Gate-type-specific conditions for pass/fail determination"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
