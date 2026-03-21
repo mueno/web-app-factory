@@ -53,15 +53,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Legal
 
-- [x] **LEGL-01**: Legal phase generates Privacy Policy from web-adapted template
-- [x] **LEGL-02**: Legal phase generates Terms of Service from web-adapted template
-- [x] **LEGL-03**: Legal documents reference actual app features from build output
+- [ ] **LEGL-01**: Legal phase generates Privacy Policy from web-adapted template
+- [ ] **LEGL-02**: Legal phase generates Terms of Service from web-adapted template
+- [ ] **LEGL-03**: Legal documents reference actual app features from build output
 
 ### Deployment
 
-- [x] **DEPL-01**: Pipeline deploys to Vercel via CLI (`vercel pull → build → deploy --prebuilt`)
-- [x] **DEPL-02**: Preview URL captured in `docs/pipeline/deployment.json` after deploy
-- [x] **DEPL-03**: Deploy gate verifies HTTP 200 on deployed URL within 30 seconds
+- [ ] **DEPL-01**: Pipeline deploys to Vercel via CLI (`vercel pull → build → deploy --prebuilt`)
+- [ ] **DEPL-02**: Preview URL captured in `docs/pipeline/deployment.json` after deploy
+- [ ] **DEPL-03**: Deploy gate verifies HTTP 200 on deployed URL within 30 seconds
 - [x] **DEPL-04**: MCP approval gate wraps deployment (human sign-off before production deploy)
 
 ## v2 Requirements
@@ -142,19 +142,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | GATE-05 | Phase 3 | Complete |
 | GATE-06 | Phase 3 | Complete |
 | GATE-07 | Phase 4 | Complete |
-| LEGL-01 | Phase 4 | Complete |
-| LEGL-02 | Phase 4 | Complete |
-| LEGL-03 | Phase 4 | Complete |
-| DEPL-01 | Phase 4 | Complete |
-| DEPL-02 | Phase 4 | Complete |
-| DEPL-03 | Phase 4 | Complete |
+| LEGL-01 | Phase 7 | Pending |
+| LEGL-02 | Phase 7 | Pending |
+| LEGL-03 | Phase 7 | Pending |
+| DEPL-01 | Phase 7 | Pending |
+| DEPL-02 | Phase 7 | Pending |
+| DEPL-03 | Phase 7 | Pending |
 | DEPL-04 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 36 total
 - Mapped to phases: 36
 - Unmapped: 0 ✓
+- Pending (gap closure): 6 (DEPL-01/02/03, LEGL-01/02/03 → Phase 7)
 
 ---
 *Requirements defined: 2026-03-21*
-*Last updated: 2026-03-22 after gap closure phase creation (PIPE-05, CONT-04, BILD-02/03/04 reset to Pending)*
+*Last updated: 2026-03-22 after gap closure phase creation (DEPL-01/02/03, LEGL-01/02/03 reset to Pending for Phase 7)*

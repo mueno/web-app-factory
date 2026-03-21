@@ -18,6 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment (completed 2026-03-21)
 - [x] **Phase 5: Build Pipeline Directory Fix + Governance Wiring** - Fix Phase 2a→2b project_dir handoff, wire GovernanceMonitor into live pipeline (gap closure) (completed 2026-03-21)
 - [x] **Phase 6: Contract Alignment + Ship Fixes** - Align YAML contract paths with implementation, remove duplicate MCP approval gate (gap closure) (completed 2026-03-21)
+- [ ] **Phase 7: Ship Directory Fix** - Fix nextjs_dir handoff to Phase 3 executor so deploy and legal operations target the correct directory (gap closure)
 
 ## Phase Details
 
@@ -119,10 +120,26 @@ Plans:
 Plans:
 - [ ] 06-01-PLAN.md — YAML contract path fixes, duplicate MCP approval removal, self-assessment verification
 
+### Phase 7: Ship Directory Fix
+**Goal**: Phase 3 (Ship) executor operates in the generated Next.js project directory for all deploy and legal operations, fixing the 6 unsatisfied requirements identified by milestone audit
+**Depends on**: Phase 6
+**Requirements**: DEPL-01, DEPL-02, DEPL-03, LEGL-01, LEGL-02, LEGL-03
+**Gap Closure**: Closes gaps from v1.0 milestone audit (single root cause: nextjs_dir not in PhaseContext.extra)
+**Success Criteria** (what must be TRUE):
+  1. `contract_pipeline_runner.py` passes `nextjs_dir` in `PhaseContext.extra` to the Phase 3 executor
+  2. Phase 3 executor uses `ctx.extra["nextjs_dir"]` as `cwd` for all Vercel CLI operations (`vercel pull`, `vercel build`, `vercel deploy`)
+  3. Deploy agent writes legal documents (`privacy/page.tsx`, `terms/page.tsx`) inside the Next.js project, not the pipeline root
+  4. Deploy gate verifies HTTP 200 on a URL derived from a successful deploy (not an empty/invalid URL)
+  5. All existing tests (439+) continue to pass after the directory handoff fix
+  6. New integration test verifies `nextjs_dir` propagation from runner to Phase 3 executor
+
+Plans:
+- [ ] 07-01-PLAN.md — nextjs_dir propagation to PhaseContext.extra, Phase 3 executor cwd fix, deploy agent cwd fix, integration test
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -132,3 +149,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | 4. Ship | 3/3 | Complete   | 2026-03-21 |
 | 5. Build Pipeline Fix | 1/1 | Complete   | 2026-03-21 |
 | 6. Contract Alignment | 1/1 | Complete   | 2026-03-21 |
+| 7. Ship Directory Fix | 0/1 | Not Started | — |
