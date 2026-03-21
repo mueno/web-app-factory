@@ -12,6 +12,49 @@ CONTRACT_PATH = str(
 )
 
 
+def _make_stub_executor(phase_id: str, success: bool):
+    """Create a real PhaseExecutor subclass stub for the given phase."""
+    from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult
+
+    class StubExecutor(PhaseExecutor):
+        @property
+        def phase_id(self) -> str:
+            return phase_id
+
+        @property
+        def sub_steps(self) -> list:
+            return []
+
+        def execute(self, ctx: PhaseContext) -> PhaseResult:
+            return PhaseResult(
+                phase_id=phase_id,
+                success=success,
+                error=None if success else "Stub executor failure",
+            )
+
+    return StubExecutor()
+
+
+def _make_tracking_executor(phase_id: str, call_log: list, success: bool = True):
+    """Create a PhaseExecutor stub that appends phase_id to call_log on execute."""
+    from tools.phase_executors.base import PhaseExecutor, PhaseContext, PhaseResult
+
+    class TrackingExecutor(PhaseExecutor):
+        @property
+        def phase_id(self) -> str:
+            return phase_id
+
+        @property
+        def sub_steps(self) -> list:
+            return []
+
+        def execute(self, ctx: PhaseContext) -> PhaseResult:
+            call_log.append(phase_id)
+            return PhaseResult(phase_id=phase_id, success=success)
+
+    return TrackingExecutor()
+
+
 class TestLoadContract:
     def test_loads_yaml_with_5_phases(self):
         from tools.contract_pipeline_runner import load_contract
@@ -43,37 +86,16 @@ class TestLoadContract:
 
 
 class TestRunPipeline:
-    def _make_failing_executor(self, phase_id: str):
-        """Create a mock executor that returns failure."""
-        from tools.phase_executors.base import PhaseResult
-        executor = MagicMock()
-        executor.phase_id = phase_id
-        executor.execute.return_value = PhaseResult(
-            phase_id=phase_id,
-            success=False,
-            error="Stub executor failure",
-        )
-        return executor
-
-    def _make_passing_executor(self, phase_id: str):
-        """Create a mock executor that returns success."""
-        from tools.phase_executors.base import PhaseResult
-        executor = MagicMock()
-        executor.phase_id = phase_id
-        executor.execute.return_value = PhaseResult(
-            phase_id=phase_id,
-            success=True,
-        )
-        return executor
-
     def test_stops_at_first_failing_phase(self, tmp_path):
         from tools.contract_pipeline_runner import load_contract, run_pipeline
         from tools.phase_executors.registry import _clear_registry, register
 
         _clear_registry()
-        failing_1a = self._make_failing_executor("1a")
+        failing_1a = _make_stub_executor("1a", success=False)
         register(failing_1a)
-        passing_1b = self._make_passing_executor("1b")
+
+        called_order: list[str] = []
+        passing_1b = _make_tracking_executor("1b", called_order, success=True)
         register(passing_1b)
 
         contract = load_contract(CONTRACT_PATH)
@@ -81,12 +103,12 @@ class TestRunPipeline:
             contract=contract,
             project_dir=str(tmp_path),
             idea="test idea",
-            skip_gates=True,  # skip gate checks in unit test
+            skip_gates=True,
         )
 
         assert result["status"] == "failed"
         # 1b should never have been called
-        passing_1b.execute.assert_not_called()
+        assert "1b" not in called_order
 
         _clear_registry()
 
@@ -95,20 +117,10 @@ class TestRunPipeline:
         from tools.phase_executors.registry import _clear_registry, register
 
         _clear_registry()
-        called_order = []
+        called_order: list[str] = []
 
         for pid in ["1a", "1b", "2a", "2b", "3"]:
-            executor = self._make_passing_executor(pid)
-            # Capture call order via side_effect
-            from tools.phase_executors.base import PhaseResult
-            pid_capture = pid  # closure capture
-            def make_side_effect(p):
-                def side_effect(ctx):
-                    called_order.append(p)
-                    return PhaseResult(phase_id=p, success=True)
-                return side_effect
-            executor.execute.side_effect = make_side_effect(pid)
-            register(executor)
+            register(_make_tracking_executor(pid, called_order, success=True))
 
         contract = load_contract(CONTRACT_PATH)
         result = run_pipeline(
@@ -132,8 +144,9 @@ class TestRunPipeline:
         ps.phase_complete(state.run_id, "1a", str(tmp_path))
 
         _clear_registry()
-        executor_1a = self._make_passing_executor("1a")
-        executor_1b = self._make_failing_executor("1b")  # Stop at 1b
+        called_order: list[str] = []
+        executor_1a = _make_tracking_executor("1a", called_order, success=True)
+        executor_1b = _make_tracking_executor("1b", called_order, success=False)  # Stop at 1b
         register(executor_1a)
         register(executor_1b)
 
@@ -147,8 +160,8 @@ class TestRunPipeline:
         )
 
         # 1a was already complete, should not re-execute it
-        executor_1a.execute.assert_not_called()
+        assert "1a" not in called_order
         # 1b should have been called (and failed)
-        executor_1b.execute.assert_called_once()
+        assert "1b" in called_order
 
         _clear_registry()
