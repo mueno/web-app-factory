@@ -33,22 +33,22 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Build Agent
 
-- [ ] **BILD-01**: Phase 2a scaffolds Next.js project via `create-next-app` with TypeScript, Tailwind v4, App Router
+- [x] **BILD-01**: Phase 2a scaffolds Next.js project via `create-next-app` with TypeScript, Tailwind v4, App Router
 - [ ] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
-- [ ] **BILD-03**: Generated app passes `next build` production build without errors
-- [ ] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
-- [ ] **BILD-05**: Generated app is responsive (mobile-first Tailwind classes)
-- [ ] **BILD-06**: Generated app includes error boundaries (`error.tsx`, `not-found.tsx`)
+- [x] **BILD-03**: Generated app passes `next build` production build without errors
+- [x] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
+- [x] **BILD-05**: Generated app is responsive (mobile-first Tailwind classes)
+- [x] **BILD-06**: Generated app includes error boundaries (`error.tsx`, `not-found.tsx`)
 - [ ] **BILD-07**: npm packages validated against registry before install (hallucination prevention)
 
 ### Quality Gates
 
-- [ ] **GATE-01**: Build gate fails pipeline if `next build` or `tsc --noEmit` returns non-zero
+- [x] **GATE-01**: Build gate fails pipeline if `next build` or `tsc --noEmit` returns non-zero
 - [ ] **GATE-02**: Lighthouse gate runs against deployed preview URL with thresholds (perf ≥85, a11y ≥90, SEO ≥85)
 - [ ] **GATE-03**: Security headers gate verifies CSP, HSTS, X-Frame-Options, X-Content-Type-Options
 - [ ] **GATE-04**: Link integrity gate verifies no internal 404s in deployed app
-- [ ] **GATE-05**: Static analysis gate flags `"use client"` in `layout.tsx` or `page.tsx`
-- [ ] **GATE-06**: Static analysis gate fails on `NEXT_PUBLIC_` + secret-pattern environment variables
+- [x] **GATE-05**: Static analysis gate flags `"use client"` in `layout.tsx` or `page.tsx`
+- [x] **GATE-06**: Static analysis gate fails on `NEXT_PUBLIC_` + secret-pattern environment variables
 - [ ] **GATE-07**: axe-core accessibility check runs in addition to Lighthouse a11y score
 
 ### Legal
@@ -128,19 +128,19 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SPEC-02 | Phase 2 | Complete |
 | SPEC-03 | Phase 2 | Complete |
 | SPEC-04 | Phase 2 | Complete |
-| BILD-01 | Phase 3 | Pending |
+| BILD-01 | Phase 3 | Complete |
 | BILD-02 | Phase 3 | Pending |
-| BILD-03 | Phase 3 | Pending |
-| BILD-04 | Phase 3 | Pending |
-| BILD-05 | Phase 3 | Pending |
-| BILD-06 | Phase 3 | Pending |
+| BILD-03 | Phase 3 | Complete |
+| BILD-04 | Phase 3 | Complete |
+| BILD-05 | Phase 3 | Complete |
+| BILD-06 | Phase 3 | Complete |
 | BILD-07 | Phase 3 | Pending |
-| GATE-01 | Phase 3 | Pending |
+| GATE-01 | Phase 3 | Complete |
 | GATE-02 | Phase 4 | Pending |
 | GATE-03 | Phase 4 | Pending |
 | GATE-04 | Phase 4 | Pending |
-| GATE-05 | Phase 3 | Pending |
-| GATE-06 | Phase 3 | Pending |
+| GATE-05 | Phase 3 | Complete |
+| GATE-06 | Phase 3 | Complete |
 | GATE-07 | Phase 4 | Pending |
 | LEGL-01 | Phase 4 | Pending |
 | LEGL-02 | Phase 4 | Pending |
