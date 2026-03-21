@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. MCP approval gate tools are reachable and a human approval sign-off unblocks the waiting phase
   4. Attempting to skip a phase or directly edit a guarded file causes the governance monitor to reject the operation
   5. Startup preflight fails with a clear error if Node.js, Python, or Vercel CLI are missing from the environment
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project skeleton, YAML contract, JSON schema, contract validation
+- [ ] 01-02-PLAN.md — Pipeline state, governance monitor, gates, phase executor base
+- [ ] 01-03-PLAN.md — MCP server, config, agents, error router, quality self-assessment
+- [ ] 01-04-PLAN.md — CLI entry point, startup preflight, pipeline runner
 
 ### Phase 2: Spec
 **Goal**: The spec agent produces a validated market analysis and structured PRD that the build agent can consume
@@ -59,7 +65,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Phase 3
 **Requirements**: GATE-02, GATE-03, GATE-04, GATE-07, LEGL-01, LEGL-02, LEGL-03, DEPL-01, DEPL-02, DEPL-03, DEPL-04
 **Success Criteria** (what must be TRUE):
-  1. Lighthouse scores on the deployed Vercel preview URL meet thresholds: performance ≥85, accessibility ≥90, SEO ≥85
+  1. Lighthouse scores on the deployed Vercel preview URL meet thresholds: performance >=85, accessibility >=90, SEO >=85
   2. axe-core accessibility check passes with zero critical violations on the deployed app
   3. Security headers gate verifies CSP, HSTS, X-Frame-Options, and X-Content-Type-Options are present on the deployed URL
   4. Link integrity gate confirms no internal 404s in the deployed application
@@ -71,11 +77,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Infrastructure | 0/TBD | Not started | - |
+| 1. Infrastructure | 0/4 | Planning complete | - |
 | 2. Spec | 0/TBD | Not started | - |
 | 3. Build | 0/TBD | Not started | - |
 | 4. Ship | 0/TBD | Not started | - |
