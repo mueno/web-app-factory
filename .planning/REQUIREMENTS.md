@@ -44,12 +44,12 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Quality Gates
 
 - [x] **GATE-01**: Build gate fails pipeline if `next build` or `tsc --noEmit` returns non-zero
-- [ ] **GATE-02**: Lighthouse gate runs against deployed preview URL with thresholds (perf ≥85, a11y ≥90, SEO ≥85)
-- [ ] **GATE-03**: Security headers gate verifies CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- [ ] **GATE-04**: Link integrity gate verifies no internal 404s in deployed app
+- [x] **GATE-02**: Lighthouse gate runs against deployed preview URL with thresholds (perf ≥85, a11y ≥90, SEO ≥85)
+- [x] **GATE-03**: Security headers gate verifies CSP, HSTS, X-Frame-Options, X-Content-Type-Options
+- [x] **GATE-04**: Link integrity gate verifies no internal 404s in deployed app
 - [x] **GATE-05**: Static analysis gate flags `"use client"` in `layout.tsx` or `page.tsx`
 - [x] **GATE-06**: Static analysis gate fails on `NEXT_PUBLIC_` + secret-pattern environment variables
-- [ ] **GATE-07**: axe-core accessibility check runs in addition to Lighthouse a11y score
+- [x] **GATE-07**: axe-core accessibility check runs in addition to Lighthouse a11y score
 
 ### Legal
 
@@ -136,12 +136,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BILD-06 | Phase 3 | Complete |
 | BILD-07 | Phase 3 | Complete |
 | GATE-01 | Phase 3 | Complete |
-| GATE-02 | Phase 4 | Pending |
-| GATE-03 | Phase 4 | Pending |
-| GATE-04 | Phase 4 | Pending |
+| GATE-02 | Phase 4 | Complete |
+| GATE-03 | Phase 4 | Complete |
+| GATE-04 | Phase 4 | Complete |
 | GATE-05 | Phase 3 | Complete |
 | GATE-06 | Phase 3 | Complete |
-| GATE-07 | Phase 4 | Pending |
+| GATE-07 | Phase 4 | Complete |
 | LEGL-01 | Phase 4 | Pending |
 | LEGL-02 | Phase 4 | Pending |
 | LEGL-03 | Phase 4 | Pending |

@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-21)
 
 ## Current Position
 
-Phase: 2 of 4 (Spec)
-Plan: 3 of 3 in current phase (02-03 complete — Phase 02 done)
+Phase: 4 of 4 (Ship)
+Plan: 2 of 2 in current phase (04-02 complete — Phase 04 done)
 Status: Active
-Last activity: 2026-03-21 — Plan 02-03 complete; 146 tests passing
+Last activity: 2026-03-22 — Plan 04-02 complete; 378 tests passing
 
 Progress: [██████████] 100%
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 03-build P01 | 4 | 2 tasks | 5 files |
 | Phase 03-build P03 | 15 | 2 tasks | 5 files |
 | Phase 04-ship P01 | 5 | 3 tasks | 9 files |
+| Phase 04-ship P02 | 6 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,10 @@ Recent decisions affecting current work:
 - [Phase 03-build]: error.tsx per route segment with async data gets 'use client' directive (BILD-06)
 - [Phase 03-build]: _run_gate_checks dispatches by gate.type field; unknown types fail-closed per gate_policy
 - [Phase 04-ship]: DEPLOY_AGENT system prompt capped at 1863 chars (under 2000 budget limit); deploy_agent_runner uses max_turns=75; mcp_approval_gate calls approve_gate function directly via asyncio.run(); company_name and contact_email forwarded into PhaseContext.extra for Phase 3 executor access
+- [Phase 04-ship]: Lighthouse gate uses --runs=3 for median score mitigating non-determinism
+- [Phase 04-ship]: Security headers gate treats HSTS as advisory-only (Vercel provides it); 4 headers are blocking
+- [Phase 04-ship]: Accessibility gate uses module-level optional import with graceful fallback when playwright/axe not installed
+- [Phase 04-ship]: Link integrity gate: depth 3 / max 50 URLs prevents runaway crawl; per-URL exception handling allows other URLs to continue
 
 ### Pending Todos
 
@@ -118,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-21T15:40:24.511Z
-Stopped at: Completed 04-ship-01-PLAN.md
+Last session: 2026-03-22T15:39:23.000Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
