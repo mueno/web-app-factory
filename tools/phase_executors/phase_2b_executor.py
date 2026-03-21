@@ -127,6 +127,12 @@ class Phase2bBuildExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
+        # ── Derive Next.js project directory ──────────────────────────────
+        # ctx.project_dir is the pipeline root (e.g. /runs/abc/pipeline-root).
+        # create-next-app places the generated project at a sibling directory
+        # named after ctx.app_name (same pattern used in Phase 2a).
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+
         # ── Step 2: Generate code via build agent ──────────────────────────
         contract_path = Path(
             ctx.extra.get("contract_path", str(_DEFAULT_CONTRACT_PATH))
@@ -141,7 +147,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
         agent_result = run_build_agent(
             prompt=user_prompt,
             system_prompt=system_prompt,
-            project_dir=str(ctx.project_dir),
+            project_dir=str(nextjs_dir),
         )
 
         if not agent_result:
@@ -168,7 +174,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
         )
 
         # ── Step 3: Validate npm packages ─────────────────────────────────
-        npm_results = self._validate_extra_npm_packages(ctx.project_dir)
+        npm_results = self._validate_extra_npm_packages(nextjs_dir)
         sub_step_results.append(
             SubStepResult(
                 sub_step_id="validate_packages",
@@ -181,7 +187,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
         try:
             generate_quality_self_assessment(
                 phase_id="2b",
-                project_dir=str(ctx.project_dir),
+                project_dir=str(nextjs_dir),
                 contract_path=str(contract_path),
             )
         except Exception as exc:
@@ -199,7 +205,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
         return PhaseResult(
             phase_id="2b",
             success=True,
-            artifacts=[str(ctx.project_dir)],
+            artifacts=[str(nextjs_dir)],
             sub_steps=sub_step_results,
         )
 

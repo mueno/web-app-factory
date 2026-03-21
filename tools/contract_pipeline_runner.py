@@ -35,6 +35,7 @@ from tools.phase_executors.registry import get_executor
 from tools.quality_self_assessment import generate_quality_self_assessment
 from tools.gates.build_gate import run_build_gate
 from tools.gates.static_analysis_gate import run_static_analysis_gate
+from pipeline_runtime.governance_monitor import GovernanceMonitor
 
 # Import executor modules to trigger self-registration via register() calls.
 # Each module registers its executor at import time; the pipeline runner
@@ -147,6 +148,8 @@ def _read_deployment_url(project_dir: str) -> str:
 def _run_gate_checks(
     contract_phase: dict[str, Any],
     project_dir: str,
+    *,
+    nextjs_dir: str | None = None,
 ) -> tuple[bool, list[str]]:
     """Run gate checks dispatched by gate type.
 
@@ -155,9 +158,17 @@ def _run_gate_checks(
     Dispatches based on gate type:
     - "artifact": checks required_files existence (file presence gate)
     - "tool_invocation": checks required_output_markers in docs/pipeline/
-    - "build": calls run_build_gate() — runs npm build + tsc --noEmit
-    - "static_analysis": calls run_static_analysis_gate() — checks 'use client' + secrets
+    - "build": calls run_build_gate() — runs npm build + tsc --noEmit in nextjs_dir
+    - "static_analysis": calls run_static_analysis_gate() — checks 'use client' + secrets in nextjs_dir
     - unknown types: fail-closed with a descriptive issue message (gate_policy)
+
+    Args:
+        contract_phase: Phase entry from the pipeline contract.
+        project_dir: Pipeline root directory (used for artifact, tool_invocation,
+            deployment-related gates, and as fallback for build/static_analysis).
+        nextjs_dir: Optional Next.js project directory. When provided, build and
+            static_analysis gates receive this directory instead of project_dir,
+            ensuring npm/tsc run in the directory that contains package.json.
     """
     issues: list[str] = []
     phase_id = contract_phase.get("id", "unknown")
@@ -191,14 +202,19 @@ def _run_gate_checks(
                     issues.append(f"Required output marker not found: {marker!r}")
 
         elif gate_type == "build":
-            # Dispatch to build gate executor: runs npm build + tsc --noEmit
-            gate_result = run_build_gate(project_dir, phase_id=phase_id)
+            # Dispatch to build gate executor: runs npm build + tsc --noEmit.
+            # Use nextjs_dir when provided (the generated Next.js project has
+            # package.json there, not in the pipeline root).
+            target_dir = nextjs_dir if nextjs_dir else project_dir
+            gate_result = run_build_gate(target_dir, phase_id=phase_id)
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
         elif gate_type == "static_analysis":
-            # Dispatch to static analysis gate: checks 'use client' placement + secrets
-            gate_result = run_static_analysis_gate(project_dir, phase_id=phase_id)
+            # Dispatch to static analysis gate: checks 'use client' placement + secrets.
+            # Use nextjs_dir when provided (src/app/ lives in the Next.js project dir).
+            target_dir = nextjs_dir if nextjs_dir else project_dir
+            gate_result = run_static_analysis_gate(target_dir, phase_id=phase_id)
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
@@ -321,6 +337,11 @@ def run_pipeline(
     safe_chars = [c if c.isalnum() or c in "-_" else "-" for c in idea[:40]]
     app_name = "".join(safe_chars).strip("-") or "web-app"
 
+    # Derive the Next.js project directory.
+    # project_dir is the pipeline root; create-next-app places the generated
+    # app at project_dir.parent / app_name (same pattern as Phase 2a/2b).
+    nextjs_dir = str(Path(project_dir).parent / app_name)
+
     # Determine start state
     if resume_run_id:
         state = load_state(resume_run_id, project_dir)
@@ -352,6 +373,13 @@ def run_pipeline(
     phases_skipped: list[str] = []
     pipeline_error: Optional[str] = None
 
+    # Instantiate GovernanceMonitor for this run (PIPE-05).
+    # blocking=False because the contract runner calls execute() synchronously —
+    # the monitor would trigger fast_phase_completion violations since phases
+    # "complete" instantly from its perspective. Non-blocking still tracks and
+    # logs all violations for audit.
+    monitor = GovernanceMonitor(run_id=run_id, project_dir=project_dir, blocking=False)
+
     for phase_id in PHASE_ORDER:
         # Skip phases before the resume point
         if resume_phase is not None and PHASE_ORDER.index(phase_id) < PHASE_ORDER.index(resume_phase):
@@ -369,6 +397,7 @@ def run_pipeline(
 
         # Record phase start
         phase_start(run_id, phase_id, project_dir)
+        monitor.on_tool_use("mcp__factory__phase_reporter", {"phase": phase_id, "status": "start"})
 
         # Look up executor
         executor = get_executor(phase_id)
@@ -403,6 +432,7 @@ def run_pipeline(
         if not result.success:
             error_msg = result.error or f"Phase {phase_id} returned failure"
             print(f"[pipeline] Phase {phase_id} FAILED: {error_msg}", file=sys.stderr)
+            monitor.on_tool_use("mcp__factory__phase_reporter", {"phase": phase_id, "status": "error"})
             mark_failed(run_id, project_dir, error_msg)
             return {
                 "status": "failed",
@@ -412,6 +442,9 @@ def run_pipeline(
                 "phases_executed": phases_executed,
                 "phases_skipped": phases_skipped,
             }
+
+        # Phase succeeded: track completion via GovernanceMonitor
+        monitor.on_tool_use("mcp__factory__phase_reporter", {"phase": phase_id, "status": "complete"})
 
         # Phase succeeded: generate quality self-assessment (CONT-04)
         try:
@@ -426,7 +459,9 @@ def run_pipeline(
         if not skip_gates:
             contract_phase = _get_contract_phase(contract, phase_id)
             if contract_phase is not None:
-                gate_passed, gate_issues = _run_gate_checks(contract_phase, project_dir)
+                gate_passed, gate_issues = _run_gate_checks(
+                    contract_phase, project_dir, nextjs_dir=nextjs_dir
+                )
                 if not gate_passed:
                     gate_error = f"Gate failure for phase {phase_id}: {'; '.join(gate_issues)}"
                     print(f"[pipeline] {gate_error}", file=sys.stderr)
@@ -440,6 +475,7 @@ def run_pipeline(
                         "phases_executed": phases_executed,
                         "phases_skipped": phases_skipped,
                     }
+                monitor.register_gate_pass(phase_id)
 
         # Record phase complete
         phase_complete(

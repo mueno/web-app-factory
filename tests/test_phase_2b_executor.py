@@ -342,7 +342,11 @@ class TestPhase2bBuildExecutorNpmValidation:
         ctx = _make_ctx(tmp_path)
         _create_spec_files(ctx.project_dir)
 
-        # Create a package.json with extra dependencies to simulate what build agent adds
+        # Create a package.json in the Next.js project directory (nextjs_dir),
+        # which is ctx.project_dir.parent / ctx.app_name — NOT the pipeline root.
+        # The executor reads package.json from nextjs_dir after the fix.
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        nextjs_dir.mkdir(parents=True, exist_ok=True)
         package_json = {
             "name": "myapp",
             "dependencies": {
@@ -352,7 +356,7 @@ class TestPhase2bBuildExecutorNpmValidation:
                 "zod": "^3.22.0",
             }
         }
-        (ctx.project_dir / "package.json").write_text(
+        (nextjs_dir / "package.json").write_text(
             json.dumps(package_json), encoding="utf-8"
         )
 
