@@ -1,0 +1,37 @@
+{
+  "phase_id": "2a",
+  "timestamp": "2026-03-22T04:19:41.168323+00:00",
+  "deliverables": [
+    {
+      "name": "Next.js Project Scaffold",
+      "path": "src/",
+      "criteria": [
+        {
+          "criterion": "TypeScript is configured in strict mode (strict: true in tsconfig.json) and tsc --noEmit passes with zero errors",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Tailwind CSS v4 is configured and the PostCSS config references @tailwindcss/postcss",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "App Router directory structure includes src/app/layout.tsx that defines root metadata (title, description) and font imports",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "src/app/page.tsx renders a meaningful landing page placeholder (not just create-next-app default boilerplate)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "next.config.ts configures TypeScript strict checking and exports a NextConfig object with at least one custom setting",
+          "status": "pending",
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}
