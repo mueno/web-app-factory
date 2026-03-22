@@ -479,7 +479,7 @@
         "loading": "Not applicable — SSG page.",
         "error": "Not applicable — SSG page.",
         "empty": "Not applicable — always has editorial content.",
-        "populated": "Hero with title 'Onsen Water Types Encyclopedia' and introductory text about Japan's volcanic geology. Grid of OnsenTypeEncyclopediaEntry cards (8-10 types: sulfur, sodium chloride, alkaline simple, iron, carbon dioxide, hydrogen carbonate, sulfate, radium, etc.). Each card shows water type name (JP + localized), color/appearance, key therapeutic benefits, and number of listed ryokan with that type. Cards link to /onsen-guide/water-types/[type]."
+        "populated": "Hero with title 'Onsen Water Types Encyclopedia' and introductory text about Japan's volcanic geology. Grid of OnsenTypeEncyclopediaEntry cards (8-10 types: sulfur, sodium chloride, alkaline simple, iron, carbon dioxide, hydrogen carbonate, sulfate, radium, etc.). Each card shows water type name (JP + EN), color/appearance, key therapeutic benefits, and number of listed ryokan with that type. Cards link to /onsen-guide/water-types/[type]."
       },
       "responsive": {
         "mobile": "Single-column stacked OnsenTypeEncyclopediaEntry cards.",
@@ -1205,6 +1205,331 @@
         "mobile": "DashboardNav as horizontal tab bar. ReviewCards full-width stacked. Ratings shown as compact star row.",
         "tablet": "ReviewCards with comfortable width. Ratings shown with subcategory labels.",
         "desktop": "DashboardNav sidebar. ReviewCards in main area with ryokan thumbnail photo alongside review content."
+      }
+    },
+    {
+      "route": "/[locale]/host",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, CurrencySelector, AuthButton. Host-specific nav indicator showing 'Host Dashboard'.",
+        "sidebar": "Desktop: left sidebar with HostDashboardNav (persistent vertical navigation with links: Overview, Listing, Availability, Pricing, Bookings, Reviews). Mobile/tablet: HostDashboardNav as horizontal scrollable tab bar below header.",
+        "main": "Host overview dashboard: HostOverviewStats at top, HostRevenueChart below, recent HostBookingsList, and recent HostReviewsList.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "HostOverviewStats",
+        "HostRevenueChart",
+        "HostBookingsList",
+        "HostBookingCard",
+        "HostReviewsList",
+        "ReviewCard",
+        "StarRating",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "PriceDisplay",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "HostDashboardNav visible and interactive. HostOverviewStats shows 4 card skeletons (bookings, revenue, occupancy, rating). HostRevenueChart shows chart skeleton with axis lines. HostBookingsList shows 3 HostBookingCard skeletons. HostReviewsList shows 2 ReviewCard skeletons.",
+        "error": "ErrorState for individual sections that fail to load independently. HostOverviewStats shows error card if stats API fails. HostBookingsList and HostReviewsList each have independent error states with retry buttons.",
+        "empty": "New host with no bookings yet: HostOverviewStats shows all zeros with encouraging message. HostRevenueChart shows empty chart with 'Revenue data will appear after your first booking'. HostBookingsList: EmptyState with 'No bookings yet — make sure your listing is complete and published!' HostReviewsList: EmptyState with 'Guest reviews will appear here after completed stays.'",
+        "populated": "HostOverviewStats: 4 summary cards — (1) Bookings this month (count + trend arrow), (2) Revenue this month (¥ amount), (3) Occupancy rate (percentage), (4) Average rating (star + number). HostRevenueChart: bar chart showing last 6 months of revenue. HostBookingsList: 3-5 most recent HostBookingCards showing guest name, dates, room type, status (pending/confirmed/completed), and confirm/decline actions for pending bookings. HostReviewsList: 2-3 latest ReviewCards with option to respond."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal scrollable tab bar with icon + label. HostOverviewStats as 2x2 grid of compact stat cards. HostRevenueChart at full width, simplified (last 3 months). HostBookingsList and HostReviewsList stacked vertically, cards full-width.",
+        "tablet": "HostDashboardNav as horizontal tab bar. HostOverviewStats as 4-column row. HostRevenueChart at full width. Lists in single column with wider cards.",
+        "desktop": "HostDashboardNav as persistent left sidebar (240px). Main content area: HostOverviewStats as 4-column row at top. HostRevenueChart spanning full width below. Two-column layout below: HostBookingsList (60%) and HostReviewsList (40%) side-by-side."
+      }
+    },
+    {
+      "route": "/[locale]/host/listing",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "ListingEditorForm: multi-section tabbed or accordion form for creating/editing the ryokan listing. Sections: Basic Info, Onsen Details, Room Types, Meal Plans, Photos, Policies.",
+        "footer": "Minimal footer with save status indicator"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "ListingEditorForm",
+        "ListingBasicInfoSection",
+        "ListingOnsenSection",
+        "ListingRoomEditor",
+        "RoomTypeEditorCard",
+        "ListingMealSection",
+        "ListingPhotosUploader",
+        "ListingPoliciesSection",
+        "DestinationAutocomplete",
+        "DateRangePicker",
+        "LoadingSpinner",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "ConfirmDialog",
+        "ImageWithFallback",
+        "Badge",
+        "Tooltip",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSkeleton matching form layout: section tab headers visible, form fields showing shimmer lines for each section. ListingPhotosUploader shows grid of image placeholder skeletons.",
+        "error": "ErrorState if listing data fails to load for editing. Toast for individual save failures with retry. ConfirmDialog if navigating away with unsaved changes.",
+        "empty": "New listing creation: all form sections empty with helpful placeholder text and guidance tooltips. ListingBasicInfoSection: name fields (JP + EN) with placeholders, DestinationAutocomplete for location. ListingOnsenSection: 'Add your first onsen/bath' CTA button. ListingRoomEditor: 'Add a room type' CTA button. ListingPhotosUploader: drag-and-drop zone with upload prompt.",
+        "populated": "Tabbed or accordion sections, each expandable: (1) ListingBasicInfoSection with filled name/description in JP and EN, address via DestinationAutocomplete, region selection. (2) ListingOnsenSection with added onsen details — water type dropdowns, pH input, temperature, bath style cards with photos. (3) ListingRoomEditor with RoomTypeEditorCards for each room — name, tatami size, occupancy, amenities checkboxes, base price, photos. (4) ListingMealSection with meal plan configurations. (5) ListingPhotosUploader with uploaded photos in categorized grid (drag to reorder, click to recategorize). (6) ListingPoliciesSection with check-in/out time selectors, cancellation policy dropdown, house rules textarea, tattoo policy dropdown. Save/Publish button at bottom with status indicator."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. ListingEditorForm as single-column stacked sections (accordion style — one section expanded at a time). Photo upload via native file picker (no drag-and-drop). RoomTypeEditorCards full-width stacked. All form fields full-width. Save button as fixed bottom bar.",
+        "tablet": "HostDashboardNav as horizontal tab bar. Form sections as expandable accordion, content in comfortable width (max-width 720px). Photo upload with drag-and-drop. 2-column field layout where appropriate.",
+        "desktop": "HostDashboardNav sidebar. ListingEditorForm in main area. Tab-based section navigation at top. Form content max-width 900px. Photo upload with drag-and-drop grid. RoomTypeEditorCards with side-by-side photo and fields. Two-column field layouts. Sticky save/publish bar at bottom of viewport."
+      }
+    },
+    {
+      "route": "/[locale]/host/availability",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "Room type selector at top (tabs or dropdown to switch between room types). AvailabilityCalendar showing month-by-month grid with block/unblock controls.",
+        "footer": "Footer with FooterLinkGroup"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "AvailabilityCalendar",
+        "CalendarDayCell",
+        "BulkDateSelector",
+        "LoadingSkeleton",
+        "LoadingSpinner",
+        "ErrorState",
+        "EmptyState",
+        "Toast",
+        "Badge",
+        "Tooltip",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "Room type tabs/dropdown visible but dimmed. AvailabilityCalendar shows month grid skeleton with day cells as shimmer squares.",
+        "error": "ErrorState with 'Unable to load availability data' and retry button. Toast for save failures when updating availability.",
+        "empty": "If no room types defined yet: EmptyState with 'Add room types to your listing first' and link to /host/listing. If room types exist but no availability set: calendar shows all days as 'available' (default open) with guidance tooltip explaining how to block dates.",
+        "populated": "Room type selector at top showing all room types (e.g., 'Deluxe Tatami Room', 'Standard Room with Bath'). AvailabilityCalendar showing current month + next 11 months navigable. CalendarDayCells color-coded: green = available, red = blocked by host, gray = booked by guest, white = past. Click a day to toggle available/blocked. Click-drag or BulkDateSelector to select a date range and block/unblock in bulk. Legend below calendar explaining color codes. Toast on successful save."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. Room type selector as dropdown. AvailabilityCalendar shows 1 month at a time with prev/next month navigation. CalendarDayCells compact (tap to toggle). BulkDateSelector as bottom sheet with start/end date pickers. Single-month view with swipe to navigate months.",
+        "tablet": "Room type selector as horizontal tabs. Calendar shows 2 months side-by-side. CalendarDayCells with comfortable tap targets. BulkDateSelector inline below calendar.",
+        "desktop": "HostDashboardNav sidebar. Room type selector as horizontal tabs. Calendar shows 3 months at a time. CalendarDayCells with hover tooltips showing booking details. BulkDateSelector as inline toolbar above calendar. Side panel showing selected date range details."
+      }
+    },
+    {
+      "route": "/[locale]/host/pricing",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "PricingManager: room type selector, base price editor, and seasonal rate rules list.",
+        "footer": "Footer with FooterLinkGroup"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "PricingManager",
+        "SeasonalRateRow",
+        "DateRangePicker",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "Toast",
+        "ConfirmDialog",
+        "PriceDisplay",
+        "Badge",
+        "Tooltip",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "Room type tabs visible but dimmed. Base price field shows shimmer. Seasonal rate list shows 2-3 row skeletons.",
+        "error": "ErrorState with 'Unable to load pricing data' and retry button. Toast for save failures.",
+        "empty": "If no room types defined: EmptyState with 'Add room types to your listing first' and link to /host/listing. If room types exist but no seasonal rates: base price field shown with current value, seasonal rates section shows EmptyState with 'No seasonal adjustments set. Add a seasonal rate to adjust pricing for peak periods.' and 'Add Seasonal Rate' button.",
+        "populated": "Room type selector at top. For selected room type: (1) Base price per person per night input field (¥) with current value and edit capability. (2) Seasonal rate rules list: each SeasonalRateRow shows date range (via DateRangePicker), rate type (multiplier like 1.5x or fixed override like ¥25,000), label (e.g., 'Golden Week', 'Winter Peak', 'Summer Off-Season'), and edit/delete actions. (3) 'Add Seasonal Rate' button to create new rule. (4) Preview section showing effective price calendar for next 3 months. Save button with Toast confirmation."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. Room type selector as dropdown. Base price input full-width. SeasonalRateRows stacked vertically as cards (date range, rate, label each on own line). 'Add' button full-width. Price preview calendar simplified to list view. Save button as fixed bottom bar.",
+        "tablet": "Room type selector as tabs. SeasonalRateRows as wider cards with date range and rate side-by-side. Price preview calendar as compact month view.",
+        "desktop": "HostDashboardNav sidebar. Room type selector as tabs. SeasonalRateRows as table-like rows (date range | rate type | value | label | actions in columns). Price preview calendar showing 3 months. All content max-width 900px."
+      }
+    },
+    {
+      "route": "/[locale]/host/bookings",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "Tab toggle (Pending / Upcoming / Past / Cancelled). HostBookingsList with HostBookingCards for the selected tab.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "HostBookingsList",
+        "HostBookingCard",
+        "ConfirmDialog",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "Toast",
+        "PriceDisplay",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Tab toggle visible but dimmed. 4-6 HostBookingCard skeletons in a list.",
+        "error": "ErrorState with 'Unable to load bookings' and retry button.",
+        "empty": "EmptyState per tab: Pending — 'No pending bookings awaiting your response.'; Upcoming — 'No upcoming guest stays.'; Past — 'No completed stays yet.'; Cancelled — 'No cancelled bookings.'",
+        "populated": "Tab toggle at top (Pending / Upcoming / Past / Cancelled) with count badges (Pending badge highlighted in orange if > 0). HostBookingCards each showing: guest name, guest count, check-in/check-out dates, room type, meal plan, total price, booking timestamp, and status badge. Pending bookings: prominent 'Confirm' (green) and 'Decline' (red) action buttons. Decline triggers ConfirmDialog with reason input. Upcoming: 'View Details' button. Past: 'View Details' button + review status indicator."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. Status tabs as pill toggles. HostBookingCards as compact cards stacked vertically — key info (guest name, dates, price) with expandable detail section. Action buttons full-width within card.",
+        "tablet": "HostBookingCards with more horizontal space, guest details visible without expanding.",
+        "desktop": "HostDashboardNav sidebar. HostBookingCards as wide rows with all details and action buttons visible in a single row (table-like layout)."
+      }
+    },
+    {
+      "route": "/[locale]/host/bookings/[bookingId]",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "Full booking detail from host perspective: guest information, reservation details, payment status, and action controls.",
+        "footer": "Footer with FooterLinkGroup"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "HostBookingCard",
+        "ReservationSummary",
+        "ConfirmDialog",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "PriceDisplay",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSkeleton for guest info section and reservation details.",
+        "error": "ErrorState with 'Unable to load booking details' and retry button.",
+        "empty": "Not applicable — always has booking data if valid bookingId.",
+        "populated": "Status badge at top (Pending / Confirmed / Completed / Cancelled / Declined). Guest information: name, contact email, guest count (adults + children), dietary restrictions, special requests, estimated arrival time. ReservationSummary: room type, check-in/check-out dates, meal plan, pricing breakdown (room cost, platform fee, host payout amount). Payment status: paid/pending/refunded. For pending bookings: 'Confirm' and 'Decline' buttons (Decline triggers ConfirmDialog with reason textarea). For upcoming confirmed: guest contact info prominently displayed. For completed: link to review if guest left one."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. Content stacked vertically. Action buttons full-width at bottom. ConfirmDialog as full-screen modal.",
+        "tablet": "Content centered (max-width 680px). Two-column layout for guest info and reservation details.",
+        "desktop": "HostDashboardNav sidebar. Two-column main area: guest details (left 50%) and reservation/payment details (right 50%). Action buttons inline."
+      }
+    },
+    {
+      "route": "/[locale]/host/reviews",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton. Host dashboard indicator.",
+        "sidebar": "Desktop: HostDashboardNav left sidebar.",
+        "main": "HostReviewsList: all guest reviews for the host's ryokan, with overall rating summary at top and the ability to respond to each review.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "HostDashboard",
+        "HostDashboardNav",
+        "HostReviewsList",
+        "ReviewCard",
+        "RatingBreakdown",
+        "HostReviewResponseForm",
+        "ReviewPagination",
+        "StarRating",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "Toast",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "RatingBreakdown shows shimmer bars. 3-4 ReviewCard skeletons stacked vertically.",
+        "error": "ErrorState with 'Unable to load reviews' and retry button.",
+        "empty": "EmptyState with message 'No guest reviews yet. Reviews will appear here after guests complete their stays. Great hospitality leads to great reviews!'",
+        "populated": "RatingBreakdown at top showing overall average and subcategory averages (onsen quality, hospitality, meals, atmosphere, cleanliness) with total review count. Below: paginated ReviewCards, each showing guest name, stay dates, ratings, review text, and HostReviewResponseForm. If host has already responded, the response is shown below the review with edit option. If not responded, 'Write a Response' button expands HostReviewResponseForm inline. ReviewPagination at bottom. Toast on successful response submission."
+      },
+      "responsive": {
+        "mobile": "HostDashboardNav as horizontal tab bar. RatingBreakdown as compact horizontal bars. ReviewCards full-width stacked. HostReviewResponseForm expands to full-width textarea with Submit button. ReviewPagination with prev/next only.",
+        "tablet": "RatingBreakdown in standard bar chart format. ReviewCards with comfortable width. HostReviewResponseForm inline with Submit button.",
+        "desktop": "HostDashboardNav sidebar. RatingBreakdown as full bar chart with labels at top. ReviewCards in main area with generous spacing. HostReviewResponseForm as inline expandable section within each ReviewCard. ReviewPagination with page numbers."
       }
     },
     {

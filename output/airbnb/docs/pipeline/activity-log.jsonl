@@ -21,3 +21,5 @@
 {"timestamp": "2026-03-22T03:58:30.795058+00:00", "run_id": "20260322-035830-airbnb", "event": "run_init", "app_name": "airbnb"}
 {"timestamp": "2026-03-22T03:58:30.841052+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_start", "phase": "1a"}
 {"timestamp": "2026-03-22T04:05:52.818465+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_complete", "phase": "1a", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/idea-validation.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/tech-feasibility-memo.json"]}
+{"timestamp": "2026-03-22T04:05:52.885536+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_start", "phase": "1b"}
+{"timestamp": "2026-03-22T04:18:12.069390+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_complete", "phase": "1b", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/prd.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/screen-spec.json"]}
