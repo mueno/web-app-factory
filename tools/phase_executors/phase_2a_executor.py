@@ -285,10 +285,30 @@ Your tasks:
    placeholder that reflects the app's purpose. Use the app idea for context.
    The page should be a React Server Component (no "use client").
 
-2. Update `next.config.ts` to enable reactStrictMode:
+2. Update `next.config.ts` with reactStrictMode and security headers:
    ```typescript
-   const nextConfig = {{
+   import type {{ NextConfig }} from "next";
+
+   const nextConfig: NextConfig = {{
      reactStrictMode: true,
+     poweredByHeader: false,
+     async headers() {{
+       return [
+         {{
+           source: "/(.*)",
+           headers: [
+             {{ key: "X-Frame-Options", value: "DENY" }},
+             {{ key: "X-Content-Type-Options", value: "nosniff" }},
+             {{ key: "Referrer-Policy", value: "strict-origin-when-cross-origin" }},
+             {{
+               key: "Content-Security-Policy",
+               value:
+                 "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';",
+             }},
+           ],
+         }},
+       ];
+     }},
    }};
    export default nextConfig;
    ```
