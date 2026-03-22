@@ -1,199 +1,175 @@
 {
   "rendering_strategy": {
     "recommendation": "Hybrid SSR + SSG + ISR",
-    "rationale": "This platform has three distinct content tiers requiring different rendering strategies: (1) Static editorial content (onsen guides, etiquette articles, regional spotlights) should use SSG for maximum performance and SEO — these pages change infrequently and benefit from CDN edge caching. (2) Ryokan listing pages should use ISR with 60-second revalidation — property details change infrequently but availability/pricing may update, and ISR provides SEO benefits of static generation with near-real-time data freshness. (3) Search results, booking flow, user dashboard, and community features require SSR for personalized, real-time content. Next.js App Router supports all three strategies per-route, making this hybrid approach natural without additional infrastructure.",
+    "rationale": "This marketplace platform has three distinct content tiers requiring different rendering strategies. (1) Static editorial content — onsen guides, etiquette articles, regional spotlights, and the landing page — should use SSG for maximum performance and SEO, as these pages change infrequently and benefit from CDN edge caching. (2) Ryokan listing pages should use ISR with 60-second revalidation — property details change infrequently but availability and pricing may update daily, and ISR provides SEO benefits of static generation with near-real-time data freshness. (3) Search results, booking flow, user dashboard, host management dashboard, and community feed require SSR for personalized, real-time content that depends on user session, search parameters, and live availability. Next.js App Router natively supports all three strategies per-route, making this hybrid approach natural without additional infrastructure.",
     "alternatives_considered": [
       {
         "strategy": "Full SSR",
-        "reason_rejected": "Unnecessary server load for static editorial content and ryokan detail pages that change infrequently. Would increase Vercel serverless function invocations and cost without UX benefit."
+        "reason_rejected": "Unnecessary server cost for static content (guides, landing pages). Listing pages would incur repeated DB queries on every request when ISR can serve cached pages. Increases Time to First Byte (TTFB) for pages that don't need real-time data."
       },
       {
         "strategy": "Full SSG",
-        "reason_rejected": "Incompatible with real-time search, availability checking, and personalized booking flows. Build times would be excessive with thousands of listing pages and multilingual content."
+        "reason_rejected": "Impossible for personalized search results and booking flows. With potentially thousands of listing pages, full static generation at build time would create long build times. Availability data would be stale immediately after build."
       },
       {
         "strategy": "SPA with client-side fetching",
-        "reason_rejected": "Poor SEO for listing and editorial pages — critical for organic discovery by international travelers searching 'best onsen ryokan in Hakone'. Also poor initial load performance on mobile networks in rural Japan."
+        "reason_rejected": "Poor SEO for listing and editorial pages — critical for organic discovery by both Japanese and international travelers. Initial load would be slow, and content would not be indexable by search engines without additional SSR layer."
       }
     ]
   },
   "packages": [
     {
       "name": "next",
-      "version": "16.2.1",
-      "purpose": "Core framework — App Router for hybrid rendering, Server Components for streaming, Route Handlers for API endpoints, built-in image optimization for property photos"
+      "version": "^15.0.0",
+      "purpose": "Core framework — App Router for hybrid rendering (SSR/SSG/ISR), file-based routing, server components, API routes for booking endpoints"
     },
     {
       "name": "next-intl",
-      "version": "4.8.3",
-      "purpose": "Internationalization — bilingual Japanese/English support with message catalogs, locale-aware routing (/ja and /en prefixes), date/currency formatting per locale"
-    },
-    {
-      "name": "next-auth",
-      "version": "5.0.0-beta.30",
-      "purpose": "Authentication — OAuth providers (Google, LINE for Japanese users), email magic links for international users. NextAuth v5 beta aligns with App Router patterns"
+      "version": "^4.8.3",
+      "purpose": "Internationalization framework for Japanese/English bilingual support — handles locale routing, message formatting, date/number localization, and server component i18n"
     },
     {
       "name": "@supabase/supabase-js",
-      "version": "2.99.3",
-      "purpose": "Database client — Postgres via Supabase for ryokan listings, bookings, reviews, user profiles. Includes real-time subscriptions for availability updates and Row Level Security for multi-tenant owner dashboards"
+      "version": "^2.99.3",
+      "purpose": "Supabase client for Postgres database access — listings, bookings, user profiles, reviews. Provides real-time subscriptions for availability updates and Row Level Security for multi-tenant host data"
+    },
+    {
+      "name": "next-auth",
+      "version": "^4.24.13",
+      "purpose": "Authentication — email/password for Japanese users, Google/Apple OAuth for international users, host vs. guest role management"
     },
     {
       "name": "stripe",
-      "version": "20.4.1",
-      "purpose": "Payment processing — multi-currency support (JPY primary), Connect for marketplace payouts to ryokan owners, escrow-style payment holds, webhook handling for booking confirmations"
+      "version": "^20.4.1",
+      "purpose": "Server-side Stripe SDK for payment processing — booking charges, host payouts via Stripe Connect, refund handling for cancellations, support for Japanese card networks (JCB)"
     },
     {
       "name": "zod",
-      "version": "4.3.6",
-      "purpose": "Schema validation — type-safe validation for booking forms, search parameters, API request/response shapes, and environment variable validation"
+      "version": "^4.3.6",
+      "purpose": "Schema validation for booking forms, listing creation, search parameters, and API request/response validation — shared between client and server"
     },
     {
-      "name": "react-hook-form",
-      "version": "7.72.0",
-      "purpose": "Form management — performant form handling for multi-step booking flow, search filters, review submission, and ryokan owner dashboard forms"
-    },
-    {
-      "name": "@tanstack/react-query",
-      "version": "5.94.5",
-      "purpose": "Server state management — caching and synchronization for availability checks, search results pagination, optimistic updates on wishlist/favorites"
+      "name": "zustand",
+      "version": "^5.0.12",
+      "purpose": "Lightweight client state management for search filters, booking flow state, photo gallery state, and UI preferences (language, currency)"
     },
     {
       "name": "date-fns",
-      "version": "4.1.0",
-      "purpose": "Date utilities — check-in/check-out date manipulation, Japanese calendar support, relative date formatting for reviews, availability calendar logic"
+      "version": "^4.1.0",
+      "purpose": "Date manipulation for availability calendar logic, check-in/check-out date handling, cancellation deadline calculations, and Japanese date formatting (令和 era support)"
     },
     {
-      "name": "react-map-gl",
-      "version": "8.1.0",
-      "purpose": "Map integration — interactive Mapbox GL map for onsen region discovery, ryokan location pins with clustering, responsive map with touch gestures for mobile"
+      "name": "react-day-picker",
+      "version": "^9.14.0",
+      "purpose": "Accessible date range picker component for booking date selection — supports disabled dates (blocked availability), minimum stay enforcement, and Japanese locale"
     },
     {
       "name": "embla-carousel-react",
-      "version": "8.6.0",
-      "purpose": "Image carousel — lightweight, touch-friendly carousel for ryokan photo galleries, seasonal photo slideshows, and featured collections"
+      "version": "^8.6.0",
+      "purpose": "Touch-friendly image carousel for listing photo galleries — lightweight, performant, supports swipe gestures on mobile for photo-forward ryokan browsing"
     },
     {
-      "name": "nuqs",
-      "version": "2.8.9",
-      "purpose": "URL search params management — type-safe URL state for search filters (region, price range, onsen type, bath type) enabling shareable/bookmarkable search URLs"
+      "name": "react-map-gl",
+      "version": "^8.1.0",
+      "purpose": "Mapbox GL wrapper for React — onsen region map exploration, ryokan location pins, interactive area-based search with clustering for dense onsen towns"
+    },
+    {
+      "name": "swr",
+      "version": "^2.4.1",
+      "purpose": "Client-side data fetching with caching and revalidation — used for availability checks, search-as-you-type results, and real-time booking status updates"
     }
   ],
   "external_apis": [
     {
-      "name": "Supabase (Postgres + Auth + Storage)",
-      "type": "BaaS",
-      "purpose": "Primary database for ryokan listings, bookings, reviews, user data. Storage for property images. Auth as fallback/supplement to NextAuth.",
-      "rate_limits": "Free tier: 500MB database, 1GB storage, 50K monthly active users. Pro tier ($25/mo): 8GB database, 100GB storage, unlimited MAU. No API rate limits on Pro tier.",
-      "cost_implications": "Pro tier sufficient for MVP. At scale (10K+ bookings/month), expect $100-300/month for database + storage. Egress costs for image serving mitigated by Vercel CDN caching.",
-      "fallback": "Neon Postgres as database alternative; Cloudflare R2 for image storage if Supabase costs escalate"
+      "name": "Supabase (hosted Postgres + Auth + Storage)",
+      "type": "Database / BaaS",
+      "usage": "Primary data store for listings, bookings, reviews, user profiles. Supabase Storage for ryokan photos (with image transformations).",
+      "rate_limits": "Free tier: 500MB DB, 1GB storage, 50K auth users. Pro tier ($25/mo): 8GB DB, 100GB storage, unlimited auth. No API rate limits on Pro tier — connection pooling via pgBouncer handles concurrency.",
+      "cost_implications": "Pro tier at $25/month sufficient for MVP. At scale (500+ listings, 5K bookings/month), expect $100–200/month. Storage costs scale with photo uploads — estimate 50 photos/listing × 500 listings = 25,000 photos at ~2MB each = ~50GB.",
+      "fallback": "Can migrate to self-hosted Postgres on Railway or Neon if Supabase pricing becomes unfavorable. Supabase client is a thin wrapper over PostgREST — migration path is clear."
     },
     {
-      "name": "Stripe Payments + Connect",
+      "name": "Stripe (Payments + Connect)",
       "type": "Payment processing",
-      "purpose": "Guest payments, multi-currency conversion (JPY ↔ USD/EUR/etc.), marketplace payouts to ryokan owners via Stripe Connect, escrow holds",
-      "rate_limits": "100 read requests/second, 25 write requests/second per API key. No practical limit for booking volumes at MVP/growth stage.",
-      "cost_implications": "2.9% + $0.30 per domestic transaction, +1% for international cards, +1% for currency conversion. Stripe Connect: additional 0.25% + $0.25 per payout. At $1M GMV/year, payment processing costs ~$35K-$45K.",
-      "fallback": "No viable alternative with equivalent multi-currency + marketplace payout support. PAY.JP could supplement for Japan-domestic transactions."
+      "usage": "Guest payment collection, host payout via Stripe Connect Express accounts, cancellation refund processing, webhook-driven booking status updates.",
+      "rate_limits": "100 read requests/second, 100 write requests/second in live mode. No hard limit on payment volume.",
+      "cost_implications": "3.6% + ¥40 per transaction for Japanese cards. Connect platform fee is additional 0.25% + ¥10 per payout. At ¥30,000 average booking value, Stripe fees are ~¥1,120/booking. Our 8% commission (¥2,400) minus Stripe fees leaves ~¥1,280 net margin per booking.",
+      "fallback": "Komoju as alternative for Japanese-specific payment methods (convenience store payment, bank transfer) if Stripe Japan coverage is insufficient."
     },
     {
-      "name": "Mapbox GL",
-      "type": "Mapping",
-      "purpose": "Interactive map for onsen region discovery, geocoding for ryokan locations, directions/transit info to ryokan from nearest station",
-      "rate_limits": "Free tier: 50K map loads/month, 100K geocoding requests/month. Beyond free tier: $5 per 1,000 map loads.",
-      "cost_implications": "Free tier sufficient for first 6 months. At 100K monthly visitors with 50% using map: ~$250/month. Japan map tiles well-supported with Japanese labels.",
-      "fallback": "Google Maps Platform (more expensive at $7/1000 loads but better Japan POI data) or OpenStreetMap/MapLibre (free but requires self-hosting tiles)"
+      "name": "Mapbox GL JS",
+      "type": "Mapping / Geolocation",
+      "usage": "Interactive map for onsen region exploration, ryokan location display, area-based search with bounding box queries.",
+      "rate_limits": "50,000 free map loads/month, then $5 per 1,000 loads. Geocoding: 100,000 free requests/month.",
+      "cost_implications": "Free tier likely sufficient for first 6 months. At 100K monthly map views, cost ~$250/month. Static map images for listing cards can reduce interactive map loads.",
+      "fallback": "MapLibre GL JS (open-source fork) with OpenStreetMap tiles as zero-cost alternative. Requires self-hosting tile server but eliminates vendor lock-in."
     },
     {
       "name": "Vercel Image Optimization",
-      "type": "Built-in platform service",
-      "purpose": "On-the-fly image resizing, WebP/AVIF conversion, and CDN delivery for ryokan property photos — critical for mobile performance and visual storytelling",
-      "rate_limits": "Pro plan: 5,000 source images. Enterprise: unlimited. Optimized images served from edge CDN with no per-request limit.",
-      "cost_implications": "Included in Vercel Pro plan ($20/month per team member). At scale with 2,000+ ryokan listings × 10-20 photos each, may need Enterprise plan or external image CDN.",
-      "fallback": "Cloudinary (free tier: 25K transformations/month, $89/month Plus plan) or imgix for dedicated image optimization"
-    },
-    {
-      "name": "SendGrid / Resend",
-      "type": "Transactional email",
-      "purpose": "Booking confirmation emails, cancellation notifications, review request emails, owner dashboard alerts (bilingual JP/EN templates)",
-      "rate_limits": "Resend free tier: 3,000 emails/month, 100 emails/day. Pro: $20/month for 50K emails/month.",
-      "cost_implications": "Free tier for MVP, Pro tier ($20/month) sufficient through first year of operation.",
-      "fallback": "SendGrid free tier (100 emails/day) or Supabase Edge Functions with SMTP relay"
+      "type": "Image CDN",
+      "usage": "On-the-fly image resizing, format conversion (WebP/AVIF), and CDN delivery for ryokan photos via next/image component.",
+      "rate_limits": "Pro plan: 5,000 source images optimized/month included, then $5 per 1,000.",
+      "cost_implications": "With 25,000 listing photos and responsive variants, may exceed free tier quickly. Consider Supabase Storage image transformations as primary, with Vercel as CDN layer only.",
+      "fallback": "Cloudinary free tier (25,000 transformations/month) or Supabase Storage built-in transformations."
     }
   ],
   "vercel_constraints": {
     "serverless_function_timeout": {
-      "limit": "Hobby: 10s, Pro: 60s, Enterprise: 900s",
-      "impact": "Booking flow involving Stripe payment intent creation + Supabase transaction should complete within 10-15 seconds. Availability search queries across multiple ryokan may approach 5-10 seconds for complex filters. Pro plan (60s) provides sufficient headroom.",
-      "mitigation": "Use streaming SSR for search results (show results progressively). Implement Edge Runtime for lightweight API routes (auth checks, simple queries). Move heavy operations (image processing, email sending) to background jobs via Vercel Cron or Inngest."
+      "limit": "Pro plan: 60 seconds (default 10s). Hobby plan: 10 seconds.",
+      "impact": "Booking creation involves Stripe payment intent + DB write + confirmation email — must complete within 10s on Hobby or 60s on Pro. Stripe API calls typically resolve in 1–3 seconds, so this is feasible.",
+      "mitigation": "Use Vercel Pro plan ($20/month) for 60s timeout. For long-running tasks (bulk photo upload, report generation), use Vercel background functions or offload to Supabase Edge Functions."
     },
     "bundle_size": {
-      "limit": "Serverless function: 50MB (compressed). Edge function: 4MB.",
-      "impact": "react-map-gl + Mapbox GL JS adds ~200KB to client bundle. Stripe.js loaded async. next-intl message catalogs for JP+EN may add 50-100KB. Total client bundle estimated at 400-600KB (compressed), well within limits.",
-      "mitigation": "Lazy-load map component (dynamic import with ssr: false). Code-split by route. Use next/dynamic for heavy components like image carousels and date pickers."
+      "limit": "250MB compressed for serverless functions. 50MB per Edge Function.",
+      "impact": "Mapbox GL JS is the largest client dependency (~200KB gzipped). Server-side Stripe SDK is lightweight (~50KB). Total client bundle should stay well under limit with code splitting.",
+      "mitigation": "Dynamic import Mapbox only on map-view pages. Use Next.js built-in code splitting per route. Lazy-load image carousel component."
+    },
+    "edge_function_limitations": {
+      "limit": "Edge Functions run on V8 isolates — no Node.js-specific APIs (fs, child_process). 128MB memory limit.",
+      "impact": "Middleware for locale detection and auth checks can run on Edge for low latency. Stripe webhooks and DB queries must use standard serverless functions (Node.js runtime).",
+      "mitigation": "Use Edge Runtime only for middleware (locale routing, auth redirect). All API routes use Node.js runtime."
     },
     "cold_start": {
-      "limit": "Serverless: 250ms-1s typical cold start. Edge: <50ms.",
-      "impact": "First request after idle period may show 500ms-1s delay on SSR pages (search, booking). Not critical for this use case — users expect slight load time on travel booking sites.",
-      "mitigation": "Use Edge Runtime for latency-sensitive routes (auth middleware, locale detection). Keep serverless functions lean. ISR for listing pages eliminates cold starts for most page views."
+      "limit": "Serverless cold starts: 200–500ms typical for Node.js. Edge: <50ms.",
+      "impact": "Search and listing pages may experience cold start latency. For a booking platform, 500ms cold start is acceptable but not ideal for search-as-you-type.",
+      "mitigation": "Use SWR for client-side search with optimistic UI. Keep frequently-hit API routes warm via cron pings. Use Edge middleware for instant locale detection."
     },
     "deployment_regions": {
-      "default": "Vercel automatically deploys to global edge network. Serverless functions default to iad1 (US East).",
-      "recommendation": "Set serverless function region to hnd1 (Tokyo) for lowest latency to Supabase (hosted in Tokyo region) and Japanese ryokan owner dashboard users. Edge functions run globally for international traveler UX.",
-      "configuration": "Set in vercel.json: { \"regions\": [\"hnd1\"] }"
+      "limit": "Serverless functions deploy to a single region by default. Edge functions deploy globally.",
+      "impact": "Primary user base is Japan (domestic + international tourists in Japan). Latency to Tokyo region is critical.",
+      "mitigation": "Set Vercel function region to hnd1 (Tokyo). Use Edge middleware for global locale routing. CDN serves static assets globally for international users browsing from home."
     }
   },
   "browser_apis": [
     {
       "api": "Geolocation API",
-      "purpose": "Enable 'nearby onsen' search for travelers currently in Japan, auto-center map on user location",
+      "usage": "Optional 'nearby onsen' feature — detect user's location to suggest closest onsen regions. Useful for travelers already in Japan.",
       "required": false,
-      "fallback": "Default map view centered on Japan with popular onsen regions highlighted. IP-based geolocation as secondary signal. Manual region selection always available."
+      "fallback": "Default to IP-based approximate geolocation (via Vercel's geo headers: x-vercel-ip-city, x-vercel-ip-country). Prompt user to manually select region if geolocation is denied."
     },
     {
       "api": "Intersection Observer API",
-      "purpose": "Lazy-load ryokan listing images as user scrolls through search results, infinite scroll pagination for reviews",
+      "usage": "Lazy loading of listing card images as user scrolls through search results. Essential for photo-heavy listing grids.",
       "required": true,
-      "fallback": "Supported in all modern browsers (97%+ global coverage). No polyfill needed — degrade to eager loading on unsupported browsers."
+      "fallback": "next/image handles lazy loading natively with loading='lazy' attribute. Intersection Observer provides additional control for infinite scroll pagination. Supported in all modern browsers (>97% global coverage)."
     },
     {
       "api": "Web Share API",
-      "purpose": "Native sharing of ryokan listings and onsen collections on mobile devices (share to LINE, WhatsApp, etc.)",
+      "usage": "Native share sheet for sharing ryokan listings on mobile — 'Share this ryokan' button triggers OS-level share dialog (LINE, Twitter, WhatsApp).",
       "required": false,
-      "fallback": "Custom share modal with copy-to-clipboard link + social media share buttons (LINE, Twitter, Facebook). Web Share API enhances but is not required."
+      "fallback": "Fall back to copy-to-clipboard with toast notification on unsupported browsers (desktop Safari, Firefox). Show manual share buttons for major platforms."
     },
     {
-      "api": "Service Worker / Cache API",
-      "purpose": "Offline caching of previously viewed ryokan listings for travelers in rural areas with poor connectivity (many onsen regions have limited mobile data)",
-      "required": false,
-      "fallback": "Standard browser caching via Cache-Control headers. PWA manifest for add-to-homescreen. Offline page with saved favorites. next-pwa package can automate Service Worker generation."
-    },
-    {
-      "api": "Intl API (Intl.NumberFormat, Intl.DateTimeFormat)",
-      "purpose": "Locale-aware formatting of prices (¥25,000 vs $167), dates (2026年3月22日 vs March 22, 2026), and relative time in reviews",
+      "api": "navigator.language / Accept-Language",
+      "usage": "Auto-detect user's preferred language (Japanese vs. English) for initial locale selection.",
       "required": true,
-      "fallback": "Fully supported in all modern browsers. date-fns locale modules provide additional formatting consistency."
+      "fallback": "Vercel Edge middleware reads Accept-Language header server-side before page render. Client-side navigator.language used for confirmation. Manual language switcher always available in header."
+    },
+    {
+      "api": "ResizeObserver API",
+      "usage": "Responsive image gallery layout — dynamically adjust photo grid columns based on container width for ryokan listing pages.",
+      "required": false,
+      "fallback": "CSS Container Queries or Tailwind responsive breakpoints handle most cases. ResizeObserver used only for complex masonry-style photo layouts. Supported in all modern browsers."
     }
-  ],
-  "feasibility_summary": {
-    "overall_assessment": "Highly feasible",
-    "confidence": "High",
-    "key_strengths": [
-      "Next.js App Router perfectly supports the hybrid rendering needs (SSG editorial + ISR listings + SSR search/booking)",
-      "Supabase provides integrated database + auth + storage without managing infrastructure",
-      "Stripe Connect is purpose-built for marketplace payment flows with multi-currency support",
-      "Vercel Tokyo region (hnd1) ensures low latency for the primary market",
-      "All npm packages are actively maintained with recent releases (verified March 2026)"
-    ],
-    "key_risks": [
-      "Image-heavy platform may push Vercel image optimization limits on Pro plan — monitor and plan for Cloudinary fallback",
-      "Mapbox GL JS client bundle size requires careful lazy-loading to maintain mobile performance",
-      "Bilingual content doubles the content management surface area — consider CMS integration (Sanity/Contentful) if editorial volume grows"
-    ],
-    "estimated_mvp_timeline": "10-14 weeks for core booking flow (search → listing → booking → confirmation) with 2-language support",
-    "estimated_monthly_infrastructure_cost": {
-      "mvp_phase": "$65-$100 (Vercel Pro $20 + Supabase Pro $25 + domain + Mapbox free tier + Resend free tier)",
-      "growth_phase_10k_bookings_per_month": "$500-$1,200 (Vercel Pro + Supabase scale + Mapbox + image optimization + email)"
-    }
-  }
+  ]
 }

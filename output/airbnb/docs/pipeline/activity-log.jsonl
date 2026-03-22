@@ -19,3 +19,5 @@
 {"timestamp": "2026-03-22T03:01:30.229772+00:00", "run_id": "20260322-024215-airbnb", "event": "phase_start", "phase": "2a"}
 {"timestamp": "2026-03-22T03:01:31.615989+00:00", "run_id": "20260322-024215-airbnb", "event": "failed", "error": "create-next-app failed: Could not create a project called \"温泉旅館に特化したAirBnBみたいな旅行予約サイト\" because of npm naming restrictions:\n    * name can only contain URL-friendly characters\n    * name can no longer contain capital letters"}
 {"timestamp": "2026-03-22T03:58:30.795058+00:00", "run_id": "20260322-035830-airbnb", "event": "run_init", "app_name": "airbnb"}
+{"timestamp": "2026-03-22T03:58:30.841052+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_start", "phase": "1a"}
+{"timestamp": "2026-03-22T04:05:52.818465+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_complete", "phase": "1a", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/idea-validation.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/tech-feasibility-memo.json"]}
