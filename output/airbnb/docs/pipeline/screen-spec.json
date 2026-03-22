@@ -1,0 +1,1444 @@
+{
+  "screens": [
+    {
+      "route": "/[locale]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton. On mobile: Logo and MobileMenuToggle only.",
+        "sidebar": "None",
+        "main": "Full-width main content area: SearchHero at top, then stacked content sections — featured curated collections, seasonal highlights, popular regions grid, recent community diaries, onsen guide teasers.",
+        "footer": "Footer with FooterLinkGroup sections and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "SearchHero",
+        "DestinationAutocomplete",
+        "DateRangePicker",
+        "GuestSelector",
+        "CuratedCollectionGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "SeasonalHighlightBanner",
+        "DiaryCard",
+        "DiaryCardAuthor",
+        "DiaryCardStats",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "LoadingSkeleton placeholders for SearchHero (destination input shimmer), curated collection grid (3-4 card skeletons per row), seasonal banner (full-width shimmer), and diary card list (3 card skeletons).",
+        "error": "ErrorState component displayed below SearchHero if collection or diary data fails to load. SearchHero remains functional. Error message offers retry button.",
+        "empty": "Not applicable for homepage — curated content is editorially managed and always present. If diary feed has no entries, EmptyState with CTA to 'Be the first to share your onsen story'.",
+        "populated": "SearchHero with destination autocomplete, date picker, and guest selector. Below: horizontal-scroll CuratedCollectionGrid for 2-3 themed collections (each containing 4-6 RyokanCards). SeasonalHighlightBanner with current season imagery. Popular regions grid with 6-8 region cards linking to /regions/[region]. Recent diaries section with 3-4 DiaryCards. Onsen guide teaser section with links to etiquette and water types guides."
+      },
+      "responsive": {
+        "mobile": "SearchHero stacks vertically: destination input full-width, date picker and guest selector each full-width below. Curated collections show as horizontal-scrollable single-row carousels with peek of next card. Popular regions show as 2-column grid (2×4). Diary cards stack in single column. Header collapses to Logo + MobileMenuToggle. Navigation moves to MobileDrawer.",
+        "tablet": "SearchHero inputs arranged in 2-column layout (destination spans full, dates and guests side-by-side). Curated collection grids show 2 cards per row. Popular regions show 3-column grid (3×3). Diary cards in 2-column layout.",
+        "desktop": "SearchHero inputs in single horizontal row with prominent CTA button. Curated collection grids show 3-4 cards per row. Popular regions in 4-column grid. Diary cards in 3-column layout. Full Header with all nav links, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton visible."
+      }
+    },
+    {
+      "route": "/[locale]/search",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact (pre-filled with current search), LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Left sidebar (desktop/tablet) or full-screen modal (mobile) containing SearchFiltersPanel with all filter groups",
+        "main": "Split layout: left portion is SearchResultsList with SearchSortDropdown and SearchPagination; right portion is SearchMapView. On mobile, these are toggled views (list/map toggle button).",
+        "footer": "Footer (hidden on mobile when map view is active)"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "SearchHero",
+        "DestinationAutocomplete",
+        "DateRangePicker",
+        "GuestSelector",
+        "SearchFiltersPanel",
+        "FilterGroup",
+        "OnsenTypeFilter",
+        "BathStyleFilter",
+        "PrivacyLevelFilter",
+        "PriceRangeSlider",
+        "MealPlanFilter",
+        "TattooFilter",
+        "RatingFilter",
+        "AccessibilityFilter",
+        "ActiveFilterTags",
+        "FilterResetButton",
+        "SearchSortDropdown",
+        "SearchResultsList",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "SearchMapView",
+        "MapPin",
+        "MapPopup",
+        "SearchPagination",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "SearchResultsList shows 6-8 LoadingSkeleton cards matching RyokanCard dimensions. SearchMapView shows map with LoadingSpinner overlay. Filter counts show shimmer placeholders. SearchSortDropdown is disabled.",
+        "error": "ErrorState replaces SearchResultsList with message 'Unable to load search results' and retry button. SearchMapView shows empty map with error toast. Filters remain interactive for query modification.",
+        "empty": "EmptyState in SearchResultsList area with illustration of an empty onsen, message 'No ryokan match your filters', and suggestions: 'Try broadening your date range', 'Remove some filters', or 'Explore popular regions'. ActiveFilterTags still shown for easy removal. Map shows no pins.",
+        "populated": "SearchResultsList shows RyokanCard results with count header ('128 ryokan found'). Each card shows photo carousel, name, region, onsen tags, rating, price. SearchMapView shows corresponding MapPin markers. Clicking a MapPin highlights the corresponding card and shows MapPopup. ActiveFilterTags show applied filters. SearchPagination at bottom."
+      },
+      "responsive": {
+        "mobile": "Full-screen layout. Top: condensed SearchHero (destination + dates in compact bar, tap to expand). Below: toggle buttons for 'List' and 'Map' views (only one visible at a time). List view: single-column RyokanCards. Map view: full-screen SearchMapView. Filter button (floating FAB) opens full-screen SearchFiltersPanel modal with apply/reset buttons at bottom. ActiveFilterTags scroll horizontally below search bar. No sidebar.",
+        "tablet": "SearchFiltersPanel as collapsible left sidebar (280px wide, toggleable). SearchResultsList in remaining space as 2-column grid. SearchMapView hidden by default, shown via toggle (replaces result list). SearchPagination below results.",
+        "desktop": "Three-panel layout: SearchFiltersPanel as persistent left sidebar (300px). SearchResultsList as center column (2-column grid of RyokanCards). SearchMapView as right panel (40% width, sticky). SearchSortDropdown and ActiveFilterTags above results. SearchPagination at bottom of results."
+      }
+    },
+    {
+      "route": "/[locale]/ryokan/[slug]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: sticky right sidebar with StickyBookingBar showing selected dates, price summary, and Book Now CTA. Mobile: none (StickyBookingBar becomes fixed bottom bar).",
+        "main": "Single-column scrollable content: RyokanDetailHero (photo gallery + title), then sequential sections — QuickInfoBar, OnsenDetailsSection, RoomTypeSection, MealPlanSection, ReviewsSection, LocationSection, SimilarRyokanSection.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "RyokanDetailHero",
+        "PhotoGallery",
+        "PhotoCategoryTab",
+        "PhotoLightbox",
+        "RyokanTitleBlock",
+        "QuickInfoBar",
+        "OnsenDetailsSection",
+        "OnsenTypeCard",
+        "BathCard",
+        "RoomTypeSection",
+        "RoomTypeCard",
+        "RoomAmenitiesList",
+        "RoomSelectButton",
+        "MealPlanSection",
+        "MealPlanCard",
+        "ReviewsSection",
+        "RatingBreakdown",
+        "ReviewCard",
+        "ReviewPagination",
+        "LocationSection",
+        "AccessDirections",
+        "NearbyAttractions",
+        "SeasonalHighlightBanner",
+        "SimilarRyokanSection",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "StickyBookingBar",
+        "SearchMapView",
+        "MapPin",
+        "ShareButton",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "Tooltip",
+        "Toast",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "RyokanDetailHero: LoadingSkeleton for photo gallery (large rectangle + 4 small squares). RyokanTitleBlock: text shimmer lines. OnsenDetailsSection: 2-3 card skeletons. RoomTypeSection: 2-3 card skeletons. ReviewsSection: rating bar shimmer + 3 review card skeletons. StickyBookingBar shows 'Checking availability...' with disabled button.",
+        "error": "ErrorState displayed if ryokan data fails to load, with message 'Unable to load ryokan details' and retry button. If only availability check fails, main content renders normally but StickyBookingBar shows 'Availability unavailable — please try again' with retry link. If reviews fail to load, ReviewsSection shows inline ErrorState with retry.",
+        "empty": "ReviewsSection: EmptyState with 'No reviews yet — be the first to share your experience after your stay'. SimilarRyokanSection: hidden if no similar ryokan found. All other sections always have content from ryokan listing data.",
+        "populated": "Full ryokan detail page. PhotoGallery shows hero grid (1 large + 4 thumbnails on desktop, carousel on mobile). QuickInfoBar shows check-in/out, tattoo policy, onsen hours as icon+text pairs. OnsenDetailsSection shows OnsenTypeCards and BathCards with photos. RoomTypeSection lists available rooms with pricing (updated after availability check). MealPlanSection shows meal options. ReviewsSection shows RatingBreakdown + paginated ReviewCards. LocationSection shows map + AccessDirections. StickyBookingBar shows per-night price and Book Now button."
+      },
+      "responsive": {
+        "mobile": "PhotoGallery becomes a full-width swipeable carousel (embla-carousel) with dot indicators instead of grid. RyokanTitleBlock stacks below carousel. QuickInfoBar scrolls horizontally. All content sections stack vertically full-width. StickyBookingBar is a fixed bottom bar (64px height) with price on left, 'Book Now' button on right — always visible while scrolling. ShareButton and WishlistToggle in a floating action row below the photo carousel. Sections collapsible with expand/collapse toggles to reduce scroll depth.",
+        "tablet": "PhotoGallery shows 2-column grid (1 large + 2 small). Content sections full-width. StickyBookingBar as fixed bottom bar similar to mobile but wider with more detail. ReviewsSection shows 2 ReviewCards per row.",
+        "desktop": "Two-column layout: main content (65% width) on left, sticky sidebar (35% width) on right. PhotoGallery shows 5-image grid (1 large left, 4 small right in 2×2). StickyBookingBar in sidebar with full date picker, guest selector, room selector, price breakdown, and prominent Book Now CTA. ReviewsSection shows full RatingBreakdown alongside ReviewCards. LocationSection shows larger map with NearbyAttractions list."
+      }
+    },
+    {
+      "route": "/[locale]/ryokan/[slug]/reviews",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Breadcrumb linking back to ryokan detail. RatingBreakdown at top. Paginated list of ReviewCards with sort and filter options.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "RatingBreakdown",
+        "ReviewCard",
+        "ReviewPagination",
+        "SearchSortDropdown",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "StarRating",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "RatingBreakdown shows shimmer bars. ReviewCard area shows 5 skeleton cards stacked vertically.",
+        "error": "ErrorState with 'Unable to load reviews' and retry button.",
+        "empty": "EmptyState with message 'No reviews yet for this ryokan.'",
+        "populated": "RatingBreakdown at top with subcategory bars (onsen quality, hospitality, meals, atmosphere, cleanliness). Below: sort dropdown (newest, highest, lowest). Paginated ReviewCards each showing author name, date, star ratings, review text. ReviewPagination at bottom."
+      },
+      "responsive": {
+        "mobile": "Single-column layout. RatingBreakdown condensed to horizontal compact view. ReviewCards full-width stacked. ReviewPagination with simplified prev/next buttons.",
+        "tablet": "Single-column layout with wider ReviewCards. RatingBreakdown in standard bar chart format.",
+        "desktop": "Max-width container (800px) centered. RatingBreakdown as full bar chart with labels. ReviewCards with generous spacing."
+      }
+    },
+    {
+      "route": "/[locale]/regions/[region]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "RegionalGuideHero at top (hero image + region name + description). Below: editorial content body, interactive area map, curated ryokan grid, seasonal tips section.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "RegionalGuideHero",
+        "GuideContentBody",
+        "SearchMapView",
+        "MapPin",
+        "MapPopup",
+        "CuratedCollectionGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "SeasonalHighlightBanner",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "RegionalGuideHero shows LoadingSkeleton for hero image. Content body shows text line skeletons. Map shows LoadingSpinner. CuratedCollectionGrid shows 4-6 RyokanCard skeletons.",
+        "error": "ErrorState if region data fails to load, with retry button and link back to homepage.",
+        "empty": "CuratedCollectionGrid: EmptyState with 'We are adding ryokan for this region — check back soon!' if no ryokan listed. Editorial content always present.",
+        "populated": "RegionalGuideHero with scenic hero image, region name (e.g., 'Hakone Onsen'), brief description. Editorial body with history, highlights, best times to visit, access info. Interactive map with MapPins for all ryokan in region. CuratedCollectionGrid showing featured ryokan. SeasonalHighlightBanner for current season activities."
+      },
+      "responsive": {
+        "mobile": "RegionalGuideHero: full-width image with text overlay. Map shown as static preview image, tap to expand to full-screen interactive map. CuratedCollectionGrid as single-column RyokanCards. Editorial content full-width with inline images.",
+        "tablet": "RegionalGuideHero: full-width with larger text. Map at 100% width, medium height. CuratedCollectionGrid as 2-column grid.",
+        "desktop": "RegionalGuideHero: full-width hero with parallax scroll effect. Content in max-width container (1200px). Map at 100% width, 500px height. CuratedCollectionGrid as 3-column grid."
+      }
+    },
+    {
+      "route": "/[locale]/onsen-guide",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Guide index page with hero section, then grid of guide article cards organized by category (Etiquette, Water Types, Regional Guides, Culture & Dining).",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "GuideRelatedLinks",
+        "ImageWithFallback",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page, always pre-rendered.",
+        "error": "Not applicable — SSG page. If build fails, Vercel serves previous cached version.",
+        "empty": "Not applicable — guide index always has editorial content.",
+        "populated": "Hero section with 'Your Complete Onsen Guide' heading and brief intro text. Below: categorized grid of guide article cards, each with thumbnail image, title, short description, and reading time estimate. Categories: Etiquette & Manners, Onsen Water Types, Regional Guides, Culture & Dining."
+      },
+      "responsive": {
+        "mobile": "Single-column stacked guide cards grouped by category with category headers.",
+        "tablet": "2-column grid of guide cards within each category section.",
+        "desktop": "3-column grid of guide cards. Category sections with larger headings and more spacing."
+      }
+    },
+    {
+      "route": "/[locale]/onsen-guide/[slug]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: sticky left sidebar with GuideTableOfContents. Mobile/tablet: collapsible TOC at top of article.",
+        "main": "GuidePageLayout containing long-form article with GuideContentBody, inline images, and GuideRelatedLinks at bottom.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "GuidePageLayout",
+        "GuideTableOfContents",
+        "GuideContentBody",
+        "GuideRelatedLinks",
+        "CuratedCollectionGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "ShareButton",
+        "ImageWithFallback",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page, always pre-rendered.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has editorial content.",
+        "populated": "Full article view: GuideTableOfContents in sidebar (desktop) or collapsible top section (mobile). GuideContentBody with rich text, inline images, callout boxes. GuideRelatedLinks at bottom with links to related guides and a CuratedCollectionGrid of 3-4 related ryokan."
+      },
+      "responsive": {
+        "mobile": "GuideTableOfContents as collapsible accordion at the top of the article (collapsed by default). GuideContentBody full-width with inline images at 100% width. GuideRelatedLinks as single-column card list. ShareButton as floating action button.",
+        "tablet": "GuideTableOfContents as collapsible section at top (expanded by default). Article content with comfortable reading width (max 720px centered). Related ryokan in 2-column grid.",
+        "desktop": "Two-column layout: sticky GuideTableOfContents sidebar (250px left), GuideContentBody (max 750px center), whitespace on right. GuideRelatedLinks in 3-column grid. ShareButton inline at article top."
+      }
+    },
+    {
+      "route": "/[locale]/onsen-guide/etiquette",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: sticky GuideTableOfContents. Mobile/tablet: collapsible TOC.",
+        "main": "GuidePageLayout with sequential EtiquetteStepCards forming an illustrated step-by-step guide.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "GuidePageLayout",
+        "GuideTableOfContents",
+        "GuideContentBody",
+        "EtiquetteStepCard",
+        "GuideRelatedLinks",
+        "ShareButton",
+        "ImageWithFallback",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has editorial content.",
+        "populated": "Introduction section explaining onsen etiquette importance. Sequential numbered EtiquetteStepCards (8-12 steps) each with illustration, step title, detailed description, and do/don't tips. Steps cover: undressing procedure, washing before entering, entering the bath, soaking etiquette, tattoo considerations, leaving the bath, drying off, common areas behavior. GuideRelatedLinks to tattoo policy guide and ryokan stay guide."
+      },
+      "responsive": {
+        "mobile": "EtiquetteStepCards full-width, stacked vertically. Illustration above text in each card. GuideTableOfContents as collapsible accordion.",
+        "tablet": "EtiquetteStepCards with side-by-side illustration and text layout. Steps in single column.",
+        "desktop": "Two-column layout with sticky GuideTableOfContents. EtiquetteStepCards alternate illustration left/right for visual rhythm. Larger illustrations."
+      }
+    },
+    {
+      "route": "/[locale]/onsen-guide/water-types",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Encyclopedia index: hero section with introduction to Japanese onsen water classification, then grid of OnsenTypeEncyclopediaEntry cards for each water type.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "OnsenTypeEncyclopediaEntry",
+        "GuideRelatedLinks",
+        "ImageWithFallback",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has editorial content.",
+        "populated": "Hero with title 'Onsen Water Types Encyclopedia' and introductory text about Japan's volcanic geology. Grid of OnsenTypeEncyclopediaEntry cards (8-10 types: sulfur, sodium chloride, alkaline simple, iron, carbon dioxide, hydrogen carbonate, sulfate, radium, etc.). Each card shows water type name (JP + localized), color/appearance, key therapeutic benefits, and number of listed ryokan with that type. Cards link to /onsen-guide/water-types/[type]."
+      },
+      "responsive": {
+        "mobile": "Single-column stacked OnsenTypeEncyclopediaEntry cards.",
+        "tablet": "2-column grid of water type cards.",
+        "desktop": "3-column grid with larger cards showing more detail preview."
+      }
+    },
+    {
+      "route": "/[locale]/onsen-guide/water-types/[type]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Detailed page for a single onsen water type: hero with water type name, description of mineral composition, therapeutic benefits, appearance/smell characteristics, famous locations. Below: CuratedCollectionGrid of ryokan with this water type.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "OnsenTypeEncyclopediaEntry",
+        "GuideContentBody",
+        "CuratedCollectionGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "GuideRelatedLinks",
+        "ShareButton",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "CuratedCollectionGrid may show EmptyState if no ryokan are yet listed with this water type.",
+        "populated": "Hero section with water type name (e.g., 'Sulfur Springs — 硫黄泉'). GuideContentBody with detailed description: mineral composition, pH range, color, smell, therapeutic properties, contraindications, famous regions. CuratedCollectionGrid of ryokan featuring this water type. GuideRelatedLinks to other water types and the main encyclopedia."
+      },
+      "responsive": {
+        "mobile": "Content stacked vertically. CuratedCollectionGrid as single-column list of RyokanCards.",
+        "tablet": "Content in comfortable reading width. CuratedCollectionGrid as 2-column grid.",
+        "desktop": "Content max-width 900px centered. CuratedCollectionGrid as 3-column grid."
+      }
+    },
+    {
+      "route": "/[locale]/community/diaries",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "DiaryFeedFilter at top (sort/filter controls), then DiaryFeed with infinite-scroll DiaryCards. Floating 'Write a Diary' CTA button for authenticated users.",
+        "footer": "Footer (visible when scrolled to end of feed)"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "DiaryFeed",
+        "DiaryCard",
+        "DiaryCardAuthor",
+        "DiaryCardStats",
+        "DiaryFeedFilter",
+        "LoadingSkeleton",
+        "LoadingSpinner",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "DiaryFeedFilter shown but disabled. DiaryFeed shows 6 LoadingSkeleton cards matching DiaryCard dimensions (cover image shimmer + text lines + author row).",
+        "error": "ErrorState replacing DiaryFeed with 'Unable to load community diaries' and retry button. DiaryFeedFilter remains visible.",
+        "empty": "EmptyState with onsen illustration, message 'No onsen diaries yet — share your hot spring adventure!', and CTA button to create first diary (links to /community/diaries/new). Shows only for authenticated users; unauthenticated users see 'Sign up to share your onsen experiences.'",
+        "populated": "DiaryFeedFilter with sort options (newest, most popular, by region dropdown). Masonry or grid layout of DiaryCards, each showing cover photo, title, excerpt (2 lines), DiaryCardAuthor with avatar and passport level, DiaryCardStats with like/comment counts. Infinite scroll loads more on reaching bottom, with LoadingSpinner indicator. Floating 'Write' button for authenticated users."
+      },
+      "responsive": {
+        "mobile": "Single-column DiaryCards. DiaryFeedFilter as compact horizontal pills (sort toggle + region dropdown). Floating 'Write' button as circular FAB in bottom-right corner. Infinite scroll with pull-to-refresh.",
+        "tablet": "2-column masonry grid of DiaryCards. DiaryFeedFilter as horizontal bar above grid.",
+        "desktop": "3-column masonry grid of DiaryCards. DiaryFeedFilter as horizontal bar with all controls visible. 'Write a Diary' as prominent button in top-right area next to DiaryFeedFilter."
+      }
+    },
+    {
+      "route": "/[locale]/community/diaries/[id]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: optional right sidebar with DiaryLinkedRyokan card and author info. Mobile/tablet: these appear inline in main content.",
+        "main": "DiaryDetail with full diary content, linked ryokan, like button, and comment section.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "DiaryDetail",
+        "DiaryContent",
+        "DiaryLinkedRyokan",
+        "DiaryCommentSection",
+        "CommentCard",
+        "CommentForm",
+        "DiaryLikeButton",
+        "DiaryCardAuthor",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "ShareButton",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "Badge",
+        "StarRating",
+        "PriceDisplay",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Cover image LoadingSkeleton (full-width rectangle). Title and author row skeleton. DiaryContent body shows 10-15 text line skeletons with 2 image block skeletons. Comment section shows LoadingSpinner.",
+        "error": "ErrorState with 'Unable to load this diary entry' and retry button. If only comments fail, main diary content renders and DiaryCommentSection shows inline error with retry.",
+        "empty": "DiaryCommentSection: EmptyState with 'No comments yet — be the first to share your thoughts.' If diary has no linked ryokan, DiaryLinkedRyokan section is hidden.",
+        "populated": "Full-width cover image at top. Title, author info (DiaryCardAuthor with avatar, name, passport level), and publish date. DiaryContent rendered as rich text with inline images. DiaryLinkedRyokan shows linked RyokanCard if applicable. DiaryLikeButton with count. ShareButton. DiaryCommentSection with CommentCards and CommentForm (for authenticated users; unauthenticated see 'Log in to comment')."
+      },
+      "responsive": {
+        "mobile": "Single-column layout. Cover image full-width. DiaryContent with inline images at 100% width. DiaryLinkedRyokan card inline below content (full-width RyokanCard). DiaryLikeButton and ShareButton as fixed bottom bar. Comments below.",
+        "tablet": "Single-column centered (max-width 720px). DiaryLinkedRyokan inline but styled as a highlight card. Comments full-width.",
+        "desktop": "Two-column: main diary content (65%) on left with comfortable reading width (max 750px). Right sidebar (35%) with sticky DiaryLinkedRyokan card and author bio card. DiaryLikeButton and ShareButton inline above content. DiaryCommentSection below main content spanning full width."
+      }
+    },
+    {
+      "route": "/[locale]/community/diaries/new",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton (minimal header — no search bar during editing)",
+        "sidebar": "Desktop: right sidebar with publish settings (status, linked ryokan, cover image). Mobile: these controls appear as a bottom sheet or inline above the editor.",
+        "main": "DiaryEditor with title input, cover image upload, rich text editor, and ryokan linker.",
+        "footer": "Minimal footer or none (editor-focused view)"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "DiaryEditor",
+        "DiaryTitleInput",
+        "DiaryCoverImageUpload",
+        "DiaryRichTextEditor",
+        "DiaryRyokanLinker",
+        "DiaryPublishButton",
+        "DestinationAutocomplete",
+        "LoadingSpinner",
+        "ErrorState",
+        "Toast",
+        "ConfirmDialog",
+        "ImageWithFallback"
+      ],
+      "states": {
+        "loading": "LoadingSpinner while editor initializes and authenticating user. DiaryRyokanLinker shows shimmer while autocomplete loads.",
+        "error": "ErrorState if editor fails to initialize. Toast notification for image upload failures. Toast for save/publish failures with retry option.",
+        "empty": "Default state: empty DiaryTitleInput with placeholder 'Give your onsen story a title...', empty DiaryCoverImageUpload with upload prompt and illustration, empty DiaryRichTextEditor with placeholder text 'Tell us about your onsen experience...', empty DiaryRyokanLinker with 'Link a ryokan (optional)' prompt.",
+        "populated": "Filled editor with title text, uploaded cover image preview (with replace/remove options), rich text content with embedded images, linked ryokan shown as mini card. DiaryPublishButton shows 'Save Draft' and 'Publish' options. Unsaved changes indicator in header."
+      },
+      "responsive": {
+        "mobile": "Full-screen editor experience. DiaryTitleInput full-width at top. DiaryCoverImageUpload below title (tap to open image picker). DiaryRichTextEditor full-width with simplified toolbar (bold, italic, image, link). DiaryRyokanLinker as a bottom sheet triggered by button. DiaryPublishButton as fixed bottom bar with Save/Publish buttons.",
+        "tablet": "Centered editor (max-width 720px). Cover image upload with drag-and-drop zone. Full rich text toolbar. Ryokan linker inline below editor.",
+        "desktop": "Two-column layout: editor (70%) on left with DiaryTitleInput, DiaryCoverImageUpload (drag-and-drop zone), and full DiaryRichTextEditor. Right sidebar (30%) with publish settings: cover image preview, DiaryRyokanLinker, status (draft/published), and DiaryPublishButton."
+      }
+    },
+    {
+      "route": "/[locale]/community/diaries/[id]/edit",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton (minimal header)",
+        "sidebar": "Same as diary creation — publish settings sidebar on desktop",
+        "main": "DiaryEditor pre-populated with existing diary content for editing.",
+        "footer": "Minimal footer or none"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "DiaryEditor",
+        "DiaryTitleInput",
+        "DiaryCoverImageUpload",
+        "DiaryRichTextEditor",
+        "DiaryRyokanLinker",
+        "DiaryPublishButton",
+        "DestinationAutocomplete",
+        "LoadingSpinner",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "ConfirmDialog",
+        "ImageWithFallback"
+      ],
+      "states": {
+        "loading": "LoadingSkeleton matching editor layout: title line skeleton, cover image rectangle skeleton, content area with text line skeletons. Sidebar shimmer for linked ryokan.",
+        "error": "ErrorState if diary data fails to load, with message 'Unable to load your diary for editing' and retry button. Toast for save failures.",
+        "empty": "Not applicable — editor is pre-populated with existing content. If cover image was deleted, DiaryCoverImageUpload shows upload prompt.",
+        "populated": "Same layout as /community/diaries/new but pre-filled with existing diary data: title, cover image, rich text content, linked ryokan. DiaryPublishButton shows 'Update' instead of 'Publish'. ConfirmDialog shown if user navigates away with unsaved changes."
+      },
+      "responsive": {
+        "mobile": "Same responsive behavior as /community/diaries/new.",
+        "tablet": "Same responsive behavior as /community/diaries/new.",
+        "desktop": "Same responsive behavior as /community/diaries/new."
+      }
+    },
+    {
+      "route": "/[locale]/collections/[slug]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Collection hero with title, description, and hero image. Below: CuratedCollectionGrid of ryokan matching the collection theme.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "CuratedCollectionGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "GuideContentBody",
+        "ShareButton",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Hero section with LoadingSkeleton for image and title. CuratedCollectionGrid shows 6 RyokanCard skeletons.",
+        "error": "ErrorState with 'Unable to load this collection' and retry button.",
+        "empty": "EmptyState in CuratedCollectionGrid area with 'This collection is being curated — check back soon!'",
+        "populated": "Hero section with collection title (e.g., 'Best Snow Onsen for Winter 2026'), editorial description, and atmospheric hero image. GuideContentBody with optional editorial narrative. CuratedCollectionGrid showing 6-12 RyokanCards. ShareButton for social sharing."
+      },
+      "responsive": {
+        "mobile": "Hero image full-width. Editorial text full-width. CuratedCollectionGrid single-column. ShareButton as floating FAB.",
+        "tablet": "Hero image full-width. CuratedCollectionGrid 2-column grid.",
+        "desktop": "Hero image full-width with text overlay. CuratedCollectionGrid 3-column grid. ShareButton inline."
+      }
+    },
+    {
+      "route": "/[locale]/booking/[ryokanSlug]",
+      "layout": {
+        "header": "Header with Logo and minimal navigation (no search bar — focused booking experience). AuthButton showing logged-in user.",
+        "sidebar": "Desktop: sticky right sidebar with BookingSummaryCard showing running total, selected options, and ryokan mini-info. Mobile: BookingSummaryCard shown as collapsible section at top.",
+        "main": "Multi-step booking form: BookingStepIndicator at top, then active step content (GuestDetailsForm or PaymentForm).",
+        "footer": "Minimal footer with terms and support links only"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "Breadcrumb",
+        "BookingStepIndicator",
+        "BookingSummaryCard",
+        "GuestDetailsForm",
+        "GuestFieldGroup",
+        "DietaryRestrictionSelect",
+        "SpecialRequestTextarea",
+        "ArrivalTimeSelect",
+        "PaymentForm",
+        "CardInputField",
+        "BillingAddressForm",
+        "PricingBreakdown",
+        "CouponCodeInput",
+        "DateRangePicker",
+        "GuestSelector",
+        "LoadingSpinner",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "PriceDisplay",
+        "Tooltip",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "BookingStepIndicator shown but inactive. BookingSummaryCard shows LoadingSkeleton for ryokan info and pricing. Main form area shows LoadingSkeleton matching form field layout. 'Checking availability...' message.",
+        "error": "If availability check fails: ErrorState with 'This room is no longer available for your selected dates' and link back to ryokan detail page. If payment fails: ErrorState inline within PaymentForm with specific error message (card declined, network error) and retry option. Toast for transient errors.",
+        "empty": "Not applicable — all fields have placeholders and the form is always interactive once loaded.",
+        "populated": "BookingStepIndicator showing current step highlighted. BookingSummaryCard with ryokan photo thumbnail, room type, dates, guest count, meal plan, itemized pricing. GuestDetailsForm step: GuestFieldGroups for each guest, DietaryRestrictionSelect, SpecialRequestTextarea, ArrivalTimeSelect. PaymentForm step: CardInputField (Stripe Elements), BillingAddressForm, PricingBreakdown with taxes/fees, optional CouponCodeInput, prominent 'Complete Booking' button with total price."
+      },
+      "responsive": {
+        "mobile": "Single-column layout. BookingSummaryCard as collapsible card at top (shows mini summary: ryokan name + total price, tap to expand full breakdown). BookingStepIndicator as compact dots/line. Form fields full-width stacked. PaymentForm: CardInputField full-width, BillingAddressForm fields stacked. 'Complete Booking' as fixed bottom bar button with total price.",
+        "tablet": "Single-column centered (max-width 680px). BookingSummaryCard above form as expanded card. Form fields with 2-column layout where appropriate (first/last name side by side). PricingBreakdown inline.",
+        "desktop": "Two-column layout: form content (60%) on left, sticky BookingSummaryCard sidebar (40%) on right. BookingSummaryCard shows full details including ryokan photo, room info, dates, meal plan, and live-updating PricingBreakdown. Form has comfortable spacing with 2-column field layout."
+      }
+    },
+    {
+      "route": "/[locale]/booking/confirmation/[bookingId]",
+      "layout": {
+        "header": "Header with Logo, LocaleSelector, AuthButton",
+        "sidebar": "None",
+        "main": "BookingConfirmation with success state, ReservationSummary, AccessGuide, EtiquetteQuickTips, and AddToCalendarButton.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "LocaleSelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "BookingConfirmation",
+        "ReservationSummary",
+        "AccessGuide",
+        "EtiquetteQuickTips",
+        "AddToCalendarButton",
+        "ShareButton",
+        "LoadingSkeleton",
+        "ErrorState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Success checkmark animation at top. ReservationSummary shows LoadingSkeleton for booking details (while confirming payment webhook processing).",
+        "error": "ErrorState with 'We are processing your booking — please check your email for confirmation. If you don't receive it within 15 minutes, contact support.' Includes support contact info and booking reference number if available.",
+        "empty": "Not applicable — always shows booking data if valid bookingId.",
+        "populated": "Green success banner with checkmark: 'Booking Confirmed!' Confirmation number displayed prominently. ReservationSummary: ryokan name and photo, room type, dates, guest count, meal plan, total paid, payment method (last 4 digits). AccessGuide: directions from nearest major station with transit options and estimated times. EtiquetteQuickTips: 4-5 brief onsen etiquette reminders with icons. AddToCalendarButton. Links: 'View in Dashboard', 'Write a Review After Your Stay', 'Browse More Ryokan'."
+      },
+      "responsive": {
+        "mobile": "Single-column stacked layout. Success banner full-width. ReservationSummary as card. AccessGuide and EtiquetteQuickTips as collapsible sections. AddToCalendarButton full-width. Action links as full-width buttons.",
+        "tablet": "Centered layout (max-width 680px). All sections expanded. AddToCalendarButton inline.",
+        "desktop": "Centered layout (max-width 800px). ReservationSummary with ryokan photo on left, details on right. AccessGuide and EtiquetteQuickTips side-by-side in 2-column layout below. Action links as inline buttons."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: left sidebar with DashboardNav (persistent vertical navigation). Mobile/tablet: DashboardNav as horizontal tab bar below header.",
+        "main": "Dashboard overview: UpcomingBookings section, quick stats, recent activity summary.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "UpcomingBookings",
+        "BookingCard",
+        "PastBookings",
+        "HotSpringPassport",
+        "PassportStamp",
+        "BadgeDisplay",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "DashboardNav visible and interactive. UpcomingBookings shows 2 BookingCard skeletons. Stats area shows number skeletons. HotSpringPassport preview shows grid of locked stamp skeletons.",
+        "error": "ErrorState for individual sections that fail to load (e.g., bookings section shows error while passport section loads normally). Each section has independent error handling with retry.",
+        "empty": "UpcomingBookings: EmptyState with 'No upcoming trips — start planning your next onsen adventure!' and CTA linking to search. PastBookings: EmptyState with 'Your completed stays will appear here.' HotSpringPassport: shows full map/grid with all stamps in 'locked' state and CTA 'Visit your first onsen to start collecting stamps!'",
+        "populated": "Overview showing: (1) UpcomingBookings with next 1-3 BookingCards showing ryokan name, dates, status badge, quick actions (view details, cancel). (2) Quick stats: total stays, regions visited, reviews written. (3) HotSpringPassport preview showing recent stamps and badge count with 'View Full Passport' link. (4) PastBookings showing last 2-3 completed stays with 'Write Review' prompt for unreviewed stays."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal scrollable tab bar below header (icons + short labels). Content sections stacked vertically full-width. BookingCards simplified to essential info (ryokan name, dates, status). HotSpringPassport preview as compact horizontal scroll of recent stamps.",
+        "tablet": "DashboardNav as horizontal tab bar. Content in single column with wider cards. BookingCards show more detail. HotSpringPassport preview in 2-column grid.",
+        "desktop": "DashboardNav as persistent left sidebar (240px). Main content area with 2-column layout: UpcomingBookings spanning full width at top, then stats and HotSpringPassport preview side-by-side below, PastBookings below that."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/bookings",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar. Mobile/tablet: horizontal tab bar.",
+        "main": "Full booking history with tab toggle (Upcoming / Past / Cancelled). List of BookingCards.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "UpcomingBookings",
+        "PastBookings",
+        "BookingCard",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "PriceDisplay",
+        "Badge",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Tab toggle visible but dimmed. 4-6 BookingCard skeletons in a list.",
+        "error": "ErrorState with 'Unable to load your bookings' and retry button.",
+        "empty": "EmptyState per tab: Upcoming — 'No upcoming trips planned. Find your next onsen!'; Past — 'No past stays yet.'; Cancelled — 'No cancelled bookings.'",
+        "populated": "Tab toggle at top (Upcoming / Past / Cancelled) with count badges. List of BookingCards each showing: ryokan photo thumbnail, ryokan name, dates, room type, total price, status badge (confirmed/completed/cancelled), and action buttons (View Details, Cancel for upcoming, Write Review for past)."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. Status tabs as pill toggles. BookingCards as compact cards stacked vertically (photo left, info right in a row).",
+        "tablet": "BookingCards with more horizontal space showing additional details.",
+        "desktop": "DashboardNav sidebar. BookingCards as wide rows with photo, full details, and action buttons all in one line."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/bookings/[bookingId]",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar.",
+        "main": "Full booking detail view with ReservationSummary, modification options, AccessGuide, and cancellation controls.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "ReservationSummary",
+        "AccessGuide",
+        "EtiquetteQuickTips",
+        "AddToCalendarButton",
+        "ConfirmDialog",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "PriceDisplay",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "LoadingSkeleton for ReservationSummary (photo + detail lines) and AccessGuide section.",
+        "error": "ErrorState with 'Unable to load booking details' and retry button.",
+        "empty": "Not applicable — always has booking data if valid bookingId. If bookingId is invalid, redirect to /dashboard/bookings.",
+        "populated": "Status badge at top (Confirmed / Completed / Cancelled). ReservationSummary with: ryokan name + link to listing, ryokan photo, room type, check-in/out dates, guest count, meal plan, special requests, total price, payment method. For upcoming bookings: 'Modify Booking' button (limited changes), 'Cancel Booking' button (triggers ConfirmDialog with cancellation policy terms). AccessGuide with directions. EtiquetteQuickTips. AddToCalendarButton. For past bookings: 'Write a Review' CTA if not yet reviewed."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. Content stacked vertically. Action buttons full-width at bottom. ConfirmDialog as full-screen modal.",
+        "tablet": "Content centered (max-width 680px). Action buttons inline.",
+        "desktop": "DashboardNav sidebar. Content in main area. ReservationSummary with photo on left, details on right. Action buttons inline in summary section."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/wishlist",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar.",
+        "main": "WishlistGrid displaying saved ryokan as RyokanCards with remove option.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "WishlistGrid",
+        "RyokanCard",
+        "RyokanCardImage",
+        "RyokanCardBadge",
+        "RyokanCardOnsenTags",
+        "RyokanCardPricing",
+        "RyokanCardRating",
+        "WishlistToggle",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "PriceDisplay",
+        "Badge",
+        "StarRating",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "DashboardNav visible. WishlistGrid shows 4-6 RyokanCard skeletons.",
+        "error": "ErrorState with 'Unable to load your wishlist' and retry button.",
+        "empty": "EmptyState with heart illustration, message 'Your wishlist is empty — save ryokan you love while browsing!', and CTA button 'Explore Ryokan' linking to search.",
+        "populated": "WishlistGrid of RyokanCards with WishlistToggle pre-filled (heart filled). Each card shows current pricing. Removing via WishlistToggle triggers optimistic removal with undo Toast notification."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. WishlistGrid as single-column stacked RyokanCards.",
+        "tablet": "WishlistGrid as 2-column grid.",
+        "desktop": "DashboardNav sidebar. WishlistGrid as 3-column grid in main content area."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/passport",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar.",
+        "main": "HotSpringPassport full view: visual Japan map with region stamps, badges collection, stats summary.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "HotSpringPassport",
+        "PassportStamp",
+        "BadgeDisplay",
+        "ShareButton",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "ImageWithFallback",
+        "Badge",
+        "Tooltip",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "HotSpringPassport map outline visible. PassportStamp positions shimmer. Stats area shows number skeletons. BadgeDisplay shows locked badge skeletons.",
+        "error": "ErrorState with 'Unable to load your Hot Spring Passport' and retry button.",
+        "empty": "Full passport displayed with all regions visible but all stamps in 'locked' grayscale state. Stats show '0 regions visited, 0 badges earned'. Motivational message: 'Your onsen journey begins with a single soak! Book your first ryokan to earn your first stamp.' CTA linking to search.",
+        "populated": "Stylized Japan map with regions highlighted: visited regions show colored PassportStamp (with visit date and ryokan name on hover via Tooltip), unvisited regions in grayscale. Stats bar: X/47 prefectures visited, Y regions explored, Z badges earned. BadgeDisplay grid showing earned badges (e.g., 'First Soak', 'Sulfur Seeker', 'Kanto Explorer', '5 Regions Club') with locked badges shown semi-transparent. ShareButton to share passport progress on social media."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. Japan map scales to fit screen width (interactive pinch-zoom). PassportStamps as tappable circles on map. Stats as compact horizontal bar. BadgeDisplay as horizontal scrollable row. ShareButton as FAB.",
+        "tablet": "Map at comfortable size. BadgeDisplay as 3-column grid below map. Stats inline above map.",
+        "desktop": "DashboardNav sidebar. Large Japan map as centerpiece. BadgeDisplay as 4-column grid to the right of or below the map. Stats prominently displayed above map. ShareButton inline."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/profile",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar.",
+        "main": "UserProfileForm with editable user settings.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "UserProfileForm",
+        "LoadingSkeleton",
+        "ErrorState",
+        "Toast",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "UserProfileForm shows LoadingSkeleton for avatar circle, name field, and preference dropdowns.",
+        "error": "ErrorState if profile data fails to load. Toast for save failures with retry.",
+        "empty": "Not applicable — profile always has data from registration. Optional fields show placeholders.",
+        "populated": "UserProfileForm sections: (1) Avatar upload + display name. (2) Email (read-only if social login). (3) Preferred language dropdown. (4) Preferred currency dropdown. (5) Travel preferences (bath style preferences, dietary restrictions, accessibility needs). (6) Connected accounts (Google, LINE — connect/disconnect). (7) 'Save Changes' button. (8) 'Delete Account' link (triggers ConfirmDialog). Toast on successful save."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. UserProfileForm full-width stacked fields. Save button full-width at bottom.",
+        "tablet": "UserProfileForm centered (max-width 600px). Fields comfortable width.",
+        "desktop": "DashboardNav sidebar. UserProfileForm in main area (max-width 600px). Two-column layout for preference dropdowns where appropriate."
+      }
+    },
+    {
+      "route": "/[locale]/dashboard/reviews",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: DashboardNav left sidebar.",
+        "main": "List of user's submitted reviews with edit/delete options.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "UserDashboard",
+        "DashboardNav",
+        "ReviewCard",
+        "StarRating",
+        "ConfirmDialog",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
+        "Toast",
+        "Badge",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "3-4 ReviewCard skeletons stacked vertically.",
+        "error": "ErrorState with 'Unable to load your reviews' and retry button.",
+        "empty": "EmptyState with message 'You haven't written any reviews yet. After your stay, share your experience to help other travelers!' CTA linking to past bookings.",
+        "populated": "List of ReviewCards showing: ryokan name (linked to listing), stay dates, ratings (overall + subcategories), review text, and action buttons (Edit, Delete). Delete triggers ConfirmDialog. Edit navigates to inline edit mode or modal."
+      },
+      "responsive": {
+        "mobile": "DashboardNav as horizontal tab bar. ReviewCards full-width stacked. Ratings shown as compact star row.",
+        "tablet": "ReviewCards with comfortable width. Ratings shown with subcategory labels.",
+        "desktop": "DashboardNav sidebar. ReviewCards in main area with ryokan thumbnail photo alongside review content."
+      }
+    },
+    {
+      "route": "/[locale]/auth/login",
+      "layout": {
+        "header": "Minimal header with Logo only (centered), linking to homepage",
+        "sidebar": "None",
+        "main": "Centered AuthModal content (not in a modal overlay — rendered as a full page for direct URL access). Contains LoginForm and SocialLoginButtons.",
+        "footer": "Minimal footer with terms and privacy links"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "AuthModal",
+        "LoginForm",
+        "SocialLoginButtons",
+        "LoadingSpinner",
+        "ErrorState",
+        "Toast",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSpinner on form submit while authenticating. SocialLoginButtons show loading state when OAuth redirect is initiated.",
+        "error": "Inline error message below form fields: 'Invalid email or password'. Toast for network errors. Rate limit message: 'Too many login attempts. Please try again in X minutes.'",
+        "empty": "Default state: empty email and password fields with placeholders. SocialLoginButtons (Google, LINE) displayed below form. 'Forgot password?' link. 'Don't have an account? Sign up' link to /auth/register.",
+        "populated": "Fields filled by user. 'Log In' button becomes active when both fields have input. Redirect message shown if user was redirected from a protected page: 'Please log in to continue to [page name]'."
+      },
+      "responsive": {
+        "mobile": "Full-screen centered card layout. Form fields full-width. SocialLoginButtons full-width stacked. Logo centered at top.",
+        "tablet": "Centered card (max-width 440px) with subtle shadow. Same form layout as mobile.",
+        "desktop": "Centered card (max-width 440px) on a branded background (subtle onsen imagery). Form with generous padding."
+      }
+    },
+    {
+      "route": "/[locale]/auth/register",
+      "layout": {
+        "header": "Minimal header with Logo only (centered)",
+        "sidebar": "None",
+        "main": "Centered AuthModal content with RegisterForm and SocialLoginButtons.",
+        "footer": "Minimal footer with terms and privacy links"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "AuthModal",
+        "RegisterForm",
+        "SocialLoginButtons",
+        "LoadingSpinner",
+        "ErrorState",
+        "Toast",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSpinner on form submit during account creation.",
+        "error": "Inline field-level validation errors (email format, password strength). 'An account with this email already exists' message. Toast for network errors.",
+        "empty": "Default state: empty name, email, password fields with placeholders. SocialLoginButtons below. 'Already have an account? Log in' link to /auth/login. Terms acceptance checkbox.",
+        "populated": "Fields filled with real-time validation feedback (green checks for valid fields). Password strength indicator. 'Create Account' button active when all required fields valid."
+      },
+      "responsive": {
+        "mobile": "Full-screen centered card. All fields full-width stacked. SocialLoginButtons full-width.",
+        "tablet": "Centered card (max-width 440px).",
+        "desktop": "Centered card (max-width 440px) on branded background."
+      }
+    },
+    {
+      "route": "/[locale]/auth/forgot-password",
+      "layout": {
+        "header": "Minimal header with Logo only",
+        "sidebar": "None",
+        "main": "Centered ForgotPasswordForm.",
+        "footer": "Minimal footer"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "AuthModal",
+        "ForgotPasswordForm",
+        "LoadingSpinner",
+        "ErrorState",
+        "Toast",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSpinner on form submit while sending reset email.",
+        "error": "Inline error for invalid email format. Toast for network errors. Note: no error shown for unregistered emails (security best practice — same success message regardless).",
+        "empty": "Email input with placeholder. 'Send Reset Link' button. 'Back to login' link.",
+        "populated": "After submission: success message 'If an account exists with this email, you will receive a password reset link. Check your inbox.' with link back to login."
+      },
+      "responsive": {
+        "mobile": "Full-screen centered card with single email field.",
+        "tablet": "Centered card (max-width 440px).",
+        "desktop": "Centered card (max-width 440px) on branded background."
+      }
+    },
+    {
+      "route": "/[locale]/auth/reset-password",
+      "layout": {
+        "header": "Minimal header with Logo only",
+        "sidebar": "None",
+        "main": "Centered password reset form with new password and confirm password fields.",
+        "footer": "Minimal footer"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "AuthModal",
+        "LoadingSpinner",
+        "ErrorState",
+        "Toast",
+        "Footer",
+        "FooterLinkGroup"
+      ],
+      "states": {
+        "loading": "LoadingSpinner while validating reset token on page load. LoadingSpinner on form submit.",
+        "error": "If token is invalid/expired: ErrorState with 'This reset link has expired. Please request a new one.' and link to /auth/forgot-password. Inline error if passwords don't match.",
+        "empty": "New password and confirm password fields with placeholders. Password strength indicator. 'Reset Password' button.",
+        "populated": "After successful reset: success message 'Password reset successfully!' with automatic redirect to login page after 3 seconds."
+      },
+      "responsive": {
+        "mobile": "Full-screen centered card with password fields.",
+        "tablet": "Centered card (max-width 440px).",
+        "desktop": "Centered card (max-width 440px) on branded background."
+      }
+    },
+    {
+      "route": "/[locale]/about",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "None",
+        "main": "Static about page with company mission, team info, and onsen passion narrative.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "GuideContentBody",
+        "ImageWithFallback",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has static content.",
+        "populated": "Hero image with mission statement overlay. Sections: Our Mission, Our Story, The Team, Why Onsen, Contact Information. Rich text with images throughout."
+      },
+      "responsive": {
+        "mobile": "Single-column stacked content. Hero image full-width. Text sections full-width with comfortable padding.",
+        "tablet": "Content centered (max-width 720px). Images at comfortable size.",
+        "desktop": "Content centered (max-width 900px). Hero section full-width. Two-column sections where appropriate (text + image side-by-side)."
+      }
+    },
+    {
+      "route": "/[locale]/terms",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: sticky table of contents for terms sections.",
+        "main": "Long-form legal text with section headings.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "GuidePageLayout",
+        "GuideTableOfContents",
+        "GuideContentBody",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has static legal content.",
+        "populated": "Full terms of service with numbered sections. Last updated date displayed at top."
+      },
+      "responsive": {
+        "mobile": "Single-column text. GuideTableOfContents as collapsible section at top.",
+        "tablet": "Centered text (max-width 720px).",
+        "desktop": "Two-column: sticky GuideTableOfContents sidebar + content body."
+      }
+    },
+    {
+      "route": "/[locale]/privacy",
+      "layout": {
+        "header": "Header with Logo, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton",
+        "sidebar": "Desktop: sticky table of contents for privacy policy sections.",
+        "main": "Long-form privacy policy text with section headings.",
+        "footer": "Footer with FooterLinkGroup and SocialLinks"
+      },
+      "components": [
+        "AppShell",
+        "Header",
+        "Logo",
+        "SearchBarCompact",
+        "LocaleSelector",
+        "CurrencySelector",
+        "AuthButton",
+        "UserMenuDropdown",
+        "MobileMenuToggle",
+        "MobileDrawer",
+        "GuidePageLayout",
+        "GuideTableOfContents",
+        "GuideContentBody",
+        "Footer",
+        "FooterLinkGroup",
+        "SocialLinks"
+      ],
+      "states": {
+        "loading": "Not applicable — SSG page.",
+        "error": "Not applicable — SSG page.",
+        "empty": "Not applicable — always has static legal content.",
+        "populated": "Full privacy policy with GDPR and APPI compliance sections. Last updated date at top. Sections covering: data collection, usage, sharing, retention, user rights, cookie policy, contact."
+      },
+      "responsive": {
+        "mobile": "Single-column text. GuideTableOfContents as collapsible section at top.",
+        "tablet": "Centered text (max-width 720px).",
+        "desktop": "Two-column: sticky GuideTableOfContents sidebar + content body."
+      }
+    }
+  ]
+}

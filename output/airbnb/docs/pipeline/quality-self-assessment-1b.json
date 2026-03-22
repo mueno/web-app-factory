@@ -1,0 +1,63 @@
+{
+  "phase_id": "1b",
+  "timestamp": "2026-03-22T01:59:14.577976+00:00",
+  "deliverables": [
+    {
+      "name": "Product Requirements Document",
+      "path": "docs/pipeline/prd.md",
+      "criteria": [
+        {
+          "criterion": "Requirements are classified with MoSCoW labels (Must/Should/Could/Won't) and each requirement is individually labeled",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Component inventory lists every reusable UI component with its hierarchy (parent-child relationships specified)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Responsive breakpoint strategy specifies behavior at mobile (< 768px), tablet (768-1024px), and desktop (> 1024px)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Route structure lists all pages with their URL paths, dynamic segments, and data requirements",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Data flow diagram or description shows how data moves between components and external APIs",
+          "status": "pending",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "Screen Specification",
+      "path": "docs/pipeline/screen-spec.json",
+      "criteria": [
+        {
+          "criterion": "Every screen in the app has a layout description specifying major regions (header, sidebar, main content, footer)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Every screen lists its component inventory with component names that match the PRD component inventory",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Interactive states (loading, error, empty, populated) are specified for every screen with data dependencies",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Mobile layout differences from desktop are explicitly called out for each screen",
+          "status": "pending",
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}
