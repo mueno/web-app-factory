@@ -54,12 +54,12 @@
     },
     "3": {
       "phase_id": "3",
-      "started_at": "2026-03-22T05:47:39.784453+00:00",
+      "started_at": "2026-03-22T06:10:23.099013+00:00",
       "completed_at": "2026-03-22T05:09:22.588028+00:00",
       "error": null,
       "status": "failed",
       "artifacts": [],
-      "notes": "FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85"
+      "notes": "FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_accessibility failed after 3 attempt(s). Last issues: playwright and axe-playwright-python are required but not installed"
     }
   },
   "status": "failed"

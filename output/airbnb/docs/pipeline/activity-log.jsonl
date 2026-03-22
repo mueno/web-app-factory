@@ -33,3 +33,5 @@
 {"timestamp": "2026-03-22T05:33:55.736883+00:00", "run_id": "20260322-035830-airbnb", "event": "failed", "error": "gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85"}
 {"timestamp": "2026-03-22T05:47:39.784453+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_start", "phase": "3"}
 {"timestamp": "2026-03-22T06:08:08.482985+00:00", "run_id": "20260322-035830-airbnb", "event": "failed", "error": "gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85"}
+{"timestamp": "2026-03-22T06:10:23.099013+00:00", "run_id": "20260322-035830-airbnb", "event": "phase_start", "phase": "3"}
+{"timestamp": "2026-03-22T06:24:58.362879+00:00", "run_id": "20260322-035830-airbnb", "event": "failed", "error": "gate_accessibility failed after 3 attempt(s). Last issues: playwright and axe-playwright-python are required but not installed"}
