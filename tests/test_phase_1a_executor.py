@@ -151,9 +151,18 @@ def mock_npm_ok():
 
 
 def _import_executor():
-    """Import phase_1a_executor to trigger self-registration. Idempotent across tests thanks to clear_registry_before_after."""
+    """Import phase_1a_executor and ensure it is registered.
+
+    On the first call, importing the module triggers self-registration.
+    On subsequent calls (after clear_registry_before_after clears the registry),
+    importlib.reload() re-executes the module-level guard which re-registers
+    because get_executor('1a') now returns None.
+    """
     import importlib
-    import tools.phase_executors.phase_1a_executor as mod
+    import sys
+    import tools.phase_executors.phase_1a_executor  # noqa: F401 (ensure in sys.modules)
+
+    mod = sys.modules["tools.phase_executors.phase_1a_executor"]
     importlib.reload(mod)
     return mod
 
