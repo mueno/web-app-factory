@@ -183,3 +183,60 @@ def test_run_spec_agent_returns_empty_when_no_result(tmp_path):
             project_dir=str(tmp_path),
         )
     assert result == ""
+
+
+def test_run_spec_agent_drains_entire_generator(tmp_path):
+    """run_spec_agent must consume ALL messages, not break early on ResultMessage.
+
+    Regression test for: RuntimeError: Attempted to exit cancel scope in a
+    different task than it was entered in.
+
+    The SDK's process_query() uses anyio TaskGroups internally. If the caller
+    breaks out of the async generator early (via `return` inside `async for`),
+    Python sends GeneratorExit into the generator, causing its finally block to
+    run query.close() in a different task context than query.start() was called
+    in. anyio detects this as a cancel scope cross-task violation.
+
+    Fix: collect the first ResultMessage but continue iterating to generator
+    exhaustion so cleanup happens in the same task context.
+    """
+    from claude_agent_sdk.types import ResultMessage
+    from tools.phase_executors.spec_agent_runner import run_spec_agent
+
+    messages_yielded: list[int] = []
+    cleanup_ran: list[bool] = []
+
+    async def multi_message_gen(*args, **kwargs):
+        """Generator that yields a ResultMessage then more messages, tracks full drain."""
+        messages_yielded.append(1)
+        yield ResultMessage(
+            subtype="result",
+            duration_ms=100,
+            duration_api_ms=100,
+            is_error=False,
+            num_turns=1,
+            session_id="test-session",
+            result="first result",
+        )
+        # These messages come AFTER ResultMessage — must be consumed without breaking
+        messages_yielded.append(2)
+        messages_yielded.append(3)
+        cleanup_ran.append(True)
+
+    with patch(
+        "tools.phase_executors.spec_agent_runner.query",
+        side_effect=multi_message_gen,
+    ):
+        result = run_spec_agent(
+            prompt="Test prompt",
+            system_prompt="System prompt",
+            project_dir=str(tmp_path),
+        )
+
+    assert result == "first result", "Should return first ResultMessage text"
+    assert len(messages_yielded) == 3, (
+        f"Generator was not fully drained — only {len(messages_yielded)} of 3 "
+        "items were yielded. Early break from async for will cause anyio "
+        "cancel scope cross-task RuntimeError in the real SDK."
+    )
+    assert cleanup_ran, "Generator cleanup (final statements) must execute"

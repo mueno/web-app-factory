@@ -2,7 +2,7 @@
 
 ## 1. Product Overview
 
-OnsenBook is a web-based accommodation booking platform exclusively focused on Japanese onsen ryokan (hot spring inns). It combines onsen-specialized search and filtering, multilingual cultural bridge content, editorial curation across all price ranges, and community-driven discovery features. The platform targets international travelers seeking authentic onsen experiences and domestic Japanese travelers wanting curated onsen getaways.
+OnsenBook is a web-based accommodation booking platform exclusively focused on Japanese onsen ryokan (hot spring inns). It combines onsen-specialized search and filtering, bilingual cultural-bridge content, host empowerment tools, and community-driven discovery features. The platform targets international travelers seeking authentic onsen experiences, domestic Japanese travelers wanting curated onsen getaways, and small ryokan owners seeking a modern, low-commission booking channel.
 
 ### 1.1 Vision Statement
 
@@ -11,10 +11,10 @@ Become the global authority for onsen ryokan discovery and booking — the platf
 ### 1.2 Success Metrics (Year 1)
 
 - 500–1,000 bookings/month by month 12
-- 30+ ryokan partnerships at launch
+- 30+ ryokan partnerships at launch (Hakone region focus)
 - 10,000 monthly organic visitors within 6 months
 - 4.5+ average user satisfaction rating
-- 5 supported languages: JP, EN, CN-S, CN-T, KR
+- Full bilingual support: Japanese and English (additional languages in Year 2)
 
 ---
 
@@ -110,24 +110,27 @@ Become the global authority for onsen ryokan discovery and booking — the platf
 
 | ID | Requirement | MoSCoW |
 |----|-------------|--------|
-| I-01 | Full UI translation in 5 languages: Japanese, English, Simplified Chinese, Traditional Chinese, Korean | Must |
-| I-02 | URL-based locale routing (/en/..., /ja/..., /zh-cn/..., /zh-tw/..., /ko/...) | Must |
+| I-01 | Full UI translation in Japanese and English | Must |
+| I-02 | URL-based locale routing (/en/..., /ja/...) | Must |
 | I-03 | Auto-detect user language from browser Accept-Language header and Vercel geo headers | Must |
-| I-04 | Currency display in JPY, USD, EUR, CNY, KRW with conversion rates updated daily | Must |
-| I-05 | Date formatting respects locale conventions (YYYY/MM/DD for Japanese, MM/DD/YYYY for US, etc.) | Must |
-| I-06 | Ryokan descriptions available in at least JP and EN; other languages progressively added | Must |
-| I-07 | Right-to-left layout support for Arabic | Won't (v1) |
+| I-04 | Currency display in JPY and USD with conversion rates updated daily; additional currencies (EUR, CNY, KRW) as extension | Must |
+| I-05 | Date formatting respects locale conventions (YYYY/MM/DD for Japanese, MM/DD/YYYY for US) | Must |
+| I-06 | Ryokan descriptions available in Japanese and English | Must |
+| I-07 | Additional languages (Simplified Chinese, Traditional Chinese, Korean) added in Year 2 | Won't (v1) |
+| I-08 | Right-to-left layout support for Arabic | Won't (v1) |
 
-### 2.8 Ryokan Owner Portal
+### 2.8 Ryokan Owner Portal (Host Dashboard)
 
 | ID | Requirement | MoSCoW |
 |----|-------------|--------|
-| O-01 | Ryokan owners can manage listing details (photos, descriptions, amenities, onsen info) | Should |
-| O-02 | Ryokan owners can manage room inventory and availability calendar | Should |
-| O-03 | Ryokan owners can set pricing and seasonal rate adjustments | Should |
-| O-04 | Ryokan owners can view and respond to bookings | Should |
-| O-05 | Dashboard showing booking analytics, revenue, and review scores | Could |
-| O-06 | LINE-based notification integration for new bookings | Could |
+| O-01 | Ryokan owners can register as hosts and create a host profile with their inn's story | Should |
+| O-02 | Ryokan owners can manage listing details (photos, descriptions, amenities, onsen info) via a structured form | Should |
+| O-03 | Ryokan owners can manage room inventory and availability calendar with block/unblock dates | Should |
+| O-04 | Ryokan owners can set base pricing and seasonal rate adjustments per room type | Should |
+| O-05 | Ryokan owners can view incoming bookings, confirm/decline, and communicate pre-arrival details | Should |
+| O-06 | Dashboard showing booking analytics: monthly revenue, occupancy rate, review scores, and guest demographics | Could |
+| O-07 | Ryokan owners can respond publicly to guest reviews | Could |
+| O-08 | LINE-based notification integration for new bookings and messages | Could |
 
 ---
 
@@ -150,7 +153,7 @@ Become the global authority for onsen ryokan discovery and booking — the platf
 
 ## 4. Component Inventory
 
-All reusable UI components listed with parent-child hierarchy. Component names are canonical and must be referenced consistently across all documentation.
+All reusable UI components listed with parent-child hierarchy. Component names are canonical and must be referenced consistently across all documentation including screen-spec.json.
 
 ### 4.1 Layout Components
 
@@ -158,8 +161,8 @@ All reusable UI components listed with parent-child hierarchy. Component names a
   - **Header** — Top navigation bar with logo, search, locale selector, auth controls
     - **Logo** — OnsenBook brand mark and wordmark, links to homepage
     - **SearchBarCompact** — Collapsed search input in header (expands on focus)
-    - **LocaleSelector** — Language dropdown switcher
-    - **CurrencySelector** — Currency preference dropdown
+    - **LocaleSelector** — Language dropdown switcher (Japanese / English)
+    - **CurrencySelector** — Currency preference dropdown (JPY / USD)
     - **AuthButton** — Login/signup button or user avatar dropdown when authenticated
     - **UserMenuDropdown** — Dropdown menu with profile, bookings, wishlist, logout links
     - **MobileMenuToggle** — Hamburger icon to open mobile navigation drawer
@@ -172,8 +175,8 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 ### 4.2 Search & Filter Components
 
 - **SearchHero** — Large search interface on homepage with destination, dates, guests inputs
-  - **DestinationAutocomplete** — Autocomplete input powered by region database / Google Places
-  - **DateRangePicker** — Check-in / check-out date selector
+  - **DestinationAutocomplete** — Autocomplete input powered by region database
+  - **DateRangePicker** — Check-in / check-out date selector (react-day-picker)
   - **GuestSelector** — Adults and children count selector with dropdown
 - **SearchFiltersPanel** — Sidebar or modal containing all filter controls
   - **FilterGroup** — Collapsible section for a group of related filters
@@ -204,7 +207,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 ### 4.3 Ryokan Detail Components
 
 - **RyokanDetailHero** — Full-width hero section with photo gallery and key info
-  - **PhotoGallery** — Grid/carousel of categorized ryokan photos
+  - **PhotoGallery** — Grid/carousel of categorized ryokan photos (embla-carousel)
     - **PhotoCategoryTab** — Tab to filter photos by category (rooms, baths, meals, etc.)
     - **PhotoLightbox** — Full-screen photo viewer overlay
   - **RyokanTitleBlock** — Name, location, star rating, review count, and badges
@@ -233,7 +236,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 ### 4.4 Booking Flow Components
 
 - **BookingSummaryCard** — Sidebar summary showing selected ryokan, room, dates, guests, price
-- **BookingStepIndicator** — Step progress indicator (Select Room -> Guest Details -> Payment -> Confirmation)
+- **BookingStepIndicator** — Step progress indicator (Select Room → Guest Details → Payment → Confirmation)
 - **GuestDetailsForm** — Form for guest names, contact, dietary restrictions, special requests
   - **GuestFieldGroup** — Repeated field group per guest
   - **DietaryRestrictionSelect** — Multi-select for dietary needs
@@ -242,7 +245,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 - **PaymentForm** — Stripe Elements embedded payment form
   - **CardInputField** — Stripe card number, expiry, CVC input
   - **BillingAddressForm** — Billing address fields
-  - **PricingBreakdown** — Itemized price breakdown (room x nights x guests, taxes, fees)
+  - **PricingBreakdown** — Itemized price breakdown (room × nights × guests, taxes, fees)
   - **CouponCodeInput** — Optional promotional code input
 - **BookingConfirmation** — Confirmation page with reservation details and next steps
   - **ReservationSummary** — Complete booking details recap
@@ -302,13 +305,37 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 - **OnsenTypeEncyclopediaEntry** — Detail view for a single onsen water type
 - **EtiquetteStepCard** — Illustrated step in the onsen etiquette guide
 
-### 4.8 Shared / Utility Components
+### 4.8 Host Portal Components
+
+- **HostDashboard** — Main dashboard layout for ryokan owner accounts
+  - **HostDashboardNav** — Sidebar/tab navigation for host dashboard sections
+  - **HostOverviewStats** — Summary cards showing key metrics (bookings this month, revenue, occupancy rate, avg rating)
+  - **HostBookingsList** — List of incoming/upcoming/past bookings for the host's ryokan
+    - **HostBookingCard** — Individual booking card with guest info, dates, status, and confirm/decline actions
+  - **HostRevenueChart** — Monthly revenue chart (simple bar/line chart)
+  - **HostReviewsList** — List of guest reviews with optional public response capability
+    - **HostReviewResponseForm** — Text input for public host response to a review
+- **ListingEditorForm** — Multi-section form for creating/editing ryokan listing
+  - **ListingBasicInfoSection** — Name, description (JP + EN), address, region selection
+  - **ListingOnsenSection** — Onsen/bath details: water type, pH, temperature, bath styles, photos
+  - **ListingRoomEditor** — Room type management: add/edit/remove room types with photos and pricing
+    - **RoomTypeEditorCard** — Editable card for a single room type
+  - **ListingMealSection** — Meal plan configuration: plan types, descriptions, dietary options
+  - **ListingPhotosUploader** — Drag-and-drop photo upload with categorization and reordering
+  - **ListingPoliciesSection** — Check-in/out times, cancellation policy, house rules, tattoo policy
+- **AvailabilityCalendar** — Visual calendar for managing room availability (block/unblock dates)
+  - **CalendarDayCell** — Individual day cell showing availability status (open/blocked/booked)
+  - **BulkDateSelector** — Tool for selecting date ranges to block/unblock in bulk
+- **PricingManager** — Interface for setting base prices and seasonal rate adjustments
+  - **SeasonalRateRow** — Row for defining a date range with a price multiplier or fixed override
+
+### 4.9 Shared / Utility Components
 
 - **LoadingSpinner** — Centered loading animation
 - **LoadingSkeleton** — Placeholder skeleton screen matching target component shape
 - **ErrorState** — Error message with retry button and optional illustration
 - **EmptyState** — Empty state message with illustration and CTA
-- **Toast** — Notification toast (success, error, info) via react-hot-toast
+- **Toast** — Notification toast (success, error, info)
 - **ConfirmDialog** — Confirmation modal for destructive actions (cancel booking, delete diary)
 - **ShareButton** — Share via Web Share API or fallback modal with copy link
 - **ImageWithFallback** — next/image wrapper with loading skeleton and error fallback
@@ -337,8 +364,9 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 - **Maps**: Mobile shows map as a toggleable full-screen view (list/map toggle); tablet and desktop show map alongside the search results list in a split-pane layout.
 - **Booking Sidebar**: Mobile shows **StickyBookingBar** as a fixed bottom bar with price and "Book Now" CTA; desktop shows full **BookingSummaryCard** in a sticky right sidebar.
 - **Images**: All images use next/image with responsive srcset. Mobile serves smaller images (640w); tablet (1024w); desktop (1920w). Format: WebP with AVIF where supported.
-- **Typography**: Base font size 16px. Headings scale down on mobile (h1: 24px mobile -> 36px desktop). Body text remains 16px across all breakpoints for readability.
-- **Touch targets**: All interactive elements have minimum 44x44px touch targets on mobile per WCAG guidelines.
+- **Typography**: Base font size 16px. Headings scale down on mobile (h1: 24px mobile → 36px desktop). Body text remains 16px across all breakpoints for readability.
+- **Touch targets**: All interactive elements have minimum 44×44px touch targets on mobile per WCAG guidelines.
+- **Host Portal**: Mobile uses simplified single-column layouts with tab-based navigation. Calendar and charts scale to viewport width. Photo upload uses native file picker instead of drag-and-drop.
 
 ---
 
@@ -365,7 +393,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 | `/[locale]/terms` | Terms of Service | SSG | Static content |
 | `/[locale]/privacy` | Privacy Policy | SSG | Static content |
 
-### Authenticated Routes
+### Authenticated Guest Routes
 
 | Route | Page | Rendering | Data Requirements |
 |-------|------|-----------|-------------------|
@@ -380,6 +408,18 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 | `/[locale]/dashboard/reviews` | My Reviews | SSR | User's submitted reviews |
 | `/[locale]/community/diaries/new` | Create Diary | SSR | Ryokan autocomplete for linking, image upload |
 | `/[locale]/community/diaries/[id]/edit` | Edit Diary | SSR | Existing diary content for editing |
+
+### Authenticated Host Routes
+
+| Route | Page | Rendering | Data Requirements |
+|-------|------|-----------|-------------------|
+| `/[locale]/host` | Host Dashboard Overview | SSR | Booking stats, revenue summary, recent reviews, occupancy rate |
+| `/[locale]/host/listing` | Listing Editor | SSR | Full ryokan listing data for editing; empty form for new listing |
+| `/[locale]/host/availability` | Availability Manager | SSR | Room types, availability calendar data for next 12 months |
+| `/[locale]/host/pricing` | Pricing Manager | SSR | Base prices per room type, seasonal rate rules |
+| `/[locale]/host/bookings` | Host Bookings | SSR | Incoming, upcoming, and past bookings with guest details |
+| `/[locale]/host/bookings/[bookingId]` | Host Booking Detail | SSR | Individual booking details, guest info, confirm/decline actions |
+| `/[locale]/host/reviews` | Host Reviews | SSR | Guest reviews with response capability |
 
 ### Auth Routes
 
@@ -406,9 +446,17 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 | `/api/community/diaries/[id]` | GET/PATCH/DELETE | Read, update, or delete diary |
 | `/api/community/diaries/[id]/comments` | GET/POST | Fetch or add comments |
 | `/api/community/diaries/[id]/like` | POST/DELETE | Like or unlike a diary |
+| `/api/host/listing` | GET/POST/PATCH | Read, create, or update host's ryokan listing |
+| `/api/host/rooms` | GET/POST/PATCH/DELETE | CRUD for room types under host's listing |
+| `/api/host/availability` | GET/PATCH | Read or update availability calendar |
+| `/api/host/pricing` | GET/PATCH | Read or update pricing rules |
+| `/api/host/bookings` | GET | Fetch bookings for host's ryokan |
+| `/api/host/bookings/[id]` | PATCH | Confirm or decline a booking |
+| `/api/host/reviews` | GET | Fetch reviews for host's ryokan |
+| `/api/host/reviews/[id]/response` | POST/PATCH | Create or update host response to review |
+| `/api/host/stats` | GET | Aggregate booking and revenue statistics |
 | `/api/webhooks/stripe` | POST | Stripe webhook for payment events |
 | `/api/upload/image` | POST | Image upload to Supabase Storage |
-| `/api/geocode` | GET | Proxy for Google Places autocomplete |
 
 ---
 
@@ -418,110 +466,143 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 
 ```
 User Input (SearchHero / SearchFiltersPanel)
-  -> URL search params updated via nuqs (type-safe URL state)
-  -> Client sends GET /api/search with query params (destination, dates, guests, filters, sort, page)
-  -> API Route validates params with Zod schema
-  -> Supabase query: JOIN ryokan, rooms, onsen_details, reviews tables with filter/sort/pagination
-  -> If dates specified: check room_availability table for open inventory
-  -> Response: { results: RyokanCard[], total: number, filters_applied: object }
-  -> React Query caches response, keyed by search params (staleTime: 30s)
-  -> SearchResultsList renders RyokanCard components
-  -> SearchMapView receives same results, renders MapPin components
-  -> User changes filter -> nuqs updates URL -> React Query refetches with new params -> UI updates
-  -> SearchPagination triggers page param change -> same flow
+  → URL search params updated (type-safe URL state)
+  → Client sends GET /api/search with query params (destination, dates, guests, filters, sort, page)
+  → API Route validates params with Zod schema
+  → Supabase query: JOIN ryokan, rooms, onsen_details, reviews tables with filter/sort/pagination
+  → If dates specified: check room_availability table for open inventory
+  → Response: { results: RyokanCard[], total: number, filters_applied: object }
+  → SWR caches response, keyed by search params (dedupingInterval: 30s)
+  → SearchResultsList renders RyokanCard components
+  → SearchMapView receives same results, renders MapPin components
+  → User changes filter → URL updates → SWR refetches with new params → UI updates
+  → SearchPagination triggers page param change → same flow
 ```
 
 ### 7.2 Ryokan Detail Flow
 
 ```
 Page Load (ISR: /ryokan/[slug])
-  -> Server Component fetches from Supabase: ryokan details, onsen info, room types, review summary
-  -> Static HTML generated and cached at CDN edge (revalidate: 60s)
-  -> Client hydration activates interactive components
-  -> PhotoGallery: images loaded via next/image from Supabase Storage CDN
-  -> ReviewsSection: initial reviews SSR'd; "Load More" triggers client-side /api/ryokan/[slug]/reviews
-  -> Availability check: Client calls /api/ryokan/[slug]/availability with selected dates
-  -> StickyBookingBar / RoomSelectButton: price updates based on availability response
-  -> WishlistToggle: Client calls /api/user/wishlist (POST/DELETE) — optimistic UI update via React Query
-  -> SimilarRyokanSection: Server Component fetches similar ryokan by region + onsen type
+  → Server Component fetches from Supabase: ryokan details, onsen info, room types, review summary
+  → Static HTML generated and cached at CDN edge (revalidate: 60s)
+  → Client hydration activates interactive components
+  → PhotoGallery: images loaded via next/image from Supabase Storage CDN
+  → ReviewsSection: initial reviews SSR'd; "Load More" triggers client-side /api/ryokan/[slug]/reviews
+  → Availability check: Client calls /api/ryokan/[slug]/availability with selected dates (via SWR)
+  → StickyBookingBar / RoomSelectButton: price updates based on availability response
+  → WishlistToggle: Client calls /api/user/wishlist (POST/DELETE) — optimistic UI update via SWR mutate
+  → SimilarRyokanSection: Server Component fetches similar ryokan by region + onsen type
 ```
 
 ### 7.3 Booking Flow
 
 ```
 Step 1: Room Selection (from Ryokan Detail)
-  -> User clicks RoomSelectButton -> navigates to /booking/[ryokanSlug]?room=[roomId]&checkin=...&checkout=...&guests=...
-  -> SSR page fetches real-time availability + pricing from Supabase
-  -> BookingSummaryCard displays selected room, dates, calculated total
-  -> BookingStepIndicator shows Step 1 (already selected) -> Step 2 active
+  → User clicks RoomSelectButton → navigates to /booking/[ryokanSlug]?room=[roomId]&checkin=...&checkout=...&guests=...
+  → SSR page fetches real-time availability + pricing from Supabase
+  → BookingSummaryCard displays selected room, dates, calculated total
+  → BookingStepIndicator shows Step 1 (already selected) → Step 2 active
 
 Step 2: Guest Details
-  -> GuestDetailsForm collects information via react-hook-form
-  -> Client-side Zod validation on each field
-  -> Data stored in React state (not persisted until payment)
+  → GuestDetailsForm collects information (Zod-validated)
+  → Client-side Zod validation on each field
+  → Data stored in zustand store (not persisted until payment)
 
 Step 3: Payment
-  -> Client calls /api/booking/[id]/payment-intent -> creates Stripe PaymentIntent
-  -> Stripe Elements (CardInputField) renders secure card input
-  -> PricingBreakdown shows itemized costs (room, meals, taxes, service fee)
-  -> User submits -> Stripe processes payment -> PaymentIntent succeeds/fails
-  -> On success: /api/booking creates booking record in Supabase (status: confirmed)
-  -> On failure: ErrorState displayed with retry option
+  → Client calls /api/booking/[id]/payment-intent → creates Stripe PaymentIntent
+  → Stripe Elements (CardInputField) renders secure card input
+  → PricingBreakdown shows itemized costs (room, meals, taxes, service fee)
+  → User submits → Stripe processes payment → PaymentIntent succeeds/fails
+  → On success: /api/booking creates booking record in Supabase (status: confirmed)
+  → On failure: ErrorState displayed with retry option
 
 Step 4: Confirmation (Async via Stripe Webhook)
-  -> Stripe sends payment_intent.succeeded webhook to /api/webhooks/stripe
-  -> Webhook handler: updates booking status, sends confirmation email via Resend, notifies ryokan
-  -> User redirected to /booking/confirmation/[bookingId]
-  -> BookingConfirmation renders reservation details from Supabase
-  -> AddToCalendarButton generates .ics file or Google Calendar link
+  → Stripe sends payment_intent.succeeded webhook to /api/webhooks/stripe
+  → Webhook handler: updates booking status, sends confirmation email via Resend, notifies ryokan
+  → User redirected to /booking/confirmation/[bookingId]
+  → BookingConfirmation renders reservation details from Supabase
+  → AddToCalendarButton generates .ics file or Google Calendar link
 ```
 
 ### 7.4 Community Diary Flow
 
 ```
 Create:
-  -> Authenticated user navigates to /community/diaries/new
-  -> DiaryEditor: DiaryTitleInput + DiaryCoverImageUpload + DiaryRichTextEditor + DiaryRyokanLinker
-  -> Image uploads -> /api/upload/image -> Supabase Storage -> returns public URL
-  -> DiaryRyokanLinker -> /api/search (autocomplete mode) -> links diary to ryokan record
-  -> DiaryPublishButton -> /api/community/diaries (POST) -> creates diary record in Supabase
-  -> On success: redirect to /community/diaries/[id]
+  → Authenticated user navigates to /community/diaries/new
+  → DiaryEditor: DiaryTitleInput + DiaryCoverImageUpload + DiaryRichTextEditor + DiaryRyokanLinker
+  → Image uploads → /api/upload/image → Supabase Storage → returns public URL
+  → DiaryRyokanLinker → /api/search (autocomplete mode) → links diary to ryokan record
+  → DiaryPublishButton → /api/community/diaries (POST) → creates diary record in Supabase
+  → On success: redirect to /community/diaries/[id]
 
 Read:
-  -> DiaryFeed: ISR page fetches recent diaries from Supabase (paginated)
-  -> Infinite scroll: client calls /api/community/diaries?page=N for next page via React Query
-  -> DiaryDetail: ISR page fetches single diary with comments
-  -> DiaryLikeButton: /api/community/diaries/[id]/like (POST/DELETE) -> optimistic UI update
-  -> DiaryCommentSection: CommentForm -> /api/community/diaries/[id]/comments (POST)
+  → DiaryFeed: ISR page fetches recent diaries from Supabase (paginated)
+  → Infinite scroll: client calls /api/community/diaries?page=N for next page via SWR
+  → DiaryDetail: ISR page fetches single diary with comments
+  → DiaryLikeButton: /api/community/diaries/[id]/like (POST/DELETE) → optimistic UI update
+  → DiaryCommentSection: CommentForm → /api/community/diaries/[id]/comments (POST)
 ```
 
 ### 7.5 Authentication Flow
 
 ```
 Login/Register:
-  -> AuthModal opens (triggered by AuthButton or protected route redirect)
-  -> Email/password: LoginForm -> NextAuth signIn("credentials") -> JWT session
-  -> Social: SocialLoginButtons -> NextAuth signIn("google"|"line") -> OAuth flow -> JWT session
-  -> On success: AuthModal closes, Header updates to show UserMenuDropdown
-  -> Session stored as HTTP-only cookie, validated server-side on SSR pages
+  → AuthModal opens (triggered by AuthButton or protected route redirect)
+  → Email/password: LoginForm → NextAuth signIn("credentials") → JWT session
+  → Social: SocialLoginButtons → NextAuth signIn("google"|"line") → OAuth flow → JWT session
+  → On success: AuthModal closes, Header updates to show UserMenuDropdown
+  → Session stored as HTTP-only cookie, validated server-side on SSR pages
 
 Protected Routes:
-  -> Next.js middleware checks session cookie on /dashboard/*, /booking/*, /community/diaries/new
-  -> No valid session -> redirect to /auth/login?redirect=[original_url]
-  -> Valid session -> proceed, inject user context into server components
+  → Next.js middleware checks session cookie on /dashboard/*, /booking/*, /community/diaries/new, /host/*
+  → No valid session → redirect to /auth/login?redirect=[original_url]
+  → Valid session → proceed, inject user context into server components
+  → Host routes additionally check user.role === "host" — redirect to /auth/login if not a host
 ```
 
 ### 7.6 Internationalization Flow
 
 ```
 Request arrives at Vercel Edge:
-  -> Edge middleware reads: (1) URL locale prefix, (2) cookie locale preference, (3) Accept-Language header, (4) Vercel geo headers
-  -> Priority: URL prefix > cookie > Accept-Language > geo > default (en)
-  -> If no locale in URL: redirect to /[detected_locale]/...
-  -> next-intl loads message bundle for active locale (namespace-split per route)
-  -> CurrencySelector preference stored in cookie, used by PriceDisplay component
-  -> Intl.NumberFormat formats prices; Intl.DateTimeFormat formats dates per locale
-  -> LocaleSelector change -> navigates to new locale prefix URL, sets cookie
+  → Edge middleware reads: (1) URL locale prefix, (2) cookie locale preference, (3) Accept-Language header, (4) Vercel geo headers
+  → Priority: URL prefix > cookie > Accept-Language > geo > default (en)
+  → If no locale in URL: redirect to /[detected_locale]/...
+  → next-intl loads message bundle for active locale (namespace-split per route)
+  → CurrencySelector preference stored in cookie, used by PriceDisplay component
+  → Intl.NumberFormat formats prices; Intl.DateTimeFormat formats dates per locale
+  → LocaleSelector change → navigates to new locale prefix URL, sets cookie
+```
+
+### 7.7 Host Portal Flow
+
+```
+Listing Management:
+  → Host navigates to /host/listing
+  → SSR page fetches existing listing data from Supabase (or shows empty form for new hosts)
+  → ListingEditorForm renders multi-section form with tabs/accordion for each section
+  → Photo uploads → /api/upload/image → Supabase Storage (with categorization metadata)
+  → On save: /api/host/listing (POST for new, PATCH for updates) → validates with Zod → writes to Supabase
+  → Toast notification on success/failure
+
+Availability Management:
+  → Host navigates to /host/availability
+  → SSR page fetches room types + availability data for next 12 months
+  → AvailabilityCalendar renders month-by-month grid with CalendarDayCells
+  → Host clicks/drags to select dates → BulkDateSelector shows block/unblock action
+  → On update: /api/host/availability (PATCH) → writes to room_availability table
+
+Booking Management:
+  → Host navigates to /host/bookings
+  → SSR page fetches bookings for host's ryokan (incoming, upcoming, past)
+  → New bookings show "Confirm" / "Decline" actions on HostBookingCard
+  → Confirm: /api/host/bookings/[id] (PATCH status: confirmed) → triggers guest notification email
+  → Decline: ConfirmDialog → /api/host/bookings/[id] (PATCH status: declined) → triggers refund via Stripe
+
+Revenue Stats:
+  → Host navigates to /host (overview)
+  → SSR page calls /api/host/stats → aggregates booking data from Supabase
+  → HostOverviewStats renders summary cards
+  → HostRevenueChart renders monthly chart via lightweight chart component
 ```
 
 ---
@@ -531,7 +612,8 @@ Request arrives at Vercel Edge:
 ### Ryokan
 ```
 ryokan: {
-  id, slug, name (jsonb: {ja, en, zh_cn, zh_tw, ko}), description (jsonb),
+  id, slug, name (jsonb: {ja, en}), description (jsonb: {ja, en}),
+  host_user_id,
   region_id, prefecture, city, address, latitude, longitude,
   price_range_min, price_range_max, star_rating, review_count, review_avg,
   checkin_time, checkout_time, cancellation_policy,
@@ -548,7 +630,7 @@ onsen_detail: {
   id, ryokan_id, water_type (enum), ph_level, temperature_celsius,
   source_type (natural|heated|mixed), bath_style (enum),
   privacy_level (enum), gender (mixed|male|female),
-  operating_hours, description (jsonb), photos (relation),
+  operating_hours, description (jsonb: {ja, en}), photos (relation),
   therapeutic_benefits (jsonb array)
 }
 ```
@@ -556,10 +638,18 @@ onsen_detail: {
 ### Room Type
 ```
 room_type: {
-  id, ryokan_id, name (jsonb), description (jsonb),
+  id, ryokan_id, name (jsonb: {ja, en}), description (jsonb: {ja, en}),
   tatami_size_jo, max_occupancy, bed_configuration,
   has_private_bath, view_type, amenities (jsonb array),
   base_price_per_person, photos (relation)
+}
+```
+
+### Room Availability
+```
+room_availability: {
+  id, room_type_id, date, status (available|blocked|booked),
+  price_override (nullable), updated_at
 }
 ```
 
@@ -569,7 +659,7 @@ booking: {
   id, user_id, ryokan_id, room_type_id,
   checkin_date, checkout_date, guest_count_adults, guest_count_children,
   meal_plan_id, total_price_jpy, currency_charged, amount_charged,
-  stripe_payment_intent_id, status (pending|confirmed|cancelled|completed),
+  stripe_payment_intent_id, status (pending|confirmed|declined|cancelled|completed),
   guest_details (jsonb), special_requests,
   created_at, updated_at
 }
@@ -580,6 +670,7 @@ booking: {
 user: {
   id, email, name, avatar_url,
   preferred_locale, preferred_currency,
+  role (guest|host|admin),
   auth_provider, auth_provider_id,
   passport_stamps (relation), wishlist (relation),
   created_at
@@ -592,7 +683,9 @@ review: {
   id, user_id, ryokan_id, booking_id,
   rating_overall, rating_onsen, rating_hospitality,
   rating_meals, rating_atmosphere, rating_cleanliness,
-  text, language, created_at, updated_at
+  text, language,
+  host_response (nullable), host_response_at (nullable),
+  created_at, updated_at
 }
 ```
 
@@ -607,6 +700,16 @@ diary: {
 }
 ```
 
+### Seasonal Rate Rule
+```
+seasonal_rate: {
+  id, room_type_id, start_date, end_date,
+  rate_type (multiplier|fixed_override),
+  rate_value, label (jsonb: {ja, en}),
+  created_at
+}
+```
+
 ---
 
 ## 9. Third-Party Integrations
@@ -616,12 +719,15 @@ diary: {
 | Supabase | Database, Auth (optional), Storage, Real-time | Server components, API routes, client SDK |
 | Stripe | Payments, Connect (marketplace payouts) | API routes, client-side Stripe Elements |
 | Mapbox GL JS | Interactive maps | Client component (react-map-gl), dynamically imported |
-| Google Places API | Location autocomplete | API route proxy (/api/geocode) |
 | NextAuth.js | Authentication orchestration | Auth routes, middleware, session management |
 | Vercel Image Optimization | Image resizing/format conversion | next/image component |
 | next-intl | Internationalization | Middleware, server/client components |
-| React Query | Client-side data fetching/caching | Client components for search, availability, user data |
+| SWR | Client-side data fetching/caching | Client components for search, availability, user data |
 | Resend | Transactional email | API routes for booking confirmation, notifications |
+| date-fns | Date manipulation | Availability calendar, booking date logic, locale formatting |
+| react-day-picker | Date range picker UI | Booking flow, availability calendar |
+| embla-carousel-react | Image carousels | Photo galleries on listing and card components |
+| zustand | Client state management | Search filters, booking flow, UI preferences |
 
 ---
 
@@ -629,9 +735,11 @@ diary: {
 
 - All user input validated server-side with Zod schemas (never trust client-only validation)
 - Supabase Row Level Security (RLS) policies enforce data access at the database level
+- Host portal routes protected by role-based middleware check (user.role === "host")
 - Stripe webhook signature verification on /api/webhooks/stripe
 - CSRF protection via SameSite cookies and origin checking
 - Image uploads validated for file type and size (max 10MB per image, JPEG/PNG/WebP only)
-- Rate limiting on search (100 req/min/IP), booking (10 req/min/IP), and auth (5 req/min/IP) endpoints
+- Rate limiting on search (100 req/min/IP), booking (10 req/min/IP), auth (5 req/min/IP), and host API (50 req/min/IP) endpoints
 - Sensitive data (payment info) never stored — delegated entirely to Stripe
 - Content Security Policy headers configured in next.config.js
+- Host listing data isolated per user via RLS — hosts can only edit their own listing

@@ -1,268 +1,239 @@
-# Idea Validation: 温泉旅館特化型予約プラットフォーム (Onsen Ryokan Booking Platform)
+# Idea Validation: Onsen Ryokan Booking Platform
 
-> A curated, community-driven booking platform exclusively for onsen ryokan — bringing the Airbnb-style discovery, rich storytelling, and guest-community experience to Japan's traditional hot-spring inns.
+**App Name:** airbnb (working title — a marketplace-style booking platform specializing exclusively in onsen ryokan)
+
+**Concept:** A curated, Airbnb-style marketplace connecting travelers directly with onsen ryokan (温泉旅館) — Japanese hot-spring inns — offering immersive discovery, transparent pricing, and a modern booking experience that neither the legacy OTAs nor the generic global platforms provide.
 
 ---
 
 ## Competitors
 
-### 1. ゆこゆこ (Yukoyuko) — yukoyuko.net
+### 1. Jalan.net (じゃらん) — by Recruit Holdings
 
-**Overview:** Japan's leading onsen-specialized booking site with 2,000+ properties. Staff (90% are certified 温泉ソムリエ) have visited over 1,000 hot-spring locations.
+| Dimension | Details |
+|-----------|---------|
+| **URL** | jalan.net |
+| **Market position** | #1 recommended OTA in Japan; together with Rakuten Travel controls ~50% of domestic accommodation bookings |
+| **Onsen ryokan features** | Keyword search by onsen type (open-air bath, private bath), meal plan filters, user review scores |
+| **Strengths** | Massive inventory (~26,000 properties), loyalty points (Pontaポイント), rich user reviews, strong SEO in Japanese |
+| **Weaknesses** | Cluttered, information-dense UI; no English-first experience; treats ryokan as one category among many (hotels, business hotels, pensions); no community or storytelling layer; commission ~10–15% squeezes small operators |
+| **Gap for us** | Generic platform — ryokan discovery is buried among 20+ accommodation types. No editorial curation or cultural context for international travelers. |
 
-| Feature | Details |
-|---------|---------|
-| Listings | ~2,000 onsen ryokan and hotels nationwide |
-| Search Filters | By cuisine (crab, lobster, abalone), region, hot-spring type (泉質), price |
-| Reviews | Proprietary scoring system — 80+ points = "highly satisfied" listings featured |
-| Target Audience | Primarily Japanese domestic travelers, skewing older (50+) |
-| Booking Flow | Web + phone booking via dedicated "communicators" who contact ryokan directly |
-| Loyalty/Points | **None** — a known weakness cited in user reviews |
-| Multilingual | Japanese only |
-| UX | Traditional portal-style layout, information-dense but not modern |
+### 2. Ikyu.com (一休) — by Yahoo Japan / LY Corporation
 
-**Key Gaps:** No loyalty program, no English support, dated UX, no community/storytelling features, no map-based exploration, no personalized recommendations.
+| Dimension | Details |
+|-----------|---------|
+| **URL** | ikyu.com |
+| **Market position** | Premium/luxury OTA; ~5,000 curated properties; 3rd most-recommended OTA in Japan |
+| **Onsen ryokan features** | Luxury ryokan vertical, high-quality photography, kaiseki meal previews, "Ikyu Diamond" loyalty tier |
+| **Strengths** | Strong brand trust for luxury; clean UI compared to Jalan; chatbot support ("いっきゅうくん"); restaurant and spa reservations integrated |
+| **Weaknesses** | Luxury-only positioning excludes the mid-tier "hidden gem" ryokan (many family-run inns at ¥8,000–15,000/night); limited English; no user-generated content or community features; no map-based discovery |
+| **Gap for us** | Ignores the long tail of authentic, affordable onsen ryokan. No Airbnb-style host profiles or guest stories. |
 
----
+### 3. Relux (リラックス) — by Loco Partners (KKR-backed)
 
-### 2. 一休.com (Ikyu.com) — ikyu.com
+| Dimension | Details |
+|-----------|---------|
+| **URL** | rlx.jp |
+| **Market position** | Curated premium accommodation platform; only 5% of national accommodations pass its 100-point inspection |
+| **Onsen ryokan features** | Dedicated onsen/open-air bath filter, concierge service (Relux Concierge), up to 6% point rewards by member tier |
+| **Strengths** | #1 in customer loyalty among Japanese OTAs; highest UX ratings; editorial curation; concierge for special requests |
+| **Weaknesses** | Very small inventory by design (curated = limited choice); Japan-only branding with minimal internationalization; no peer-to-peer community; static editorial content — no real-time social proof or guest-generated storytelling; heavy curation means small inns without marketing budgets rarely get listed |
+| **Gap for us** | Relux proves curation works but caps supply. No host empowerment model — properties can't self-list or tell their own story. No map/region-based exploration. |
 
-**Overview:** Premium hotel/ryokan booking platform (owned by Yahoo Japan/Z Holdings) curating ~17,000 luxury properties. Tagline: 「こころに贅沢させよう」("Indulge your heart").
+### 4. Yukoyuko (ゆこゆこ) — Onsen Specialist
 
-| Feature | Details |
-|---------|---------|
-| Listings | ~17,000 premium hotels and ryokan (quality-gated admission) |
-| Search Filters | Rich faceted search: facility type, room type, meal plan, budget, hot-spring area, station proximity, review score |
-| Reviews | User reviews integrated with diamond-tier ranking system |
-| Target Audience | Affluent domestic travelers; high-spending demographic |
-| Loyalty | 一休ポイント — earned on bookings, usable instantly on next reservation |
-| Multilingual | English site available (en-us) but limited in content richness vs Japanese |
-| Pricing | Competitive on luxury segment — users report "cheaper than expected for quality" |
+| Dimension | Details |
+|-----------|---------|
+| **URL** | yukoyuko.net |
+| **Market position** | Japan's only OTA dedicated exclusively to onsen ryokan; 20+ year history; covers 1,000+ onsen regions |
+| **Onsen ryokan features** | Onsen-specific search (water type, therapeutic effects, open-air, mixed-gender), meal ratings (90+ kaiseki scores), phone concierge service |
+| **Strengths** | Deep onsen expertise; staff physically visit properties; strong weekday/budget positioning (~¥10,000/night with meals); phone support for older demographics |
+| **Weaknesses** | Extremely dated UI/UX (early-2000s design); no mobile-first experience; no English support; no social/community features; phone-centric service model doesn't scale; no map-based browsing or modern filtering UX |
+| **Gap for us** | Proves the onsen-specialized niche is viable but is ripe for disruption with a modern, mobile-first, bilingual, community-driven platform. |
 
-**Key Gaps:** Luxury-only positioning excludes mid-range/budget ryokan, limited international marketing, no community or experiential content (onsen guides, etiquette tips), generic hotel platform not onsen-specialized, no UGC storytelling.
+### 5. Selected Onsen Ryokan
 
----
+| Dimension | Details |
+|-----------|---------|
+| **URL** | selected-ryokan.com |
+| **Market position** | Curated directory of 450+ onsen ryokan; multilingual (EN, CN, KR) |
+| **Onsen ryokan features** | View-based filtering (mountain, sea, Mt. Fuji), architectural style filters, private bath focus |
+| **Strengths** | Genuinely international audience; beautiful visual curation; English-first |
+| **Weaknesses** | Not a booking platform — links out to JTB, Booking.com, Agoda for actual transactions; no user accounts, reviews, or booking management; purely a directory |
+| **Gap for us** | Validates international demand for curated onsen ryokan content, but proves no one has built the end-to-end booking + discovery experience for this audience. |
 
-### 3. JapaneseGuesthouses.com
+### Competitive Landscape Summary
 
-**Overview:** A curated, concierge-style ryokan booking service catering primarily to international travelers. Operates like a traditional travel agent — staff personally book on guests' behalf.
+```
+                    Onsen-Specialized
+                          ▲
+                          │
+            Yukoyuko ●    │    ● Our Platform
+                          │       (target position)
+                          │
+  Budget ◄────────────────┼────────────────► Premium
+                          │
+          Jalan ●         │         ● Ikyu
+                          │         ● Relux
+                          │
+                          ▼
+                    General Accommodation
+```
 
-| Feature | Details |
-|---------|---------|
-| Listings | Curated selection (not exhaustive), strong in rural/hard-to-find ryokan |
-| Booking Flow | Manual/concierge: guests submit inquiry → staff contacts ryokan → confirmation |
-| Target Audience | International travelers (English-speaking), especially first-time ryokan visitors |
-| Personalization | High — staff help with room selection, train timetables, pickup arrangements |
-| Reviews | Guest testimonials featured on individual ryokan pages |
-| Multilingual | English-primary |
-| Payment | Requires credit card to distinguish "serious inquiries" |
-
-**Key Gaps:** Not self-service (no instant booking), very slow booking process, small inventory, no mobile-optimized experience, no map or discovery features, no onsen-specific filtering (water type, private baths, etc.), feels like a 2005-era website.
-
----
-
-### 4. Rakuten Travel — travel.rakuten.com
-
-**Overview:** Japan's largest OTA by domestic volume. Massive inventory covering all accommodation types including ryokan.
-
-| Feature | Details |
-|---------|---------|
-| Listings | 100,000+ properties across Japan (all types) |
-| Ryokan Focus | Ryokan are a subset — searchable but not the primary experience |
-| Loyalty | Rakuten Points ecosystem (cross-platform with e-commerce, credit cards) |
-| Target Audience | Broad domestic + growing international user base |
-| Search Filters | Standard OTA filters; no onsen-specific facets (泉質, 効能, private bath) |
-| Multilingual | Full English site |
-
-**Key Gaps:** Ryokan are buried among hotels/business hotels — no curated onsen experience. No onsen-specific search (by water chemistry, therapeutic benefit, bath type). No cultural storytelling or community features. Generic OTA UX.
-
----
-
-### 5. Jalan.net — jalan.net
-
-**Overview:** Recruit Holdings' OTA, especially strong in onsen resort category among domestic platforms.
-
-| Feature | Details |
-|---------|---------|
-| Listings | Large domestic inventory, particularly strong onsen resort coverage |
-| Onsen Features | Some onsen-specific search capabilities |
-| Loyalty | Pontaポイント integration |
-| Target Audience | Domestic Japanese travelers |
-| Multilingual | Limited English |
-
-**Key Gaps:** Still a generalist OTA, onsen content is a feature not the product identity. No community, no curated editorial experience, no international-friendly UX.
-
----
-
-### Competitor Comparison Matrix
-
-| Capability | ゆこゆこ | 一休 | JapaneseGH | Rakuten | Jalan | **Our Platform** |
-|-----------|---------|------|------------|---------|-------|-----------------|
-| Onsen-specialized | ✅ | ❌ | Partial | ❌ | Partial | ✅ |
-| Instant booking | ✅ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Multilingual (JP+EN+) | ❌ | Partial | EN only | ✅ | Partial | ✅ |
-| Onsen-specific search (泉質/効能) | ✅ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Map-based discovery | ❌ | ❌ | ❌ | Basic | Basic | ✅ |
-| Guest community/reviews | Basic | ✅ | Testimonials | ✅ | ✅ | ✅ (rich UGC) |
-| Photo/video storytelling | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
-| Modern mobile-first UX | ❌ | Partial | ❌ | Partial | Partial | ✅ |
-| Points/loyalty | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ |
-| Personalized recommendations | ❌ | ❌ | Manual | ❌ | ❌ | ✅ (AI-driven) |
+**Key insight:** No existing platform combines (1) onsen-ryokan specialization, (2) modern Airbnb-style UX with host profiles and guest stories, (3) bilingual Japanese/English support, and (4) a marketplace model that empowers small operators.
 
 ---
 
 ## Target User
 
-### Primary Persona: "Yuki" — The Onsen-Curious International Traveler
+### Primary Persona: "Yuki" — The Urban Wellness Seeker
 
-- **Age Range:** 28–42
-- **Occupation:** Mid-career professional (tech, finance, creative industries) in the US, Europe, Australia, or East Asia
-- **Income:** $60K–$120K annual; willing to spend $200–$500/night on unique experiences
-- **Travel Style:** Experience-driven; prefers "authentic local" over luxury hotel chains
-- **Language:** English primary; may know basic Japanese or none at all
+| Attribute | Detail |
+|-----------|--------|
+| **Age range** | 28–42 |
+| **Occupation** | Mid-career professional in Tokyo, Osaka, or Nagoya (tech, finance, creative industries) |
+| **Income** | ¥5M–8M/year |
+| **Travel frequency** | 3–5 domestic trips/year, 1–2 specifically for onsen |
+| **Digital behavior** | Mobile-first; uses Instagram for travel inspiration; books on Jalan/Rakuten by habit but frustrated by the experience |
 
-**Concrete Pain Point:**
-Yuki is planning a 10-day trip to Japan and wants to spend 3 nights in onsen ryokan across different regions. She opens Booking.com and searches "ryokan" — she gets 2,000 results mixing business hotels with "ryokan-style" rooms. She can't filter by water type (sulfur vs alkaline), can't tell which have private outdoor baths (露天風呂), and the reviews are generic hotel reviews that don't mention the onsen experience. She finds JapaneseGuesthouses.com but the booking process requires emailing and waiting days for confirmation. She tries Rakuten Travel but the interface is overwhelming and ryokan-specific information is buried. She ends up spending 6+ hours across 4 different websites, reading blog posts, and still isn't confident in her choices.
+**Concrete pain point:** Yuki wants to book a 1-night weekend onsen getaway with her partner. She opens Jalan and is overwhelmed by 4,000+ results for "関東 温泉." She can't filter by "water quality" or "quiet atmosphere" — only by price and star rating. She spends 45 minutes cross-referencing Jalan listings with Instagram photos and Google Maps reviews to find a small family-run ryokan in Hakone with a private open-air bath. She discovers the ryokan's own website is a geocities-era page with no online booking — she has to call during business hours. She gives up and books a corporate chain instead.
 
-**What Yuki wants:** A single platform where she can browse ryokan by onsen type, see atmospheric photos, read stories from past guests about the experience, filter by "private bath available" or "English-speaking staff," and book instantly with confidence.
+**What she wants:** A beautifully designed app where she can browse by onsen atmosphere (quiet mountain retreat, seaside, snow-viewing), see authentic photos and guest stories, compare water types (硫黄泉, 炭酸泉), and book instantly — including small, family-run inns that aren't on the big OTAs.
 
-### Secondary Persona: "Takeshi" — The Domestic Onsen Enthusiast
+### Secondary Persona: "David" — The International Ryokan Explorer
 
-- **Age Range:** 35–55
-- **Occupation:** Company employee (会社員) or self-employed
-- **Frequency:** Visits onsen 4–8 times per year, often weekend trips
-- **Pain Point:** Uses ゆこゆこ and Jalan but finds them dated. Wants a community-driven experience where he can discover hidden gems through other enthusiasts' stories and track his own onsen journey (温泉巡り). Current platforms treat onsen as just a hotel amenity checkbox, not as the primary experience to explore.
+| Attribute | Detail |
+|-----------|--------|
+| **Age range** | 30–50 |
+| **Occupation** | Knowledge worker (US, EU, AU) planning a Japan trip |
+| **Pain point** | Wants an authentic ryokan + onsen experience but can't navigate Japanese OTAs; Booking.com listings feel generic and miss the cultural context; doesn't know the difference between an onsen town and a hotel with a bath |
+| **What he wants** | An English-first platform with cultural explainers, curated collections ("best snow onsen," "ryokan with tattoo-friendly baths"), and a seamless booking flow that handles the unique ryokan conventions (check-in by 3 PM, kaiseki meal timing, yukata etiquette) |
+
+### Tertiary Persona: Small Ryokan Owner ("Okami-san")
+
+| Attribute | Detail |
+|-----------|--------|
+| **Age range** | 50–70 |
+| **Pain point** | Paying 10–20% OTA commissions while receiving a commoditized listing experience; lacks technical skills to maintain a modern website; wants to tell the story of her 3-generation family inn but has no platform for it |
+| **What she wants** | A simple dashboard to manage availability and showcase her inn's unique character — the 200-year-old cypress bath, the local mountain vegetables in her kaiseki, the seasonal garden views |
 
 ---
 
 ## Differentiation
 
-Our differentiation strategy is derived directly from the gaps identified across all five competitors:
+Our differentiation is **derived directly from the gaps** identified across all five competitors:
 
-### 1. Onsen-First Data Model (Gap: No competitor has deep onsen-specific search)
+### 1. Onsen-First Discovery UX (vs. Jalan/Rakuten's generic search)
+Jalan buries onsen ryokan among 20+ accommodation types with generic filters. We build the entire UX around onsen-specific attributes:
+- **Water type** (硫黄泉 sulfur, 炭酸泉 carbonated, アルカリ泉 alkaline, etc.) with health benefit explanations
+- **Bath style** (open-air 露天風呂, private 貸切風呂, room-attached 部屋付き)
+- **Atmosphere tags** (mountain retreat, seaside, snow-viewing, forest, river)
+- **Map-based exploration** by onsen region, not just prefecture
 
-While ゆこゆこ offers basic 泉質 filtering, no platform provides comprehensive onsen-centric search. Our platform models onsen data as a first-class entity:
-- **Water chemistry** (泉質): sulfur, sodium chloride, alkaline simple, carbon dioxide, etc.
-- **Therapeutic benefits** (効能): skin conditions, muscle pain, nerve pain, fatigue recovery
-- **Bath types**: indoor (内湯), outdoor (露天風呂), private (貸切), room-attached (部屋付き)
-- **Temperature ranges** and source type (源泉かけ流し vs circulation)
+### 2. Host Empowerment Model (vs. Relux/Ikyu's gatekept curation)
+Relux accepts only 5% of applicants. Ikyu focuses on luxury. Neither gives small operators a voice. We adopt an Airbnb-style self-listing model:
+- Ryokan owners create rich profiles: their story, their craft, their seasonal specialties
+- Photo + video uploads with quality guidance (not gatekeeping)
+- Guest reviews build organic quality signals (replacing editorial curation with community curation)
+- Lower commission (target 8% vs. industry 10–20%) to attract small, family-run inns
 
-### 2. Airbnb-Style Visual Storytelling (Gap: All competitors use catalog/portal UX)
+### 3. Bilingual by Default (vs. Yukoyuko/Jalan's Japan-only approach)
+International visitors to Japan hit 42.7M in 2025 (+15.8% YoY). Hoshino Resorts' KAI onsen brand saw 247% growth in international onsen guests. Yet no onsen-specialized platform serves this audience:
+- Full Japanese + English UI from day one
+- Cultural context layer: onsen etiquette guides, kaiseki meal explainers, check-in conventions
+- Tattoo-friendly filtering (the #1 international traveler concern for onsen)
 
-No competitor provides immersive, photo-rich listing pages with atmospheric storytelling. We deliver:
-- Full-bleed hero photography of baths, kaiseki meals, and seasonal scenery
-- Guest photo galleries with seasonal tagging (cherry blossom / autumn leaves / snow)
-- Short "experience stories" from past guests (like Airbnb reviews but narrative-focused)
+### 4. Community & Storytelling (vs. everyone's transactional-only approach)
+No competitor offers user-generated storytelling. We add:
+- Guest trip reports with photos ("My winter evening at a 300-year-old inn in Ginzan Onsen")
+- Seasonal collections (紅葉 autumn leaves × onsen, 雪見 snow-viewing × onsen)
+- Host journals: okami-san can share behind-the-scenes of kaiseki preparation or garden maintenance
 
-### 3. True Bilingual-First Architecture (Gap: English support is afterthought everywhere)
-
-- Full content parity between Japanese and English (not machine-translated stubs)
-- Cultural context tooltips for international guests (kaiseki explanation, onsen etiquette, yukata guide)
-- English-language customer support integration
-
-### 4. Community & Discovery (Gap: No platform has community features)
-
-- "Onsen Collections" — curated lists by theme (snow onsen, ocean-view, couples, solo travel)
-- Guest onsen journey tracking (stamp rally / digital passport)
-- Seasonal highlight system surfacing the best time to visit each ryokan
-
-### 5. Modern, Mobile-First UX with Map Discovery (Gap: Competitors have dated interfaces)
-
-- Interactive map with onsen-region clustering
-- Mobile-first responsive design (international travelers browse on phones)
-- Instant booking with real-time availability (no email-and-wait flow)
+### 5. Modern, Mobile-First Experience (vs. Yukoyuko's dated UI)
+Yukoyuko proves the onsen niche is viable but hasn't modernized in 15+ years. We deliver:
+- Responsive, app-like web experience (Next.js + Tailwind)
+- Instant search with rich filtering
+- Photo-forward design inspired by Airbnb's listing cards
+- One-tap booking with saved payment methods
 
 ---
 
 ## Risks
 
-### Risk 1: Supply-Side Acquisition — Onboarding Traditional Ryokan Owners
+### Risk 1: Supply-Side Cold Start — Insufficient Ryokan Listings at Launch
+**Severity:** High
+**Description:** Travelers won't use a platform with < 50 listings. Small ryokan owners are not tech-savvy and may resist onboarding.
+**Mitigation:**
+- Launch with a single onsen region (e.g., Hakone — 30 min from Tokyo, ~200 ryokan, strong international demand) for geographic focus
+- Provide white-glove onboarding: physically visit properties, photograph them, and create initial listings on owners' behalf
+- Offer 0% commission for the first 6 months to remove adoption friction
+- Partner with local onsen town tourism associations (温泉協会) who have existing relationships with all member inns
 
-**Description:** Many onsen ryokan are family-run businesses with limited digital literacy. Owners (often 60+) may resist adopting a new platform, especially one targeting international guests who bring language/cultural challenges.
+### Risk 2: OTA Retaliation — Jalan/Rakuten Contractual Lock-In
+**Severity:** Medium-High
+**Description:** Major OTAs may have rate-parity clauses preventing ryokan from offering lower prices on our platform, or may threaten to delist properties that join us.
+**Mitigation:**
+- Position as complementary, not competitive — focus on properties NOT currently listed on major OTAs (the long tail of 5,000+ small inns with no online presence)
+- Legal review of Japanese fair-trade regulations (公正取引委員会 has been investigating OTA rate-parity practices)
+- Differentiate on experience, not price — host profiles, cultural content, and community features are not replicable by adding a filter to Jalan
 
-**Mitigation Strategy:**
-- Start with ryokan already listed on existing OTAs (they've already opted into digital distribution)
-- Offer a white-glove onboarding service with Japanese-speaking staff who visit properties, take professional photos, and set up listings
-- Provide a simple owner dashboard (タブレット対応) with LINE integration for notifications
-- Commission structure competitive with or lower than Rakuten/Jalan (typically 8–12%)
-- Partner with regional tourism boards (観光協会) who can introduce the platform to local ryokan associations
+### Risk 3: Internationalization Quality — Poor Machine Translation Destroys Trust
+**Severity:** Medium
+**Description:** Ryokan descriptions involve culturally specific terms (kaiseki, yukata, tatami, rotenburo) that machine translation mangles. Bad translations repel the international audience that's core to our differentiation.
+**Mitigation:**
+- Build a bilingual CMS with structured fields (not free-text translation): room type dropdowns, amenity checklists, standardized bath descriptions
+- Maintain a glossary of ~200 onsen/ryokan terms with approved English translations and cultural explainers
+- Human review pipeline for host-written free-text descriptions before they go live in English
+- Leverage next-intl for robust i18n framework with fallback handling
 
-### Risk 2: Two-Sided Marketplace Cold Start Problem
+### Risk 4: Payment & Cancellation Complexity
+**Severity:** Medium
+**Description:** Ryokan booking conventions differ from hotels: prepayment expectations vary, cancellation policies are strict (often 50% fee at 3 days, 100% at same-day), and some inns only accept cash or bank transfer.
+**Mitigation:**
+- Stripe integration for card-based payments with configurable cancellation policies per listing
+- Support for Japanese payment methods (コンビニ払い convenience store payment, bank transfer) via Stripe Japan or Komoju
+- Standardized cancellation policy templates (Flexible / Moderate / Strict) with clear guest-facing display
+- Escrow-style payment: charge at booking, release to host after check-in
 
-**Description:** The platform needs both supply (ryokan listings) and demand (travelers) simultaneously. Without listings, travelers won't come; without traffic, ryokan won't list.
-
-**Mitigation Strategy:**
-- **Supply-first approach:** Seed the platform with 100–200 carefully curated listings in 5 popular onsen regions (箱根, 別府, 草津, 城崎, 道後) before public launch
-- **Content-led demand generation:** Publish SEO-optimized onsen guides, "best ryokan for X" articles, and social media content to build organic traffic before the transactional marketplace is critical mass
-- **Leverage existing booking infrastructure:** Initially, some listings can link to existing OTA booking flows (affiliate model) while building direct booking relationships
-- **Influencer partnerships:** Partner with Japan travel YouTubers/bloggers for launch awareness
-
-### Risk 3: International Payment & Cancellation Complexity
-
-**Description:** Japanese ryokan have strict cancellation policies (often 3–7 days, with escalating fees). International travelers expect Airbnb/Booking.com-style flexible cancellation. Currency conversion, payment processing fees for international cards, and potential chargebacks add operational complexity.
-
-**Mitigation Strategy:**
-- Implement a clear cancellation policy tier system (Flexible / Moderate / Strict) displayed prominently at booking time — let ryokan choose their tier
-- Use Stripe for payment processing (supports JPY ↔ multi-currency with transparent FX)
-- Offer optional "cancellation protection" add-on funded by a small fee
-- Hold payments in escrow and release to ryokan after check-in to reduce chargeback risk
-
-### Risk 4: Regulatory Compliance — 旅行業法 (Travel Agency Act)
-
-**Description:** Operating an accommodation booking platform in Japan may require a travel agency license (旅行業登録) depending on the business model. The 2018 minpaku law and travel agency regulations create compliance requirements.
-
-**Mitigation Strategy:**
-- Operate as a booking intermediary (場貸し model) rather than a travel agent — the ryokan is the service provider, the platform facilitates the connection (similar to how Rakuten Travel operates)
-- Obtain legal counsel specializing in Japanese travel industry regulation before launch
-- Register as a 旅行業者代理業 (travel agent representative) if required
-- Ensure compliance with 景品表示法 (Act against Unjustifiable Premiums and Misleading Representations) for pricing display
-
-### Risk 5: Competition from Incumbent Platforms Adding Onsen Features
-
-**Description:** Rakuten Travel or Jalan could add onsen-specific search features, eroding our differentiation. Booking.com has been steadily increasing ryokan inventory.
-
-**Mitigation Strategy:**
-- Build defensible advantages that incumbents can't easily copy: deep community/UGC content, editorial voice, onsen expertise brand identity
-- Move fast to establish brand recognition in the "onsen booking" search vertical
-- Focus on international traveler segment where incumbents are weakest
-- Build direct relationships with ryokan owners (not just API connections) to secure exclusive deals or content
+### Risk 5: Seasonal Demand Concentration
+**Severity:** Medium-Low
+**Description:** Onsen tourism peaks in winter and autumn, potentially leaving the platform underutilized in summer.
+**Mitigation:**
+- Promote summer onsen experiences (outdoor baths, river-side cooling, fireworks festivals)
+- Expand content strategy to include summer-specific features (浴衣祭り yukata festivals, 川床 riverside dining)
+- Introduce off-season discounting tools for hosts
+- Consider adjacent expansion to non-onsen ryokan in summer-popular regions
 
 ---
 
 ## Market Size
 
-### Japan Hospitality & Tourism Market
+### Total Addressable Market (TAM)
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| Foreign visitors to Japan (2025) | 42.7 million (record high) | [Japan Times, Jan 2026](https://www.japantimes.co.jp/news/2026/01/20/japan/japan-foreign-visitor-number-record-high/) |
-| Foreign tourist spending (2025) | ¥9.5 trillion (~$63B USD) | [JTB Tourism Research](https://www.tourism.jp/en/tourism-database/stats/) |
-| Lodging share of tourist spending | ¥3.5 trillion (~$23B USD, up 26.7% YoY) | JTB Tourism Research |
-| Japan Hospitality Market (2025) | $47.39 billion | [Mordor Intelligence](https://www.mordorintelligence.com/industry-reports/hospitality-industry-in-japan) |
-| Japan Hospitality Market (2031 projected) | $60.35 billion (4.12% CAGR) | Mordor Intelligence |
+The **Japan Online Accommodation Market** was valued at **USD 3.14 billion in 2025** and is projected to grow at **7.5% CAGR to reach USD 4.51 billion by 2030** (Source: [Mordor Intelligence, Japan Online Accommodation Market Report](https://www.mordorintelligence.com/industry-reports/japan-online-accommodation-market)).
 
-### Onsen Ryokan Segment
+The broader **Japan hospitality market** is valued at **USD 47.39 billion in 2025**, growing to USD 49.34 billion in 2026 (Source: [Mordor Intelligence, Japan Hospitality Industry Report](https://www.mordorintelligence.com/industry-reports/hospitality-industry-in-japan)).
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| Luxury Ryokan Market (2024, global) | $350 billion (8.5% CAGR to 2032) | [FutureDataStats](https://www.futuredatastats.com/luxury-ryokan-market) |
-| Private Onsen Market (2024, global) | $600 billion (9.5% CAGR to 2032) | [FutureDataStats](https://www.futuredatastats.com/private-onsen-market) |
-| Hoshino KAI brand international growth | +247% vs pre-pandemic | [Hospitality Net](https://www.hospitalitynet.org/news/4130860.html) |
+### Serviceable Addressable Market (SAM)
 
-### Serviceable Addressable Market (SAM) Estimate
+Onsen ryokan represent approximately **15–20% of Japan's accommodation market** based on the ~3,000 registered onsen regions and estimated 20,000+ onsen-equipped inns. Applied to the online accommodation market:
 
-- Japan's domestic onsen travel market is estimated at approximately ¥1.5–2 trillion annually (based on ~130 million annual onsen visits × average spend)
-- Online booking penetration for ryokan is estimated at 40–50%, with the remainder booked via phone or direct
-- Our initial target: capture 0.1–0.5% of the online onsen ryokan booking market within 3 years
-- **SAM (online onsen ryokan bookings):** ~¥600–800 billion ($4–5.3B USD)
-- **Initial target (Year 3):** ¥600M–4B ($4M–$27M USD) in GMV at 10–12% commission = ¥60M–480M revenue
+- **SAM estimate: USD 470M–630M/year** (15–20% of USD 3.14B online accommodation market)
 
-### Key Growth Drivers
+### Serviceable Obtainable Market (SOM)
 
-1. **Inbound tourism boom:** 42.7M visitors in 2025, spending on lodging up 26.7% YoY
-2. **Wellness tourism trend:** Onsen/ryokan positioned as premium wellness experiences
-3. **Hoshino Resorts expanding KAI brand:** 3 new onsen ryokan opening in 2026 alone, validating market demand
-4. **Digital transformation of traditional accommodation:** Many ryokan still rely on phone/fax bookings, creating digitization opportunity
+For our platform, a realistic year-3 target:
+- Capture 500 ryokan listings (of ~20,000 onsen inns)
+- Average 10 bookings/month/listing at ¥30,000 average booking value
+- 8% commission = **¥1.44B/year (~USD 9.6M/year)** in platform revenue
+
+### Growth Catalysts
+
+- **International tourism surge:** Japan welcomed **42.68 million international visitors in 2025** (+15.8% YoY) — Source: [Japan Tourism Statistics](https://www.touristjapan.com/japan-travel-trends-statistics-2025-2026/)
+- **Onsen-specific international demand:** Hoshino Resorts' KAI onsen brand saw **247% growth** in international guests vs. pre-pandemic levels (Source: [Hospitality Net, 2025](https://www.hospitalitynet.org/news/4130860.html))
+- **Three new KAI properties opening in 2026** (Kusatsu, Miyajima, Zao) signals industry confidence in onsen tourism growth
+- **Luxury Ryokan Market** growing at **8.5% CAGR** (Source: [FutureDataStats](https://www.futuredatastats.com/luxury-ryokan-market))
 
 ---
 
@@ -272,19 +243,19 @@ No competitor provides immersive, photo-rich listing pages with atmospheric stor
 
 ### Rationale
 
-1. **Clear market gap:** No platform combines onsen specialization + modern UX + bilingual support + community features. Each competitor excels in one dimension but fails in others. ゆこゆこ has onsen expertise but no English or modern UX. 一休 has quality curation but isn't onsen-specialized. JapaneseGuesthouses.com serves international travelers but with a manual, outdated process. Rakuten/Jalan are generalist OTAs where ryokan are buried.
+1. **Clear market gap:** No platform combines onsen specialization + modern Airbnb-style UX + bilingual support + host empowerment. Yukoyuko proves the niche works but is 15 years behind on UX. Selected Onsen Ryokan validates international demand but doesn't transact.
 
-2. **Massive and growing market:** Japan saw record 42.7M international visitors in 2025, with lodging spending up 26.7%. The onsen/wellness tourism segment is growing faster than the overall market. Hoshino Resorts' 247% growth in international KAI guests proves demand exists.
+2. **Strong demand tailwinds:** 42.7M international visitors to Japan (growing 15%+ YoY), 247% growth in international onsen guests, and a $3.14B online accommodation market growing at 7.5% CAGR.
 
-3. **Timing is right:** Japan's inbound tourism is at an all-time high. The government's "Tourism Nation" strategy continues to invest in infrastructure and promotion. Digital transformation of traditional hospitality is accelerating.
+3. **Supply-side pain:** Small ryokan owners are paying 10–20% OTA commissions while receiving a commoditized listing experience. A lower-commission platform with storytelling tools addresses a real operator pain point.
 
-4. **Defensible differentiation:** The combination of onsen-first data model, bilingual storytelling, and community features creates a multi-dimensional moat that no single competitor can easily replicate by adding a feature.
+4. **Technical feasibility:** The app is a standard marketplace (listings, search, booking, payments) — well-understood architecture with no exotic technical requirements. Next.js + Supabase + Stripe provides a proven stack. Bilingual support is well-served by next-intl.
 
-5. **Viable technology stack:** Next.js + Supabase + Stripe provides a modern, cost-effective foundation. No exotic technology requirements. The core challenge is content/supply, not technology.
+5. **Focused launch strategy:** Starting with a single onsen region (Hakone) de-risks the cold-start problem and creates a manageable scope for an MVP.
 
-### Conditions for Go
+### Key Conditions for Go
 
-- Secure 100+ ryokan listings before public launch (3 months of supply-side outreach)
-- Validate willingness-to-pay with 20+ ryokan owners (target: 10% commission acceptance)
-- Hire or contract bilingual (JP/EN) content team for launch content
-- Obtain legal clearance on 旅行業法 compliance for chosen business model
+- Must secure **30+ ryokan listings in Hakone** before public launch
+- Must have **human-quality English translations** for all launch listings (not machine-only)
+- Must validate willingness-to-pay with **5+ ryokan owners** agreeing to the commission model
+- Target **MVP launch within 12 weeks** with core booking flow + bilingual listings

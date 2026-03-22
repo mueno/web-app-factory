@@ -456,8 +456,8 @@ class Phase1bSpecExecutor(PhaseExecutor):
         else:
             section_text = inventory_match.group(1)
 
-        # Extract bold-formatted names: **ComponentName**
-        bold_names = re.findall(r"\*\*([A-Z][A-Za-z0-9]+)\*\*", section_text)
+        # Extract bold-formatted names: **ComponentName**, **myComponent**, **My_Component**
+        bold_names = re.findall(r"\*\*([A-Za-z][A-Za-z0-9_-]*)\*\*", section_text)
         return set(bold_names)
 
 
