@@ -1,0 +1,56 @@
+{
+  "run_id": "20260322-024215-airbnb",
+  "app_name": "温泉旅館に特化したAirBnBみたいな旅行予約サイト",
+  "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
+  "idea": "温泉旅館に特化したAirBnBみたいな旅行予約サイト",
+  "started_at": "2026-03-22T02:42:15.259778+00:00",
+  "current_phase": null,
+  "phases": {
+    "1a": {
+      "phase_id": "1a",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "status": "pending",
+      "artifacts": [],
+      "notes": ""
+    },
+    "1b": {
+      "phase_id": "1b",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "status": "pending",
+      "artifacts": [],
+      "notes": ""
+    },
+    "2a": {
+      "phase_id": "2a",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "status": "pending",
+      "artifacts": [],
+      "notes": ""
+    },
+    "2b": {
+      "phase_id": "2b",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "status": "pending",
+      "artifacts": [],
+      "notes": ""
+    },
+    "3": {
+      "phase_id": "3",
+      "started_at": null,
+      "completed_at": null,
+      "error": null,
+      "status": "pending",
+      "artifacts": [],
+      "notes": ""
+    }
+  },
+  "status": "running"
+}
