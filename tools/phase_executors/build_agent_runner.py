@@ -76,7 +76,7 @@ def run_build_agent(
     )
 
     async def _run() -> str:
-        async for message in query(prompt, options=options):
+        async for message in query(prompt=prompt, options=options):
             if isinstance(message, ResultMessage):
                 return message.result or ""
         return ""
