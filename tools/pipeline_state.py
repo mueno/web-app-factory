@@ -97,7 +97,7 @@ def _activity_log_path(project_dir: str) -> Path:
 
 
 def _safe_slug(name: str) -> str:
-    return "".join(c if c.isalnum() or c in "-_" else "-" for c in name[:30]).strip("-").lower()
+    return "".join(c if (c.isascii() and c.isalnum()) or c in "-_" else "-" for c in name[:30]).strip("-").lower() or "app"
 
 
 def _write_state(project_dir: str, run_id: str, state: PipelineState) -> None:

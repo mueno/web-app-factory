@@ -115,6 +115,39 @@ def test_init_run_phases_are_pending(tmp_project_dir):
             )
 
 
+# ── slug / run_id safety ───────────────────────────────────────────────────
+
+
+def test_init_run_non_ascii_idea_produces_valid_run_id(tmp_project_dir):
+    """Non-ASCII app names (e.g. Japanese) must produce ASCII-only run_id.
+
+    Regression: Japanese characters passed str.isalnum() but failed
+    _validate_run_id's [A-Za-z0-9._-] pattern, crashing PhaseContext.
+    """
+    state = init_run(
+        app_name="温泉旅館に特化したAirBnBみたいな旅行予約サイト",
+        project_dir=str(tmp_project_dir),
+        idea="温泉旅館に特化したAirBnBみたいな旅行予約サイト",
+    )
+    assert state.run_id.isascii(), f"run_id contains non-ASCII: {state.run_id}"
+    # Must also survive PhaseContext validation
+    from tools.phase_executors.base import _validate_run_id
+    _validate_run_id(state.run_id)
+
+
+def test_init_run_all_non_ascii_idea_still_works(tmp_project_dir):
+    """Purely non-ASCII input should produce a fallback slug, not empty."""
+    state = init_run(
+        app_name="日本語のみ",
+        project_dir=str(tmp_project_dir),
+        idea="日本語のみ",
+    )
+    assert state.run_id.isascii()
+    assert len(state.run_id) > 0
+    from tools.phase_executors.base import _validate_run_id
+    _validate_run_id(state.run_id)
+
+
 # ── phase lifecycle ────────────────────────────────────────────────────────
 
 
