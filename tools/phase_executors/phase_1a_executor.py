@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase 1a executor: Idea Validation and Technical Feasibility.
 
 Calls the spec agent via the Claude Agent SDK to produce:

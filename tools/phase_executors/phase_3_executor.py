@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase 3 executor: Ship.
 
 Orchestrates the full ship pipeline:

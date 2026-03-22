@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """CRITICAL integration test: MCP phase_reporter -> state.json bridge.
 
 This test verifies that the MCP phase_reporter tool's project_dir bridge

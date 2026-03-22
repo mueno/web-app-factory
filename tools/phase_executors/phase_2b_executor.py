@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase 2b executor: Code Generation.
 
 Drives the build agent to generate all pages, components, and API routes

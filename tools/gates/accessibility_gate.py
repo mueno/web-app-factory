@@ -72,7 +72,7 @@ def run_accessibility_gate(url: str, phase_id: str = "3") -> GateResult:
                 axe = Axe()
                 axe_result = axe.run(page)
 
-                all_violations: list = list(axe_result.violations)
+                all_violations: list = list(axe_result.response.get("violations", []))
                 critical_violations = [v for v in all_violations if v.get("impact") == "critical"]
 
                 issues: list = []

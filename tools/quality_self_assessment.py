@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Quality self-assessment generator.
 
 Reads quality_criteria from the pipeline contract YAML and generates a

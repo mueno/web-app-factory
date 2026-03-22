@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Stub phase executors for all 5 web pipeline phases.
 
 These stubs satisfy the PhaseExecutor interface so the pipeline runner

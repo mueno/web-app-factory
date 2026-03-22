@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase Executor base classes and data types.
 
 Defines the abstract interface that every phase executor must implement,

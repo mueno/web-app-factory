@@ -20,9 +20,14 @@ def _make_violation(impact: str, description: str = "Some violation") -> dict:
 
 
 def _make_axe_result(violations: list) -> MagicMock:
-    """Build a mock axe result with the given violations."""
+    """Build a mock axe result with the given violations.
+
+    The real axe-playwright-python result stores violations at
+    ``result.response["violations"]``, so we mock ``response`` as a
+    dict-like object.
+    """
     mock_result = MagicMock()
-    mock_result.violations = violations
+    mock_result.response = {"violations": violations}
     return mock_result
 
 

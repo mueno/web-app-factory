@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase 2a executor: Next.js Project Scaffolding.
 
 Scaffolds a new Next.js application via `npx create-next-app@latest` subprocess

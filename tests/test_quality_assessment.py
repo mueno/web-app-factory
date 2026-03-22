@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Tests for quality self-assessment module.
 
 Tests verify that generate_quality_self_assessment:

@@ -269,11 +269,12 @@ Generate `src/app/privacy/page.tsx` (Privacy Policy) and
 `src/app/terms/page.tsx` (Terms of Service) using PRD context so each
 document references actual app features.
 
-- **Jurisdiction**: Japanese law (APPI) as primary basis; include GDPR/CCPA
-  mentions for international coverage. AllNew LLC is a Japanese entity.
+- **Jurisdiction**: Use the company jurisdiction provided via CLI parameters.
+  Include GDPR/CCPA/APPI mentions as appropriate for international coverage.
 - **NEVER use placeholder strings** such as YOUR_APP_NAME, YOUR_COMPANY,
   [Company Name], [Contact Email], or similar template variables. Use the
-  actual company name and contact email provided in context.
+  actual company name and contact email provided via --company-name and
+  --contact-email CLI parameters.
 - Legal docs must have `/privacy` and `/terms` footer links on all pages.
 
 ## Gate Failure Remediation

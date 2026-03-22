@@ -1,4 +1,4 @@
-# Copyright 2026 AllNew LLC. All rights reserved.
+# SPDX-License-Identifier: MIT
 """Phase Executor Registry — maps phase IDs to their executor instances.
 
 The registry is the single lookup point used by the pipeline runner

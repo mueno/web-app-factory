@@ -47,12 +47,12 @@ class TestLegalGate:
     def test_both_files_present_no_placeholders_pass(self, tmp_path):
         """Both legal files exist with no placeholders -> GateResult passed=True."""
         privacy_text = (
-            "# Privacy Policy\n\nAllNew LLC collects your health data to provide "
-            "the WeightSnap weight tracking feature. Contact: hello@allnew.jp"
+            "# Privacy Policy\n\nAcme Corp collects your health data to provide "
+            "the WeightSnap weight tracking feature. Contact: hello@example.com"
         )
         terms_text = (
             "# Terms of Service\n\nThese terms govern your use of the WeightSnap "
-            "application operated by AllNew LLC."
+            "application operated by Acme Corp."
         )
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
@@ -74,7 +74,7 @@ class TestLegalGate:
 
     def test_missing_privacy_file_fail(self, tmp_path):
         """Privacy page missing -> GateResult passed=False with issue."""
-        terms_text = "# Terms\n\nAllNew LLC terms for the app."
+        terms_text = "# Terms\n\nAcme Corp terms for the app."
         self._create_legal_files(tmp_path, terms_content=terms_text)
         self._create_prd(tmp_path)
 
@@ -89,7 +89,7 @@ class TestLegalGate:
 
     def test_missing_terms_file_fail(self, tmp_path):
         """Terms page missing -> GateResult passed=False with issue."""
-        privacy_text = "# Privacy\n\nAllNew LLC privacy policy."
+        privacy_text = "# Privacy\n\nAcme Corp privacy policy."
         self._create_legal_files(tmp_path, privacy_content=privacy_text)
         self._create_prd(tmp_path)
 
@@ -121,9 +121,9 @@ class TestLegalGate:
 
     def test_placeholder_your_app_name_detected_fail(self, tmp_path):
         """YOUR_APP_NAME in terms file -> GateResult passed=False with issue."""
-        privacy_text = "# Privacy Policy\n\nAllNew LLC collects data for the app."
+        privacy_text = "# Privacy Policy\n\nAcme Corp collects data for the app."
         terms_text = (
-            "# Terms of Service\n\nWelcome to YOUR_APP_NAME, operated by AllNew LLC."
+            "# Terms of Service\n\nWelcome to YOUR_APP_NAME, operated by Acme Corp."
         )
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
@@ -141,7 +141,7 @@ class TestLegalGate:
     def test_placeholder_your_company_detected_fail(self, tmp_path):
         """YOUR_COMPANY in privacy file -> fail."""
         privacy_text = "# Privacy\n\nYOUR_COMPANY processes your personal data."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -157,7 +157,7 @@ class TestLegalGate:
     def test_placeholder_bracket_company_detected_fail(self, tmp_path):
         """[COMPANY] placeholder detected -> fail."""
         privacy_text = "# Privacy\n\n[COMPANY] Privacy Policy."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -172,7 +172,7 @@ class TestLegalGate:
     def test_placeholder_bracket_date_detected_fail(self, tmp_path):
         """[DATE] placeholder detected -> fail."""
         privacy_text = "# Privacy\n\nEffective [DATE]."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -187,7 +187,7 @@ class TestLegalGate:
     def test_placeholder_bracket_app_name_detected_fail(self, tmp_path):
         """[APP_NAME] placeholder detected -> fail."""
         privacy_text = "# Privacy\n\n[APP_NAME] collects your data."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -202,7 +202,7 @@ class TestLegalGate:
     def test_placeholder_your_email_detected_fail(self, tmp_path):
         """YOUR_EMAIL placeholder detected -> fail."""
         privacy_text = "# Privacy\n\nContact us at YOUR_EMAIL."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -218,8 +218,8 @@ class TestLegalGate:
 
     def test_no_feature_reference_advisory(self, tmp_path):
         """Legal files exist but no PRD feature referenced -> pass with advisory."""
-        privacy_text = "# Privacy\n\nAllNew LLC processes personal data. Contact: hi@example.com"
-        terms_text = "# Terms\n\nAllNew LLC terms of service. Last updated 2026."
+        privacy_text = "# Privacy\n\nAcme Corp processes personal data. Contact: hi@example.com"
+        terms_text = "# Terms\n\nAcme Corp terms of service. Last updated 2026."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -241,8 +241,8 @@ class TestLegalGate:
     def test_feature_referenced_no_advisory(self, tmp_path):
         """PRD feature name appears in legal docs -> no advisory."""
         feature_name = "WeightTracker"
-        privacy_text = f"# Privacy\n\nAllNew LLC processes data for {feature_name}."
-        terms_text = f"# Terms\n\nAllNew LLC terms for the {feature_name} application."
+        privacy_text = f"# Privacy\n\nAcme Corp processes data for {feature_name}."
+        terms_text = f"# Terms\n\nAcme Corp terms for the {feature_name} application."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -267,8 +267,8 @@ class TestLegalGate:
 
     def test_phase_id_propagated(self, tmp_path):
         """phase_id parameter is reflected in GateResult.phase_id."""
-        privacy_text = "# Privacy\n\nAllNew LLC."
-        terms_text = "# Terms\n\nAllNew LLC."
+        privacy_text = "# Privacy\n\nAcme Corp."
+        terms_text = "# Terms\n\nAcme Corp."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )
@@ -283,8 +283,8 @@ class TestLegalGate:
 
     def test_no_prd_file_still_checks_files(self, tmp_path):
         """Missing prd.md -> legal gate still checks file presence and placeholders."""
-        privacy_text = "# Privacy\n\nAllNew LLC collects data."
-        terms_text = "# Terms\n\nAllNew LLC terms."
+        privacy_text = "# Privacy\n\nAcme Corp collects data."
+        terms_text = "# Terms\n\nAcme Corp terms."
         self._create_legal_files(
             tmp_path, privacy_content=privacy_text, terms_content=terms_text
         )

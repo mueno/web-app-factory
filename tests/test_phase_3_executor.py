@@ -300,7 +300,7 @@ class TestGenerateLegalSubStep:
 
         ctx = _make_context(
             tmp_path,
-            extra={"company_name": "AllNew LLC", "contact_email": "hello@allnew.jp"},
+            extra={"company_name": "Acme Corp", "contact_email": "hello@example.com"},
         )
         executor = Phase3ShipExecutor()
         executor._preview_url = "https://test.vercel.app"
@@ -324,8 +324,8 @@ class TestGenerateLegalSubStep:
         # Prompt should include PRD content
         assert "WeightSnap" in prompt or "WeightTracker" in prompt
         # Prompt should include company info
-        assert "AllNew LLC" in prompt
-        assert "hello@allnew.jp" in prompt
+        assert "Acme Corp" in prompt
+        assert "hello@example.com" in prompt
 
     def test_legal_generation_without_company_info(self, tmp_path):
         """Missing company_name/contact_email -> deploy-agent still called."""
@@ -655,7 +655,7 @@ class TestFullHappyPath:
         from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
         ctx = _make_context(
             tmp_path,
-            extra={"company_name": "AllNew LLC", "contact_email": "hi@allnew.jp"},
+            extra={"company_name": "Acme Corp", "contact_email": "hi@example.com"},
         )
         executor = Phase3ShipExecutor()
 
@@ -777,8 +777,8 @@ class TestGenerateLegalNextjsDir:
             tmp_path,
             extra={
                 "nextjs_dir": "/fake/nextjs",
-                "company_name": "AllNew LLC",
-                "contact_email": "hi@allnew.jp",
+                "company_name": "Acme Corp",
+                "contact_email": "hi@example.com",
             },
         )
         executor = Phase3ShipExecutor()
