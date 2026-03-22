@@ -9,3 +9,5 @@
 {"timestamp": "2026-03-22T01:46:42.297898+00:00", "run_id": "20260322-014104-airbnb", "event": "phase_complete", "phase": "1a", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/idea-validation.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/tech-feasibility-memo.json"]}
 {"timestamp": "2026-03-22T01:46:42.363430+00:00", "run_id": "20260322-014104-airbnb", "event": "phase_start", "phase": "1b"}
 {"timestamp": "2026-03-22T01:59:14.579358+00:00", "run_id": "20260322-014104-airbnb", "event": "phase_complete", "phase": "1b", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/prd.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/screen-spec.json"]}
+{"timestamp": "2026-03-22T01:59:14.624989+00:00", "run_id": "20260322-014104-airbnb", "event": "phase_start", "phase": "2a"}
+{"timestamp": "2026-03-22T02:02:14.633012+00:00", "run_id": "20260322-014104-airbnb", "event": "failed", "error": "create-next-app timed out after 180s"}

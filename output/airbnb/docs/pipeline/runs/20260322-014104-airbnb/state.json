@@ -4,7 +4,7 @@
   "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
   "idea": "温泉旅館に特化したAirBnBみたいな旅行予約サイト",
   "started_at": "2026-03-22T01:41:04.197355+00:00",
-  "current_phase": "1b",
+  "current_phase": "2a",
   "phases": {
     "1a": {
       "phase_id": "1a",
@@ -32,12 +32,12 @@
     },
     "2a": {
       "phase_id": "2a",
-      "started_at": null,
-      "completed_at": null,
+      "started_at": "2026-03-22T01:59:14.624989+00:00",
+      "completed_at": "2026-03-22T02:02:14.633012+00:00",
       "error": null,
-      "status": "pending",
+      "status": "failed",
       "artifacts": [],
-      "notes": ""
+      "notes": "FAILED: create-next-app timed out after 180s"
     },
     "2b": {
       "phase_id": "2b",
@@ -58,5 +58,5 @@
       "notes": ""
     }
   },
-  "status": "running"
+  "status": "failed"
 }
