@@ -1,0 +1,39 @@
+{
+  "gate": "startup_preflight",
+  "timestamp": "2026-03-22T01:35:41.754408+00:00",
+  "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
+  "status": "PASS",
+  "checks": [
+    {
+      "check": "nodejs",
+      "passed": true,
+      "reason": null,
+      "version": "v22.22.0"
+    },
+    {
+      "check": "npm",
+      "passed": true,
+      "reason": null,
+      "version": "10.9.4"
+    },
+    {
+      "check": "vercel_cli",
+      "passed": true,
+      "reason": null,
+      "version": "50.33.1"
+    },
+    {
+      "check": "python",
+      "passed": true,
+      "reason": null,
+      "version": "3.13.12"
+    },
+    {
+      "check": "claude_cli",
+      "passed": true,
+      "reason": null,
+      "version": "2.1.81 (Claude Code)"
+    }
+  ],
+  "issues": []
+}
