@@ -18,12 +18,13 @@
 | 1b: Spec & Design | completed | 2026-03-22T04:05:52.885536+00:00 | 2026-03-22T04:18:12.069390+00:00 | /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/prd.md, /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/screen-spec.json |
 | 2a: Scaffold | completed | 2026-03-22T04:18:12.138227+00:00 | 2026-03-22T04:19:46.164457+00:00 | /Users/masa/Development/web-app-factory/output/airbnb/airbnb |
 | 2b: Build | completed | 2026-03-22T04:19:46.230137+00:00 | 2026-03-22T04:41:16.989971+00:00 | /Users/masa/Development/web-app-factory/output/airbnb |
-| 3: Ship | failed | 2026-03-22T05:17:57.650836+00:00 | 2026-03-22T05:09:22.588028+00:00 | - |
+| 3: Ship | failed | 2026-03-22T05:47:39.784453+00:00 | 2026-03-22T05:09:22.588028+00:00 | - |
 
 ## Notes
 
 ### Phase 3: Ship
 
 FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85
+FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85
 FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85
 
