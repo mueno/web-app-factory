@@ -14,6 +14,7 @@ Key behaviors (PIPE-01):
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Optional
@@ -337,9 +338,9 @@ def run_pipeline(
     project_dir = str(Path(project_dir).resolve())
     _contract_path = contract_path or str(_DEFAULT_CONTRACT_PATH)
 
-    # Derive app name from idea slug
-    safe_chars = [c if c.isalnum() or c in "-_" else "-" for c in idea[:40]]
-    app_name = "".join(safe_chars).strip("-") or "web-app"
+    # Derive app name from idea slug (ASCII-only for npm compatibility)
+    safe_chars = [c if (c.isascii() and c.isalnum()) or c in "-_" else "-" for c in idea[:40]]
+    app_name = re.sub(r"-{2,}", "-", "".join(safe_chars)).strip("-").lower() or "web-app"
 
     # Derive the Next.js project directory.
     # project_dir is the pipeline root; create-next-app places the generated

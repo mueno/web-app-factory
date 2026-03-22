@@ -67,9 +67,17 @@ def run_deploy_agent(
     )
 
     async def _run() -> str:
+        # Drain the entire generator to avoid GeneratorExit being sent mid-cleanup.
+        # Breaking early (via `return`) from an `async for` loop over the SDK's
+        # async generator causes `finally: await query.close()` to run in a
+        # different anyio task context than `query.start()`, triggering:
+        #   RuntimeError: Attempted to exit cancel scope in a different task
+        # Fix: collect the result and continue iterating until the generator is
+        # exhausted naturally.
+        result: str = ""
         async for message in query(prompt=prompt, options=options):
-            if isinstance(message, ResultMessage):
-                return message.result or ""
-        return ""
+            if isinstance(message, ResultMessage) and not result:
+                result = message.result or ""
+        return result
 
     return asyncio.run(_run())
