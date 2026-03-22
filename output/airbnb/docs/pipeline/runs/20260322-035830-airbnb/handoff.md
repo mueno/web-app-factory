@@ -1,7 +1,7 @@
 # Pipeline Handoff: airbnb
 
 - **Run ID**: `20260322-035830-airbnb`
-- **Status**: running
+- **Status**: completed
 - **Started**: 2026-03-22T03:58:30.795058+00:00
 - **Current Phase**: 3
 - **Project Dir**: `/Users/masa/Development/web-app-factory/output/airbnb`
