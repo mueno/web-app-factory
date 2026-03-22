@@ -18,7 +18,7 @@
 | 1b: Spec & Design | completed | 2026-03-22T04:05:52.885536+00:00 | 2026-03-22T04:18:12.069390+00:00 | /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/prd.md, /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/screen-spec.json |
 | 2a: Scaffold | completed | 2026-03-22T04:18:12.138227+00:00 | 2026-03-22T04:19:46.164457+00:00 | /Users/masa/Development/web-app-factory/output/airbnb/airbnb |
 | 2b: Build | completed | 2026-03-22T04:19:46.230137+00:00 | 2026-03-22T04:41:16.989971+00:00 | /Users/masa/Development/web-app-factory/output/airbnb |
-| 3: Ship | failed | 2026-03-22T06:10:23.099013+00:00 | 2026-03-22T05:09:22.588028+00:00 | - |
+| 3: Ship | failed | 2026-03-22T07:36:24.318825+00:00 | 2026-03-22T05:09:22.588028+00:00 | - |
 
 ## Notes
 
@@ -28,4 +28,5 @@ FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse perfo
 FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85
 FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85
 FAILED: gate_accessibility failed after 3 attempt(s). Last issues: playwright and axe-playwright-python are required but not installed
+FAILED: Security headers gate failed: Missing required security header: Content-Security-Policy; Missing required security header: X-Content-Type-Options; Missing required security header: Referrer-Policy
 
