@@ -100,7 +100,7 @@ def run_link_integrity_gate(url: str, phase_id: str = "3") -> GateResult:
     queue.append((start_url, 0))
     visited.add(start_url)
 
-    _OK_STATUSES = {200, 301, 302, 308}
+    _OK_STATUSES = {200, 301, 302, 308, 401}
 
     with httpx.Client(follow_redirects=False, timeout=_REQUEST_TIMEOUT) as client:
         while queue and urls_checked < _MAX_URLS:

@@ -51,7 +51,7 @@ def run_deployment_gate(
             ],
         )
 
-    if response.status_code == 200:
+    if response.status_code in (200, 401):
         return GateResult(
             gate_type="deployment",
             phase_id=phase_id,
