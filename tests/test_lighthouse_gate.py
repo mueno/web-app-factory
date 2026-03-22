@@ -188,6 +188,52 @@ class TestLighthouseGateCustomThresholds:
         assert result.passed is True
 
 
+class TestLighthouseGateTolerance:
+    """Tests for score tolerance (advisory instead of hard block)."""
+
+    def test_score_within_tolerance_passes(self):
+        """Score 83 with threshold 85 and tolerance 2 -> passed=True (advisory)."""
+        from tools.gates.lighthouse_gate import run_lighthouse_gate
+
+        # 83 is within 2 points of 85 -> should pass with advisory
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.83, 0.95, 0.90)):
+            result = run_lighthouse_gate("https://example.com")
+
+        assert result.passed is True
+        assert len(result.advisories) > 0
+        assert any("tolerance" in a.lower() for a in result.advisories)
+
+    def test_score_below_tolerance_fails(self):
+        """Score 80 with threshold 85 and tolerance 2 -> passed=False (hard block)."""
+        from tools.gates.lighthouse_gate import run_lighthouse_gate
+
+        # 80 is 5 points below 85 -> exceeds tolerance -> hard block
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.80, 0.95, 0.90)):
+            result = run_lighthouse_gate("https://example.com")
+
+        assert result.passed is False
+        assert any("below threshold" in issue for issue in result.issues)
+
+    def test_score_at_threshold_passes_no_advisory(self):
+        """Score exactly at threshold -> passed=True, no advisory."""
+        from tools.gates.lighthouse_gate import run_lighthouse_gate
+
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.85, 0.90, 0.85)):
+            result = run_lighthouse_gate("https://example.com")
+
+        assert result.passed is True
+        assert result.advisories == []
+
+    def test_tolerance_stored_in_extra(self):
+        """tolerance value is stored in extra for auditability."""
+        from tools.gates.lighthouse_gate import run_lighthouse_gate
+
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.83, 0.95, 0.90)):
+            result = run_lighthouse_gate("https://example.com")
+
+        assert "tolerance" in result.extra
+
+
 class TestLighthouseGateExtra:
     """Tests for extra data stored in GateResult."""
 

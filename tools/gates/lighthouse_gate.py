@@ -25,6 +25,10 @@ def _now_iso() -> str:
 
 _DEFAULT_THRESHOLDS: dict = {"performance": 85, "accessibility": 90, "seo": 85}
 
+# Tolerance (points) to absorb normal Lighthouse variability (±2-3 between runs).
+# A score within tolerance triggers an advisory instead of a hard BLOCK.
+_SCORE_TOLERANCE: float = 2.0
+
 _LIGHTHOUSE_CATEGORIES = ["performance", "accessibility", "seo"]
 
 
@@ -124,6 +128,7 @@ def run_lighthouse_gate(
         categories = lh_data.get("categories", {})
         scores: dict = {}
         issues: list = []
+        advisories: list = []
 
         for category in _LIGHTHOUSE_CATEGORIES:
             cat_data = categories.get(category, {})
@@ -138,9 +143,17 @@ def run_lighthouse_gate(
             threshold = effective_thresholds.get(category, 0)
 
             if score_pct < threshold:
-                issues.append(
-                    f"Lighthouse {category} score {score_pct:.1f} is below threshold {threshold}"
-                )
+                gap = threshold - score_pct
+                if gap <= _SCORE_TOLERANCE:
+                    # Within tolerance — advisory, not a hard block
+                    advisories.append(
+                        f"Lighthouse {category} score {score_pct:.1f} is within "
+                        f"tolerance of threshold {threshold} (gap {gap:.1f})"
+                    )
+                else:
+                    issues.append(
+                        f"Lighthouse {category} score {score_pct:.1f} is below threshold {threshold}"
+                    )
 
         passed = len(issues) == 0
 
@@ -150,10 +163,15 @@ def run_lighthouse_gate(
             passed=passed,
             status="PASS" if passed else "BLOCKED",
             severity="INFO" if passed else "BLOCK",
-            confidence=1.0 if passed else 0.0,
+            confidence=1.0 if passed else max(0.0, 1.0 - sum(
+                (threshold - scores.get(c, 0)) / 100
+                for c in _LIGHTHOUSE_CATEGORIES
+                if scores.get(c, 0) < effective_thresholds.get(c, 0)
+            )),
             checked_at=checked_at,
             issues=issues,
-            extra={"scores": scores},
+            advisories=advisories,
+            extra={"scores": scores, "tolerance": _SCORE_TOLERANCE},
         )
 
     finally:

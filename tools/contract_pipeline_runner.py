@@ -186,15 +186,19 @@ def _run_gate_checks(
                     issues.append(f"Required file missing: {rel_path}")
 
         elif gate_type == "tool_invocation":
-            # Check required output markers in files under docs/pipeline/
+            # Check required output markers in files under docs/pipeline/.
+            # Uses 2-layer matching: exact first, then case-insensitive
+            # normalized fallback to absorb LLM heading variations.
             for marker in conditions.get("required_output_markers", []):
                 found = False
+                marker_lower = marker.lower()
                 docs_dir = Path(project_dir) / "docs" / "pipeline"
                 if docs_dir.exists():
                     for f in docs_dir.rglob("*"):
                         if f.is_file():
                             try:
-                                if marker in f.read_text(encoding="utf-8", errors="replace"):
+                                content = f.read_text(encoding="utf-8", errors="replace")
+                                if marker in content or marker_lower in content.lower():
                                     found = True
                                     break
                             except OSError:

@@ -289,6 +289,30 @@ class TestGateDispatch:
         assert passed is True
         assert issues == []
 
+    def test_gate_dispatch_tool_invocation_case_insensitive_fallback(self, tmp_path):
+        """Tool invocation gate matches markers case-insensitively as fallback."""
+        docs_dir = tmp_path / "docs" / "pipeline"
+        docs_dir.mkdir(parents=True, exist_ok=True)
+        # File has lowercase heading, contract expects title case
+        (docs_dir / "output.md").write_text("## competitors\nSome analysis", encoding="utf-8")
+        contract_phase = {
+            "id": "1a",
+            "gates": [
+                {
+                    "type": "tool_invocation",
+                    "conditions": {
+                        "required_output_markers": ["## Competitors"],
+                    },
+                }
+            ],
+        }
+
+        from tools.contract_pipeline_runner import _run_gate_checks
+        passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
+
+        assert passed is True
+        assert issues == []
+
     def test_gate_dispatch_tool_invocation_regression_missing_marker(self, tmp_path):
         """Tool invocation gate fails when marker is missing from docs/pipeline/."""
         (tmp_path / "docs" / "pipeline").mkdir(parents=True)
