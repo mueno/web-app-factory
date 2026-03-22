@@ -54,12 +54,12 @@
     },
     "3": {
       "phase_id": "3",
-      "started_at": "2026-03-22T07:36:24.318825+00:00",
+      "started_at": "2026-03-22T07:46:33.665069+00:00",
       "completed_at": "2026-03-22T05:09:22.588028+00:00",
       "error": null,
       "status": "failed",
       "artifacts": [],
-      "notes": "FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_accessibility failed after 3 attempt(s). Last issues: playwright and axe-playwright-python are required but not installed\nFAILED: Security headers gate failed: Missing required security header: Content-Security-Policy; Missing required security header: X-Content-Type-Options; Missing required security header: Referrer-Policy"
+      "notes": "FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 72.0 is below threshold 85\nFAILED: gate_accessibility failed after 3 attempt(s). Last issues: playwright and axe-playwright-python are required but not installed\nFAILED: Security headers gate failed: Missing required security header: Content-Security-Policy; Missing required security header: X-Content-Type-Options; Missing required security header: Referrer-Policy\nFAILED: Security headers gate failed: Missing required security header: Content-Security-Policy; Missing required security header: X-Content-Type-Options; Missing required security header: Referrer-Policy"
     }
   },
   "status": "failed"
