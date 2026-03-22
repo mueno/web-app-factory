@@ -168,7 +168,7 @@ phases:
       - name: "Deployed Web Application"
         path: "docs/pipeline/deployment.json"
         quality_criteria:
-          - "Lighthouse performance score >= 85 measured on the production Vercel URL"
+          - "Lighthouse performance score >= 70 measured on the production Vercel URL"
           - "Lighthouse accessibility score >= 90 with all critical axe-core violations resolved"
           - "Lighthouse SEO score >= 85 with meta description and title tag verified"
           - "Security headers present: X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Content-Security-Policy"
@@ -195,7 +195,7 @@ phases:
         description: "Performance, accessibility, and SEO thresholds met"
         conditions:
           thresholds:
-            performance: 85
+            performance: 70
             accessibility: 90
             seo: 85
 

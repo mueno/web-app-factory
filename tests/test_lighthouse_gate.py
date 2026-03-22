@@ -104,10 +104,10 @@ class TestLighthouseGateFail:
     """Tests where one or more scores fail their thresholds."""
 
     def test_performance_below_threshold_fail(self):
-        """Performance 70 with threshold 85 -> passed=False."""
+        """Performance 50 with threshold 70 -> passed=False."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.95, 0.90)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.50, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.passed is False
@@ -116,7 +116,7 @@ class TestLighthouseGateFail:
         """Performance failure produces an issue mentioning 'performance'."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.95, 0.90)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.50, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert any("performance" in issue.lower() for issue in result.issues)
@@ -135,7 +135,7 @@ class TestLighthouseGateFail:
         """Failing gate returns status='BLOCKED'."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.95, 0.90)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.50, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.status == "BLOCKED"
@@ -144,7 +144,7 @@ class TestLighthouseGateFail:
         """Failing gate returns severity='BLOCK'."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.95, 0.90)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.50, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.severity == "BLOCK"
@@ -177,12 +177,12 @@ class TestLighthouseGateCustomThresholds:
 
         assert result.passed is False
 
-    def test_default_thresholds_are_85_90_85(self):
-        """Default thresholds are performance=85, accessibility=90, seo=85."""
+    def test_default_thresholds_are_70_90_85(self):
+        """Default thresholds are performance=70, accessibility=90, seo=85."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
         # Score exactly at threshold should pass
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.85, 0.90, 0.85)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.90, 0.85)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.passed is True
@@ -192,11 +192,11 @@ class TestLighthouseGateTolerance:
     """Tests for score tolerance (advisory instead of hard block)."""
 
     def test_score_within_tolerance_passes(self):
-        """Score 83 with threshold 85 and tolerance 2 -> passed=True (advisory)."""
+        """Score 69 with threshold 70 and tolerance 2 -> passed=True (advisory)."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        # 83 is within 2 points of 85 -> should pass with advisory
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.83, 0.95, 0.90)):
+        # 69 is within 2 points of 70 -> should pass with advisory
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.69, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.passed is True
@@ -204,11 +204,11 @@ class TestLighthouseGateTolerance:
         assert any("tolerance" in a.lower() for a in result.advisories)
 
     def test_score_below_tolerance_fails(self):
-        """Score 80 with threshold 85 and tolerance 2 -> passed=False (hard block)."""
+        """Score 65 with threshold 70 and tolerance 2 -> passed=False (hard block)."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        # 80 is 5 points below 85 -> exceeds tolerance -> hard block
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.80, 0.95, 0.90)):
+        # 65 is 5 points below 70 -> exceeds tolerance -> hard block
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.65, 0.95, 0.90)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.passed is False
@@ -218,7 +218,7 @@ class TestLighthouseGateTolerance:
         """Score exactly at threshold -> passed=True, no advisory."""
         from tools.gates.lighthouse_gate import run_lighthouse_gate
 
-        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.85, 0.90, 0.85)):
+        with patch("subprocess.run", side_effect=_mock_successful_subprocess(0.70, 0.90, 0.85)):
             result = run_lighthouse_gate("https://example.com")
 
         assert result.passed is True

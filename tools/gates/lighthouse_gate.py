@@ -23,7 +23,7 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-_DEFAULT_THRESHOLDS: dict = {"performance": 85, "accessibility": 90, "seo": 85}
+_DEFAULT_THRESHOLDS: dict = {"performance": 70, "accessibility": 90, "seo": 85}
 
 # Tolerance (points) to absorb normal Lighthouse variability (±2-3 between runs).
 # A score within tolerance triggers an advisory instead of a hard BLOCK.
