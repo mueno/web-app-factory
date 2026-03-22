@@ -1,6 +1,6 @@
 {
   "gate": "startup_preflight",
-  "timestamp": "2026-03-22T01:39:00.989717+00:00",
+  "timestamp": "2026-03-22T01:41:04.189360+00:00",
   "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
   "status": "PASS",
   "checks": [
