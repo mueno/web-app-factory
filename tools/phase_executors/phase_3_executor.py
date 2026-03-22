@@ -543,15 +543,43 @@ Use the exact company name and email provided above — never use placeholders.
                 "; ".join(last_issues[:3]),
             )
 
+            # Build actionable fix prompt with diagnostics when available
+            diagnostics_section = ""
+            if hasattr(gate_result, "extra") and isinstance(gate_result.extra, dict):
+                diags = gate_result.extra.get("diagnostics", [])
+                if diags:
+                    diag_lines = []
+                    for d in diags:
+                        line = f"- **{d.get('title', d.get('id', '?'))}**"
+                        dv = d.get("displayValue", "")
+                        if dv:
+                            line += f" ({dv})"
+                        desc = d.get("description", "")
+                        if desc:
+                            line += f" — {desc}"
+                        diag_lines.append(line)
+                    diagnostics_section = (
+                        "\n\n## Specific Lighthouse Audit Failures\n\n"
+                        + "\n".join(diag_lines)
+                        + "\n\nFix the audits above in priority order (worst score first)."
+                    )
+
             fix_prompt = f"""\
 The {gate_name.replace("gate_", "")} quality gate failed with these issues:
 
 {chr(10).join(f"- {issue}" for issue in last_issues)}
+{diagnostics_section}
 
-Please:
-1. Fix the code issues described above in src/
-2. Run: npm run build (to verify the fix compiles)
-3. Run: vercel deploy --yes (to create a new preview deployment)
+## Fix Instructions
+
+1. Address the specific audit failures listed above. Common fixes:
+   - Large JS bundles → use dynamic import() and next/dynamic for heavy components
+   - Render-blocking resources → defer non-critical CSS/JS
+   - Image optimization → use next/image with width/height and priority for LCP
+   - Unused JavaScript → remove unused imports, tree-shake dependencies
+   - Layout shift → set explicit width/height on images, fonts, embeds
+2. Run: npm run build (verify the fix compiles)
+3. Run: vercel deploy --yes (create a new preview deployment)
 
 Focus only on fixing the specific issues listed. Do not change unrelated code.
 """

@@ -31,6 +31,44 @@ _SCORE_TOLERANCE: float = 2.0
 
 _LIGHTHOUSE_CATEGORIES = ["performance", "accessibility", "seo"]
 
+# Maximum number of failing audits to include in diagnostics
+_MAX_DIAGNOSTICS = 8
+
+
+def _extract_failing_audits(lh_data: dict) -> list[dict]:
+    """Extract top failing audits from Lighthouse JSON for actionable fix guidance.
+
+    Returns a list of dicts with keys: id, title, score, displayValue, description.
+    Only includes audits with score < 1.0 (not perfect), sorted by score ascending
+    (worst first). Capped at _MAX_DIAGNOSTICS entries.
+    """
+    audits = lh_data.get("audits", {})
+    failing: list[dict] = []
+
+    for audit_id, audit_data in audits.items():
+        if not isinstance(audit_data, dict):
+            continue
+        score = audit_data.get("score")
+        # Skip informational audits (score=None) and perfect audits (score=1.0)
+        if score is None or score >= 1.0:
+            continue
+        # Skip audits that are not actionable (e.g. metrics, not opportunities)
+        score_display_mode = audit_data.get("scoreDisplayMode", "")
+        if score_display_mode in ("notApplicable", "manual", "informative"):
+            continue
+
+        failing.append({
+            "id": audit_id,
+            "title": audit_data.get("title", audit_id),
+            "score": score,
+            "displayValue": audit_data.get("displayValue", ""),
+            "description": (audit_data.get("description") or "")[:200],
+        })
+
+    # Sort by score ascending (worst audits first)
+    failing.sort(key=lambda a: (a["score"], a["id"]))
+    return failing[:_MAX_DIAGNOSTICS]
+
 
 def run_lighthouse_gate(
     url: str,
@@ -155,6 +193,9 @@ def run_lighthouse_gate(
                         f"Lighthouse {category} score {score_pct:.1f} is below threshold {threshold}"
                     )
 
+        # Extract top failing audits for actionable diagnostics
+        diagnostics = _extract_failing_audits(lh_data)
+
         passed = len(issues) == 0
 
         return GateResult(
@@ -171,7 +212,11 @@ def run_lighthouse_gate(
             checked_at=checked_at,
             issues=issues,
             advisories=advisories,
-            extra={"scores": scores, "tolerance": _SCORE_TOLERANCE},
+            extra={
+                "scores": scores,
+                "tolerance": _SCORE_TOLERANCE,
+                "diagnostics": diagnostics,
+            },
         )
 
     finally:
