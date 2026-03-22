@@ -167,6 +167,7 @@ class Phase2aScaffoldExecutor(PhaseExecutor):
         """
         cmd = [
             "npx",
+            "--yes",  # auto-accept npx package install prompt
             "create-next-app@latest",
             ctx.app_name,
             "--typescript",
@@ -175,7 +176,7 @@ class Phase2aScaffoldExecutor(PhaseExecutor):
             "--src-dir",
             "--disable-git",
             "--use-npm",
-            "--yes",
+            "--yes",  # auto-accept create-next-app prompts
         ]
 
         try:
@@ -185,6 +186,7 @@ class Phase2aScaffoldExecutor(PhaseExecutor):
                 capture_output=True,
                 text=True,
                 timeout=_SCAFFOLD_TIMEOUT,
+                stdin=subprocess.DEVNULL,  # prevent any interactive prompt from hanging
             )
         except subprocess.TimeoutExpired:
             return SubStepResult(
