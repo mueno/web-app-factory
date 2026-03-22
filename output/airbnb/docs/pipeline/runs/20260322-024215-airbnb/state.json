@@ -4,7 +4,7 @@
   "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
   "idea": "温泉旅館に特化したAirBnBみたいな旅行予約サイト",
   "started_at": "2026-03-22T02:42:15.259778+00:00",
-  "current_phase": "1b",
+  "current_phase": "2a",
   "phases": {
     "1a": {
       "phase_id": "1a",
@@ -32,12 +32,12 @@
     },
     "2a": {
       "phase_id": "2a",
-      "started_at": null,
-      "completed_at": null,
+      "started_at": "2026-03-22T03:01:30.229772+00:00",
+      "completed_at": "2026-03-22T03:01:31.615989+00:00",
       "error": null,
-      "status": "pending",
+      "status": "failed",
       "artifacts": [],
-      "notes": ""
+      "notes": "FAILED: create-next-app failed: Could not create a project called \"温泉旅館に特化したAirBnBみたいな旅行予約サイト\" because of npm naming restrictions:\n    * name can only contain URL-friendly characters\n    * name can no longer contain capital letters"
     },
     "2b": {
       "phase_id": "2b",
@@ -58,5 +58,5 @@
       "notes": ""
     }
   },
-  "status": "running"
+  "status": "failed"
 }
