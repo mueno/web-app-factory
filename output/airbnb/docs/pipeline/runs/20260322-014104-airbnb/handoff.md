@@ -3,7 +3,7 @@
 - **Run ID**: `20260322-014104-airbnb`
 - **Status**: running
 - **Started**: 2026-03-22T01:41:04.197355+00:00
-- **Current Phase**: (none)
+- **Current Phase**: 1a
 - **Project Dir**: `/Users/masa/Development/web-app-factory/output/airbnb`
 
 ## Idea
@@ -14,7 +14,7 @@
 
 | Phase | Status | Started | Completed | Artifacts |
 |-------|--------|---------|-----------|-----------|
-| 1a: Idea Validation | pending | - | - | - |
+| 1a: Idea Validation | completed | 2026-03-22T01:41:04.250047+00:00 | 2026-03-22T01:46:42.297898+00:00 | /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/idea-validation.md, /Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/tech-feasibility-memo.json |
 | 1b: Spec & Design | pending | - | - | - |
 | 2a: Scaffold | pending | - | - | - |
 | 2b: Build | pending | - | - | - |

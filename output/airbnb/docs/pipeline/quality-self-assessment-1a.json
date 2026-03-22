@@ -1,0 +1,63 @@
+{
+  "phase_id": "1a",
+  "timestamp": "2026-03-22T01:46:42.289872+00:00",
+  "deliverables": [
+    {
+      "name": "Idea Validation Report",
+      "path": "docs/pipeline/idea-validation.md",
+      "criteria": [
+        {
+          "criterion": "At least 3 named competitor apps are analyzed with specific feature comparisons (not generic categories)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Target user persona includes age range, occupation, and a concrete pain point with a real-world example",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Differentiation strategy is derived from the competitor analysis gaps, not stated generically",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "At least 3 risks are identified with specific mitigation strategies for each",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Market size estimate is provided with a quantitative basis or cited source",
+          "status": "pending",
+          "evidence": null
+        }
+      ]
+    },
+    {
+      "name": "Technical Feasibility Memo",
+      "path": "docs/pipeline/tech-feasibility-memo.json",
+      "criteria": [
+        {
+          "criterion": "Next.js suitability is evaluated against the specific app requirements (SSR vs SSG vs ISR trade-offs discussed)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "External API dependencies are listed by name with rate limits or cost implications noted",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Vercel deployment constraints relevant to the app are assessed (serverless timeout, bundle size, etc.)",
+          "status": "pending",
+          "evidence": null
+        },
+        {
+          "criterion": "Browser API requirements (camera, geolocation, etc.) are listed if applicable, with fallback strategy",
+          "status": "pending",
+          "evidence": null
+        }
+      ]
+    }
+  ]
+}
