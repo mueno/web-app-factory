@@ -4,7 +4,7 @@
   "project_dir": "/Users/masa/Development/web-app-factory/output/airbnb",
   "idea": "温泉旅館に特化したAirBnBみたいな旅行予約サイト",
   "started_at": "2026-03-22T03:58:30.795058+00:00",
-  "current_phase": "2b",
+  "current_phase": "3",
   "phases": {
     "1a": {
       "phase_id": "1a",
@@ -54,13 +54,13 @@
     },
     "3": {
       "phase_id": "3",
-      "started_at": null,
-      "completed_at": null,
+      "started_at": "2026-03-22T04:41:17.100702+00:00",
+      "completed_at": "2026-03-22T05:09:22.588028+00:00",
       "error": null,
-      "status": "pending",
+      "status": "failed",
       "artifacts": [],
-      "notes": ""
+      "notes": "FAILED: gate_lighthouse failed after 3 attempt(s). Last issues: Lighthouse performance score 83.0 is below threshold 85"
     }
   },
-  "status": "running"
+  "status": "failed"
 }
