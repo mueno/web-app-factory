@@ -38,6 +38,10 @@
         "ImageWithFallback",
         "PriceDisplay",
         "Badge",
+        "StarRating",
+        "LoadingSkeleton",
+        "ErrorState",
+        "EmptyState",
         "Footer",
         "FooterLinkGroup",
         "SocialLinks"
@@ -49,8 +53,8 @@
         "populated": "SearchHero with destination autocomplete, date picker, and guest selector. Below: horizontal-scroll CuratedCollectionGrid for 2-3 themed collections (each containing 4-6 RyokanCards). SeasonalHighlightBanner with current season imagery. Popular regions grid with 6-8 region cards linking to /regions/[region]. Recent diaries section with 3-4 DiaryCards. Onsen guide teaser section with links to etiquette and water types guides."
       },
       "responsive": {
-        "mobile": "SearchHero stacks vertically: destination input full-width, date picker and guest selector each full-width below. Curated collections show as horizontal-scrollable single-row carousels with peek of next card. Popular regions show as 2-column grid (2×4). Diary cards stack in single column. Header collapses to Logo + MobileMenuToggle. Navigation moves to MobileDrawer.",
-        "tablet": "SearchHero inputs arranged in 2-column layout (destination spans full, dates and guests side-by-side). Curated collection grids show 2 cards per row. Popular regions show 3-column grid (3×3). Diary cards in 2-column layout.",
+        "mobile": "SearchHero stacks vertically: destination input full-width, date picker and guest selector each full-width below. Curated collections show as horizontal-scrollable single-row carousels with peek of next card. Popular regions show as 2-column grid (2x4). Diary cards stack in single column. Header collapses to Logo + MobileMenuToggle. Navigation moves to MobileDrawer.",
+        "tablet": "SearchHero inputs arranged in 2-column layout (destination spans full, dates and guests side-by-side). Curated collection grids show 2 cards per row. Popular regions show 3-column grid (3x3). Diary cards in 2-column layout.",
         "desktop": "SearchHero inputs in single horizontal row with prominent CTA button. Curated collection grids show 3-4 cards per row. Popular regions in 4-column grid. Diary cards in 3-column layout. Full Header with all nav links, SearchBarCompact, LocaleSelector, CurrencySelector, AuthButton visible."
       }
     },
@@ -103,6 +107,7 @@
         "MapPopup",
         "SearchPagination",
         "LoadingSkeleton",
+        "LoadingSpinner",
         "ErrorState",
         "EmptyState",
         "PriceDisplay",
@@ -180,6 +185,8 @@
         "SearchMapView",
         "MapPin",
         "ShareButton",
+        "DateRangePicker",
+        "GuestSelector",
         "LoadingSkeleton",
         "ErrorState",
         "EmptyState",
@@ -202,7 +209,7 @@
       "responsive": {
         "mobile": "PhotoGallery becomes a full-width swipeable carousel (embla-carousel) with dot indicators instead of grid. RyokanTitleBlock stacks below carousel. QuickInfoBar scrolls horizontally. All content sections stack vertically full-width. StickyBookingBar is a fixed bottom bar (64px height) with price on left, 'Book Now' button on right — always visible while scrolling. ShareButton and WishlistToggle in a floating action row below the photo carousel. Sections collapsible with expand/collapse toggles to reduce scroll depth.",
         "tablet": "PhotoGallery shows 2-column grid (1 large + 2 small). Content sections full-width. StickyBookingBar as fixed bottom bar similar to mobile but wider with more detail. ReviewsSection shows 2 ReviewCards per row.",
-        "desktop": "Two-column layout: main content (65% width) on left, sticky sidebar (35% width) on right. PhotoGallery shows 5-image grid (1 large left, 4 small right in 2×2). StickyBookingBar in sidebar with full date picker, guest selector, room selector, price breakdown, and prominent Book Now CTA. ReviewsSection shows full RatingBreakdown alongside ReviewCards. LocationSection shows larger map with NearbyAttractions list."
+        "desktop": "Two-column layout: main content (65% width) on left, sticky sidebar (35% width) on right. PhotoGallery shows 5-image grid (1 large left, 4 small right in 2x2). StickyBookingBar in sidebar with full date picker, guest selector, room selector, price breakdown, and prominent Book Now CTA. ReviewsSection shows full RatingBreakdown alongside ReviewCards. LocationSection shows larger map with NearbyAttractions list."
       }
     },
     {
@@ -1047,6 +1054,7 @@
         "PriceDisplay",
         "Badge",
         "StarRating",
+        "Toast",
         "Footer",
         "FooterLinkGroup",
         "SocialLinks"
@@ -1132,6 +1140,7 @@
         "UserDashboard",
         "DashboardNav",
         "UserProfileForm",
+        "ConfirmDialog",
         "LoadingSkeleton",
         "ErrorState",
         "Toast",

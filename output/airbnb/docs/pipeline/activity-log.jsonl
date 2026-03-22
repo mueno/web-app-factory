@@ -14,3 +14,5 @@
 {"timestamp": "2026-03-22T02:42:15.259778+00:00", "run_id": "20260322-024215-airbnb", "event": "run_init", "app_name": "温泉旅館に特化したAirBnBみたいな旅行予約サイト"}
 {"timestamp": "2026-03-22T02:42:15.314312+00:00", "run_id": "20260322-024215-airbnb", "event": "phase_start", "phase": "1a"}
 {"timestamp": "2026-03-22T02:51:11.356240+00:00", "run_id": "20260322-024215-airbnb", "event": "phase_complete", "phase": "1a", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/idea-validation.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/tech-feasibility-memo.json"]}
+{"timestamp": "2026-03-22T02:51:11.418477+00:00", "run_id": "20260322-024215-airbnb", "event": "phase_start", "phase": "1b"}
+{"timestamp": "2026-03-22T03:01:30.167094+00:00", "run_id": "20260322-024215-airbnb", "event": "phase_complete", "phase": "1b", "artifacts": ["/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/prd.md", "/Users/masa/Development/web-app-factory/output/airbnb/docs/pipeline/screen-spec.json"]}

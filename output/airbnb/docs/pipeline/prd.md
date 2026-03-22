@@ -45,7 +45,7 @@ Become the global authority for onsen ryokan discovery and booking — the platf
 |----|-------------|--------|
 | L-01 | Each ryokan has a detail page with photo gallery, description, onsen details, room types, and pricing | Must |
 | L-02 | Onsen details section shows water type, temperature, source (natural/heated), pH level, bath styles available, and operating hours | Must |
-| L-03 | Room types display tatami size (in jō), futon/bed configuration, max occupancy, view type, and whether in-room private bath is included | Must |
+| L-03 | Room types display tatami size (in jo), futon/bed configuration, max occupancy, view type, and whether in-room private bath is included | Must |
 | L-04 | Meal plan details show kaiseki course descriptions with seasonal menu examples and dietary accommodation options | Must |
 | L-05 | Photo gallery includes categorized photos: rooms, baths (outdoor/indoor), meals, exterior, common areas | Must |
 | L-06 | Each listing displays user ratings (overall + subcategories: onsen quality, hospitality, meals, atmosphere, cleanliness) | Must |
@@ -158,7 +158,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
   - **Header** — Top navigation bar with logo, search, locale selector, auth controls
     - **Logo** — OnsenBook brand mark and wordmark, links to homepage
     - **SearchBarCompact** — Collapsed search input in header (expands on focus)
-    - **LocaleSelector** — Language/currency dropdown switcher
+    - **LocaleSelector** — Language dropdown switcher
     - **CurrencySelector** — Currency preference dropdown
     - **AuthButton** — Login/signup button or user avatar dropdown when authenticated
     - **UserMenuDropdown** — Dropdown menu with profile, bookings, wishlist, logout links
@@ -233,7 +233,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 ### 4.4 Booking Flow Components
 
 - **BookingSummaryCard** — Sidebar summary showing selected ryokan, room, dates, guests, price
-- **BookingStepIndicator** — Step progress indicator (Select Room → Guest Details → Payment → Confirmation)
+- **BookingStepIndicator** — Step progress indicator (Select Room -> Guest Details -> Payment -> Confirmation)
 - **GuestDetailsForm** — Form for guest names, contact, dietary restrictions, special requests
   - **GuestFieldGroup** — Repeated field group per guest
   - **DietaryRestrictionSelect** — Multi-select for dietary needs
@@ -242,7 +242,7 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 - **PaymentForm** — Stripe Elements embedded payment form
   - **CardInputField** — Stripe card number, expiry, CVC input
   - **BillingAddressForm** — Billing address fields
-  - **PricingBreakdown** — Itemized price breakdown (room × nights × guests, taxes, fees)
+  - **PricingBreakdown** — Itemized price breakdown (room x nights x guests, taxes, fees)
   - **CouponCodeInput** — Optional promotional code input
 - **BookingConfirmation** — Confirmation page with reservation details and next steps
   - **ReservationSummary** — Complete booking details recap
@@ -333,12 +333,12 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 
 - **Navigation**: Mobile uses hamburger menu with **MobileDrawer**; tablet shows condensed header; desktop shows full **Header** with all navigation links visible.
 - **Search Filters**: Mobile shows filters in a full-screen slide-up modal triggered by a filter button; tablet shows a collapsible sidebar; desktop shows a persistent left sidebar.
-- **Grid Layouts**: Mobile uses single-column stacked layout; tablet uses 2-column grid; desktop uses 3–4 column grid for ryokan cards and content grids.
+- **Grid Layouts**: Mobile uses single-column stacked layout; tablet uses 2-column grid; desktop uses 3-4 column grid for ryokan cards and content grids.
 - **Maps**: Mobile shows map as a toggleable full-screen view (list/map toggle); tablet and desktop show map alongside the search results list in a split-pane layout.
 - **Booking Sidebar**: Mobile shows **StickyBookingBar** as a fixed bottom bar with price and "Book Now" CTA; desktop shows full **BookingSummaryCard** in a sticky right sidebar.
 - **Images**: All images use next/image with responsive srcset. Mobile serves smaller images (640w); tablet (1024w); desktop (1920w). Format: WebP with AVIF where supported.
-- **Typography**: Base font size 16px. Headings scale down on mobile (h1: 24px mobile → 36px desktop). Body text remains 16px across all breakpoints for readability.
-- **Touch targets**: All interactive elements have minimum 44×44px touch targets on mobile per WCAG guidelines.
+- **Typography**: Base font size 16px. Headings scale down on mobile (h1: 24px mobile -> 36px desktop). Body text remains 16px across all breakpoints for readability.
+- **Touch targets**: All interactive elements have minimum 44x44px touch targets on mobile per WCAG guidelines.
 
 ---
 
@@ -418,108 +418,110 @@ All reusable UI components listed with parent-child hierarchy. Component names a
 
 ```
 User Input (SearchHero / SearchFiltersPanel)
-  → Client sends GET /api/search with query params (destination, dates, guests, filters, sort, page)
-  → API Route validates params with Zod schema
-  → Supabase query: JOIN ryokan, rooms, onsen_details, reviews tables with filter/sort/pagination
-  → If dates specified: check room_availability table for open inventory
-  → Response: { results: RyokanCard[], total: number, filters_applied: object }
-  → React Query caches response, keyed by search params
-  → SearchResultsList renders RyokanCard components
-  → SearchMapView receives same results, renders MapPin components
-  → User changes filter → React Query refetches with new params → UI updates
+  -> URL search params updated via nuqs (type-safe URL state)
+  -> Client sends GET /api/search with query params (destination, dates, guests, filters, sort, page)
+  -> API Route validates params with Zod schema
+  -> Supabase query: JOIN ryokan, rooms, onsen_details, reviews tables with filter/sort/pagination
+  -> If dates specified: check room_availability table for open inventory
+  -> Response: { results: RyokanCard[], total: number, filters_applied: object }
+  -> React Query caches response, keyed by search params (staleTime: 30s)
+  -> SearchResultsList renders RyokanCard components
+  -> SearchMapView receives same results, renders MapPin components
+  -> User changes filter -> nuqs updates URL -> React Query refetches with new params -> UI updates
+  -> SearchPagination triggers page param change -> same flow
 ```
 
 ### 7.2 Ryokan Detail Flow
 
 ```
 Page Load (ISR: /ryokan/[slug])
-  → Server Component fetches from Supabase: ryokan details, onsen info, room types, review summary
-  → Static HTML generated and cached at CDN edge (revalidate: 60s)
-  → Client hydration activates interactive components
-  → PhotoGallery: images loaded via next/image from Supabase Storage CDN
-  → ReviewsSection: initial reviews SSR'd; "Load More" triggers client-side /api/ryokan/[slug]/reviews
-  → Availability check: Client calls /api/ryokan/[slug]/availability with selected dates
-  → StickyBookingBar / RoomSelectButton: price updates based on availability response
-  → WishlistToggle: Client calls /api/user/wishlist (POST/DELETE) — optimistic UI update via React Query
-  → SimilarRyokanSection: Server Component fetches similar ryokan by region + onsen type
+  -> Server Component fetches from Supabase: ryokan details, onsen info, room types, review summary
+  -> Static HTML generated and cached at CDN edge (revalidate: 60s)
+  -> Client hydration activates interactive components
+  -> PhotoGallery: images loaded via next/image from Supabase Storage CDN
+  -> ReviewsSection: initial reviews SSR'd; "Load More" triggers client-side /api/ryokan/[slug]/reviews
+  -> Availability check: Client calls /api/ryokan/[slug]/availability with selected dates
+  -> StickyBookingBar / RoomSelectButton: price updates based on availability response
+  -> WishlistToggle: Client calls /api/user/wishlist (POST/DELETE) — optimistic UI update via React Query
+  -> SimilarRyokanSection: Server Component fetches similar ryokan by region + onsen type
 ```
 
 ### 7.3 Booking Flow
 
 ```
 Step 1: Room Selection (from Ryokan Detail)
-  → User clicks RoomSelectButton → navigates to /booking/[ryokanSlug]?room=[roomId]&checkin=...&checkout=...&guests=...
-  → SSR page fetches real-time availability + pricing from Supabase
-  → BookingSummaryCard displays selected room, dates, calculated total
-  → BookingStepIndicator shows Step 1 (already selected) → Step 2 active
+  -> User clicks RoomSelectButton -> navigates to /booking/[ryokanSlug]?room=[roomId]&checkin=...&checkout=...&guests=...
+  -> SSR page fetches real-time availability + pricing from Supabase
+  -> BookingSummaryCard displays selected room, dates, calculated total
+  -> BookingStepIndicator shows Step 1 (already selected) -> Step 2 active
 
 Step 2: Guest Details
-  → GuestDetailsForm collects information
-  → Client-side Zod validation on each field
-  → Data stored in React state (not persisted until payment)
+  -> GuestDetailsForm collects information via react-hook-form
+  -> Client-side Zod validation on each field
+  -> Data stored in React state (not persisted until payment)
 
 Step 3: Payment
-  → Client calls /api/booking/[id]/payment-intent → creates Stripe PaymentIntent
-  → Stripe Elements (CardInputField) renders secure card input
-  → PricingBreakdown shows itemized costs (room, meals, taxes, service fee)
-  → User submits → Stripe processes payment → PaymentIntent succeeds/fails
-  → On success: /api/booking creates booking record in Supabase (status: confirmed)
-  → On failure: ErrorState displayed with retry option
+  -> Client calls /api/booking/[id]/payment-intent -> creates Stripe PaymentIntent
+  -> Stripe Elements (CardInputField) renders secure card input
+  -> PricingBreakdown shows itemized costs (room, meals, taxes, service fee)
+  -> User submits -> Stripe processes payment -> PaymentIntent succeeds/fails
+  -> On success: /api/booking creates booking record in Supabase (status: confirmed)
+  -> On failure: ErrorState displayed with retry option
 
 Step 4: Confirmation (Async via Stripe Webhook)
-  → Stripe sends payment_intent.succeeded webhook to /api/webhooks/stripe
-  → Webhook handler: updates booking status, sends confirmation email, notifies ryokan
-  → User redirected to /booking/confirmation/[bookingId]
-  → BookingConfirmation renders reservation details from Supabase
-  → AddToCalendarButton generates .ics file or Google Calendar link
+  -> Stripe sends payment_intent.succeeded webhook to /api/webhooks/stripe
+  -> Webhook handler: updates booking status, sends confirmation email via Resend, notifies ryokan
+  -> User redirected to /booking/confirmation/[bookingId]
+  -> BookingConfirmation renders reservation details from Supabase
+  -> AddToCalendarButton generates .ics file or Google Calendar link
 ```
 
 ### 7.4 Community Diary Flow
 
 ```
 Create:
-  → Authenticated user navigates to /community/diaries/new
-  → DiaryEditor: DiaryTitleInput + DiaryCoverImageUpload + DiaryRichTextEditor + DiaryRyokanLinker
-  → Image uploads → /api/upload/image → Supabase Storage → returns public URL
-  → DiaryRyokanLinker → /api/search (autocomplete mode) → links diary to ryokan record
-  → DiaryPublishButton → /api/community/diaries (POST) → creates diary record in Supabase
-  → On success: redirect to /community/diaries/[id]
+  -> Authenticated user navigates to /community/diaries/new
+  -> DiaryEditor: DiaryTitleInput + DiaryCoverImageUpload + DiaryRichTextEditor + DiaryRyokanLinker
+  -> Image uploads -> /api/upload/image -> Supabase Storage -> returns public URL
+  -> DiaryRyokanLinker -> /api/search (autocomplete mode) -> links diary to ryokan record
+  -> DiaryPublishButton -> /api/community/diaries (POST) -> creates diary record in Supabase
+  -> On success: redirect to /community/diaries/[id]
 
 Read:
-  → DiaryFeed: ISR page fetches recent diaries from Supabase (paginated)
-  → Infinite scroll: client calls /api/community/diaries?page=N for next page
-  → DiaryDetail: ISR page fetches single diary with comments
-  → DiaryLikeButton: /api/community/diaries/[id]/like (POST/DELETE) → optimistic UI update
-  → DiaryCommentSection: CommentForm → /api/community/diaries/[id]/comments (POST)
+  -> DiaryFeed: ISR page fetches recent diaries from Supabase (paginated)
+  -> Infinite scroll: client calls /api/community/diaries?page=N for next page via React Query
+  -> DiaryDetail: ISR page fetches single diary with comments
+  -> DiaryLikeButton: /api/community/diaries/[id]/like (POST/DELETE) -> optimistic UI update
+  -> DiaryCommentSection: CommentForm -> /api/community/diaries/[id]/comments (POST)
 ```
 
 ### 7.5 Authentication Flow
 
 ```
 Login/Register:
-  → AuthModal opens (triggered by AuthButton or protected route redirect)
-  → Email/password: LoginForm → NextAuth signIn("credentials") → JWT session
-  → Social: SocialLoginButtons → NextAuth signIn("google"|"line") → OAuth flow → JWT session
-  → On success: AuthModal closes, Header updates to show UserMenuDropdown
-  → Session stored as HTTP-only cookie, validated server-side on SSR pages
+  -> AuthModal opens (triggered by AuthButton or protected route redirect)
+  -> Email/password: LoginForm -> NextAuth signIn("credentials") -> JWT session
+  -> Social: SocialLoginButtons -> NextAuth signIn("google"|"line") -> OAuth flow -> JWT session
+  -> On success: AuthModal closes, Header updates to show UserMenuDropdown
+  -> Session stored as HTTP-only cookie, validated server-side on SSR pages
 
 Protected Routes:
-  → Next.js middleware checks session cookie on /dashboard/*, /booking/*, /community/diaries/new
-  → No valid session → redirect to /auth/login?redirect=[original_url]
-  → Valid session → proceed, inject user context into server components
+  -> Next.js middleware checks session cookie on /dashboard/*, /booking/*, /community/diaries/new
+  -> No valid session -> redirect to /auth/login?redirect=[original_url]
+  -> Valid session -> proceed, inject user context into server components
 ```
 
 ### 7.6 Internationalization Flow
 
 ```
 Request arrives at Vercel Edge:
-  → Edge middleware reads: (1) URL locale prefix, (2) cookie locale preference, (3) Accept-Language header, (4) Vercel geo headers
-  → Priority: URL prefix > cookie > Accept-Language > geo > default (en)
-  → If no locale in URL: redirect to /[detected_locale]/...
-  → next-intl loads message bundle for active locale (namespace-split per route)
-  → CurrencySelector preference stored in cookie, used by PriceDisplay component
-  → Intl.NumberFormat formats prices; Intl.DateTimeFormat formats dates per locale
-  → LocaleSelector change → navigates to new locale prefix URL, sets cookie
+  -> Edge middleware reads: (1) URL locale prefix, (2) cookie locale preference, (3) Accept-Language header, (4) Vercel geo headers
+  -> Priority: URL prefix > cookie > Accept-Language > geo > default (en)
+  -> If no locale in URL: redirect to /[detected_locale]/...
+  -> next-intl loads message bundle for active locale (namespace-split per route)
+  -> CurrencySelector preference stored in cookie, used by PriceDisplay component
+  -> Intl.NumberFormat formats prices; Intl.DateTimeFormat formats dates per locale
+  -> LocaleSelector change -> navigates to new locale prefix URL, sets cookie
 ```
 
 ---
@@ -584,6 +586,16 @@ user: {
 }
 ```
 
+### Review
+```
+review: {
+  id, user_id, ryokan_id, booking_id,
+  rating_overall, rating_onsen, rating_hospitality,
+  rating_meals, rating_atmosphere, rating_cleanliness,
+  text, language, created_at, updated_at
+}
+```
+
 ### Diary
 ```
 diary: {
@@ -609,6 +621,7 @@ diary: {
 | Vercel Image Optimization | Image resizing/format conversion | next/image component |
 | next-intl | Internationalization | Middleware, server/client components |
 | React Query | Client-side data fetching/caching | Client components for search, availability, user data |
+| Resend | Transactional email | API routes for booking confirmation, notifications |
 
 ---
 
