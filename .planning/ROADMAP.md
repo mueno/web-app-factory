@@ -181,7 +181,11 @@ Plans:
   2. Calling `waf_start_dev_server` for a run ID that already has a running server returns the existing URL without starting a duplicate process
   3. `waf_stop_dev_server` terminates the specified server process and removes it from the PID registry
   4. All dev server processes are cleaned up when the MCP server shuts down — no orphan `npm run dev` processes remain after `waf_stop_dev_server` or SIGTERM
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Dev server lifecycle module (TDD): DevServerRegistry, start/stop logic, readiness detection, process group cleanup
+- [ ] 10-02-PLAN.md — MCP tool registration: waf_start_dev_server and waf_stop_dev_server in mcp_server.py
 
 #### Phase 11: MCP Tool Layer
 **Goal**: The full pipeline is accessible through four conversational MCP tools that expose generation, status, approval, and run history
@@ -231,7 +235,7 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 7. Ship Directory Fix | v1.0 | 1/1 | Complete | 2026-03-22 |
 | 8. MCP Infrastructure Foundation | v2.0 | 3/3 | Complete | 2026-03-23 |
 | 9. Deploy Abstraction | 3/3 | Complete   | 2026-03-23 | - |
-| 10. Local Dev Server | v2.0 | 0/TBD | Not started | - |
+| 10. Local Dev Server | v2.0 | 0/2 | Not started | - |
 | 11. MCP Tool Layer | v2.0 | 0/TBD | Not started | - |
 | 12. Environment Detection + Distribution | v2.0 | 0/TBD | Not started | - |
 | 13. Pipeline Quality | v2.0 | 0/TBD | Not started | - |
