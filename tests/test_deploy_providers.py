@@ -129,7 +129,6 @@ def test_registry_vercel():
     assert hasattr(provider, "verify")
 
 
-@pytest.mark.xfail(reason="GCPProvider not yet implemented — see Plan 09-03")
 def test_registry_gcp():
     """get_provider('gcp') returns a GCPProvider instance."""
     from tools.deploy_providers.registry import get_provider
