@@ -339,6 +339,41 @@ Use mobile-first Tailwind CSS classes throughout:
 - `lg:` prefix for desktop breakpoint (1024px+)
 Example: `className="flex flex-col md:flex-row lg:gap-8"`
 
+**Cross-page data flow contracts (CRITICAL — most common source of bugs):**
+When a form or component navigates to another page with URL search parameters \
+(via `router.push`, `<Link>`, or `URLSearchParams`), you MUST:
+1. Define a shared TypeScript interface in `src/lib/types.ts` for the parameter \
+schema (e.g., `SimulationSearchParams`).
+2. The sending component MUST construct URLSearchParams using the EXACT field \
+names defined in that interface.
+3. The receiving page MUST read `searchParams` using the EXACT same field names.
+4. NEVER invent different parameter names on the sending vs receiving side.
+
+Example:
+```typescript
+// src/lib/types.ts
+export interface SimulationSearchParams {{
+  originCity: string;
+  venueSlug: string;
+  budget: string;
+}}
+
+// Form component — MUST use the same keys
+const params = new URLSearchParams({{
+  originCity: origin.city,  // ← matches interface
+  venueSlug: venue.slug,    // ← matches interface
+  budget: String(budget),   // ← matches interface
+}});
+router.push(`/results?${{params.toString()}}`);
+
+// Receiving page — MUST read the same keys
+const originCity = typeof params.originCity === "string" ? params.originCity : "";
+const venueSlug = typeof params.venueSlug === "string" ? params.venueSlug : "";
+```
+
+If a form sends `originCity` but the page reads `origin`, the app is broken. \
+This is the #1 most critical validation to get right.
+
 **TypeScript rules:**
 - All props must have explicit TypeScript interfaces or type aliases
 - All function return types must be explicit
@@ -346,7 +381,9 @@ Example: `className="flex flex-col md:flex-row lg:gap-8"`
 - Enable strict mode — treat all type errors as blocking
 
 Start with the shared components from the Component Inventory, then implement \
-each page from the screen specification in route order.
+each page from the screen specification in route order. After generating all \
+code, verify that every form submission or router.push call uses parameter \
+names that EXACTLY match the receiving page's searchParams access.
 """
 
     def _validate_extra_npm_packages(self, project_dir: Path) -> dict[str, bool]:

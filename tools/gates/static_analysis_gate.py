@@ -5,6 +5,7 @@ Performs regex-based file scanning for:
 - GATE-06: NEXT_PUBLIC_ secret-pattern environment variable exposure
 - BILD-06: error.tsx existence for route segments with async data fetching
 - BILD-05: Mobile-first responsive Tailwind pattern usage
+- FLOW-01: Form/router.push parameter names match receiving page searchParams
 
 Exported function: run_static_analysis_gate
 """
@@ -42,6 +43,15 @@ _ASYNC_DATA_RE = re.compile(
 
 # BILD-05: Hardcoded pixel widths that break responsiveness
 _HARDCODED_WIDTH_RE = re.compile(r'(?:width:\s*["\']?\d{4,}px|w-\[\d{4,}px\])')
+
+# FLOW-01: Extract URLSearchParams keys from form/component code
+_URL_SEARCH_PARAMS_RE = re.compile(
+    r"new\s+URLSearchParams\s*\(\s*\{([^}]+)\}", re.DOTALL
+)
+# FLOW-01: Extract searchParams field access in page.tsx
+_SEARCH_PARAMS_ACCESS_RE = re.compile(
+    r"params\.(\w+)"
+)
 
 
 def _now_iso() -> str:
@@ -208,14 +218,95 @@ def _check_responsive_patterns(project_dir: Path) -> list[str]:
     return issues
 
 
+def _check_form_page_params(project_dir: Path) -> list[str]:
+    """FLOW-01: Verify form submission parameter names match receiving page searchParams.
+
+    Scans all .tsx files under src/ for URLSearchParams construction, extracts
+    the keys, then finds the target route's page.tsx and checks that the same
+    keys are read via searchParams access. Reports mismatches.
+    """
+    issues: list[str] = []
+    src_dir = project_dir / "src"
+    if not src_dir.exists():
+        return issues
+
+    # Phase 1: Collect all URLSearchParams constructions with their target routes
+    router_push_re = re.compile(
+        r"router\.push\s*\(\s*`([^`]+)\$\{params", re.DOTALL
+    )
+    # Also match router.push(`/path?${params.toString()}`)
+    router_push_path_re = re.compile(
+        r"router\.push\s*\(\s*`(/[^?`]+)\?", re.DOTALL
+    )
+
+    for filepath in src_dir.rglob("*.tsx"):
+        if _should_skip(filepath):
+            continue
+        try:
+            content = filepath.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        # Find URLSearchParams construction
+        params_match = _URL_SEARCH_PARAMS_RE.search(content)
+        if not params_match:
+            continue
+
+        # Extract parameter keys from the URLSearchParams object literal
+        params_body = params_match.group(1)
+        sent_keys = set(re.findall(r"(\w+)\s*:", params_body))
+        if not sent_keys:
+            continue
+
+        # Find the target route from router.push
+        route_match = router_push_path_re.search(content)
+        if not route_match:
+            continue
+        target_route = route_match.group(1)
+
+        # Resolve the target page.tsx
+        # Convert route like /simulate/results to src/app/simulate/results/page.tsx
+        route_parts = target_route.strip("/").split("/")
+        page_path = project_dir / "src" / "app" / "/".join(route_parts) / "page.tsx"
+
+        if not page_path.exists():
+            continue
+
+        try:
+            page_content = page_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        # Extract searchParams field accesses in the receiving page
+        received_keys = set(_SEARCH_PARAMS_ACCESS_RE.findall(page_content))
+        if not received_keys:
+            continue
+
+        # Compare: keys sent by form but not read by page (or vice versa)
+        sent_not_received = sent_keys - received_keys
+        received_not_sent = received_keys - sent_keys
+
+        rel_sender = filepath.relative_to(project_dir)
+        rel_receiver = page_path.relative_to(project_dir)
+
+        if received_not_sent:
+            issues.append(
+                f"FLOW-01: {rel_receiver} reads params {sorted(received_not_sent)} "
+                f"but {rel_sender} never sends them — form will always show empty state"
+            )
+
+    return issues
+
+
 def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResult:
     """Run static analysis gate checks on the generated project.
 
-    Performs four checks:
+    Performs five checks:
     1. GATE-05: No 'use client' in layout.tsx or page.tsx
     2. GATE-06: No NEXT_PUBLIC_ secret-pattern environment variables exposed
     3. BILD-06: error.tsx exists for route segments with async data fetching
     4. BILD-05: No hardcoded pixel widths that break responsive design
+    5. FLOW-01: Form submission params match receiving page searchParams
 
     Args:
         project_dir: Absolute path to the generated Next.js project directory.
@@ -234,6 +325,7 @@ def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResu
     issues.extend(_check_next_public_secrets(base))
     issues.extend(_check_error_boundaries(base))
     issues.extend(_check_responsive_patterns(base))
+    issues.extend(_check_form_page_params(base))
 
     passed = len(issues) == 0
     status = "PASS" if passed else "BLOCKED"
