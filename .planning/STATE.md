@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
-status: in-progress
-stopped_at: "Completed 09-deploy-abstraction/09-01-PLAN.md"
-last_updated: "2026-03-23T07:56:27Z"
+status: executing
+stopped_at: Completed 09-deploy-abstraction/09-03-PLAN.md
+last_updated: "2026-03-23T08:03:49.810Z"
 last_activity: 2026-03-23 — Phase 09 Plan 01 complete (DeployProvider ABC + AWSProvider + LocalOnlyProvider)
 progress:
   total_phases: 13
   completed_phases: 8
   total_plans: 22
-  completed_plans: 20
-  percent: 20
+  completed_plans: 21
+  percent: 95
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 9 of 13 (Deploy Abstraction)
-Plan: 1 of 3 complete
-Status: In progress — Plan 01 done, Plan 02 (VercelProvider) ready to start
-Last activity: 2026-03-23 — Phase 09 Plan 01 complete (DeployProvider ABC + AWSProvider + LocalOnlyProvider)
+Plan: 3 of 3 complete
+Status: Phase 09 complete — GCPProvider + deploy_target wiring done
+Last activity: 2026-03-23 — Phase 09 Plan 03 complete (GCPProvider + deploy_target wiring end-to-end)
 
-Progress: [███░░░░░░░] 20% (v2.0 milestone — Phase 9 Plan 01 of 3 complete)
+Progress: [██████████] 95% (v2.0 milestone — Phase 9 all 3 plans complete)
 
 ## Accumulated Context
 
@@ -54,6 +54,8 @@ Carried from v1.0 + v2.0 research:
 - [Phase 09-deploy-abstraction Plan 01]: Placeholder stubs for VercelProvider and GCPProvider created so registry.py imports work in Plan 01; Plans 02/03 overwrite with full implementations
 - [Phase 09-deploy-abstraction Plan 01]: ABC used over Protocol — runtime TypeError at instantiation preferred for gate-safety
 - [Phase 09-deploy-abstraction Plan 01]: LocalOnlyProvider.verify() returns True unconditionally — deployment_gate skipped for local targets per user decision
+- [Phase 09-deploy-abstraction]: GCPProvider extracts Service URL from stderr (not stdout) — gcloud run deploy writes URL to stderr
+- [Phase 09-deploy-abstraction]: deploy_target unconditionally forwarded in pipeline_kwargs (not conditional on truthiness like company_name) — always has a string value
 
 ### Pending Todos
 
@@ -69,6 +71,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T07:56:27Z
-Stopped at: Completed 09-deploy-abstraction/09-01-PLAN.md
-Resume file: .planning/phases/09-deploy-abstraction/09-02-PLAN.md
+Last session: 2026-03-23T08:03:49.806Z
+Stopped at: Completed 09-deploy-abstraction/09-03-PLAN.md
+Resume file: None

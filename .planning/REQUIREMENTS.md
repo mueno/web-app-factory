@@ -42,10 +42,10 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 - [x] **DEPL-01**: DeployProvider abstract interface with deploy/get_url/verify methods
 - [ ] **DEPL-02**: VercelProvider extracted from existing Phase 3 executor (backward compatible)
-- [ ] **DEPL-03**: GCPProvider using `gcloud run deploy --source .` for Google Cloud Run
+- [x] **DEPL-03**: GCPProvider using `gcloud run deploy --source .` for Google Cloud Run
 - [x] **DEPL-04**: AWSProvider stub (interface only, raises NotImplementedError with guidance)
 - [x] **DEPL-05**: LocalOnlyProvider that skips cloud deploy and returns localhost URL
-- [ ] **DEPL-06**: Deploy target selectable via `waf_generate_app` parameter
+- [x] **DEPL-06**: Deploy target selectable via `waf_generate_app` parameter
 
 ### Pipeline Quality (Backlog)
 
@@ -103,10 +103,10 @@ Deferred to future release.
 | LDEV-04 | Phase 10 | Pending |
 | DEPL-01 | Phase 9 | Complete |
 | DEPL-02 | Phase 9 | Pending |
-| DEPL-03 | Phase 9 | Pending |
+| DEPL-03 | Phase 9 | Complete |
 | DEPL-04 | Phase 9 | Complete |
 | DEPL-05 | Phase 9 | Complete |
-| DEPL-06 | Phase 9 | Pending |
+| DEPL-06 | Phase 9 | Complete |
 | QUAL-01 | Phase 13 | Pending |
 | QUAL-02 | Phase 13 | Pending |
 
