@@ -115,7 +115,6 @@ def test_registry_valid_targets_constant():
     assert "gcp" in VALID_DEPLOY_TARGETS
 
 
-@pytest.mark.xfail(reason="VercelProvider not yet implemented — see Plan 09-02")
 def test_registry_vercel():
     """get_provider('vercel') returns a VercelProvider instance."""
     from tools.deploy_providers.registry import get_provider
@@ -321,6 +320,192 @@ class TestLocalOnlyProvider:
 
         assert result.success is False
         assert "timed out" in result.metadata.get("error", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# VercelProvider
+# ---------------------------------------------------------------------------
+
+
+class TestVercelProvider:
+    """VercelProvider implements deploy/get_url/verify using Vercel CLI subprocess logic."""
+
+    def test_deploy_success(self, tmp_path):
+        """deploy() calls provision, deploy_preview, and promote in sequence; returns DeployResult."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+
+        preview_url = "https://myapp-abc123.vercel.app"
+        (tmp_path / "docs" / "pipeline").mkdir(parents=True, exist_ok=True)
+
+        mock_success = MagicMock()
+        mock_success.returncode = 0
+        mock_success.stdout = f"Deployed to {preview_url}"
+        mock_success.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_success) as mock_run:
+            provider = VercelProvider()
+            result = provider.deploy(tmp_path, {"nextjs_dir": str(tmp_path)})
+
+        # All 3 subprocess.run calls: provision, deploy_preview, promote
+        assert mock_run.call_count == 3
+        assert result.success is True
+        assert result.url == preview_url
+        assert result.provider == "vercel"
+
+    def test_provision_failure(self, tmp_path):
+        """When vercel link returns non-zero, deploy() returns DeployResult(success=False)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+
+        mock_failure = MagicMock()
+        mock_failure.returncode = 1
+        mock_failure.stdout = ""
+        mock_failure.stderr = "Not authenticated to Vercel CLI"
+
+        with patch("subprocess.run", return_value=mock_failure):
+            provider = VercelProvider()
+            result = provider.deploy(tmp_path, {"nextjs_dir": str(tmp_path)})
+
+        assert result.success is False
+        assert result.url is None
+        assert result.provider == "vercel"
+        assert "provision" in result.metadata.get("step", "")
+
+    def test_preview_url_extraction(self, tmp_path):
+        """deploy() captures Vercel preview URL from multi-line stdout via regex."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+
+        preview_url = "https://test-app-xyz789.vercel.app"
+        stdout_with_noise = (
+            "Installing dependencies...\n"
+            "Building...\n"
+            f"Deployment URL: {preview_url}\n"
+            "Done!\n"
+        )
+
+        mock_provision = MagicMock()
+        mock_provision.returncode = 0
+        mock_provision.stdout = ""
+        mock_provision.stderr = ""
+
+        mock_deploy = MagicMock()
+        mock_deploy.returncode = 0
+        mock_deploy.stdout = stdout_with_noise
+        mock_deploy.stderr = ""
+
+        mock_promote = MagicMock()
+        mock_promote.returncode = 0
+        mock_promote.stdout = ""
+        mock_promote.stderr = ""
+
+        with patch("subprocess.run", side_effect=[mock_provision, mock_deploy, mock_promote]):
+            provider = VercelProvider()
+            result = provider.deploy(tmp_path, {"nextjs_dir": str(tmp_path)})
+
+        assert result.success is True
+        assert result.url == preview_url
+
+    def test_verify_delegates_to_gate(self):
+        """verify() delegates to run_deployment_gate and returns gate_result.passed."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        passing_gate = GateResult(
+            gate_type="deployment",
+            phase_id="3",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+        with patch(
+            "tools.deploy_providers.vercel_provider.run_deployment_gate",
+            return_value=passing_gate,
+        ) as mock_gate:
+            provider = VercelProvider()
+            result = provider.verify("https://test.vercel.app")
+
+        mock_gate.assert_called_once_with("https://test.vercel.app")
+        assert result is True
+
+    def test_get_url_returns_url(self):
+        """get_url() returns url from a successful DeployResult."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        from tools.deploy_providers.base import DeployResult
+
+        provider = VercelProvider()
+        deploy_result = DeployResult(
+            success=True,
+            url="https://myapp.vercel.app",
+            provider="vercel",
+        )
+        assert provider.get_url(deploy_result) == "https://myapp.vercel.app"
+
+    def test_get_url_raises_when_no_url(self):
+        """get_url() raises ValueError when url is None (deploy failed)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        from tools.deploy_providers.base import DeployResult
+
+        provider = VercelProvider()
+        deploy_result = DeployResult(
+            success=False,
+            url=None,
+            provider="vercel",
+        )
+        with pytest.raises(ValueError):
+            provider.get_url(deploy_result)
+
+    def test_deployment_json_written_on_success(self, tmp_path):
+        """deploy() writes deployment.json with preview_url and platform='vercel'."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        import json
+
+        preview_url = "https://myapp-dep.vercel.app"
+
+        mock_success = MagicMock()
+        mock_success.returncode = 0
+        mock_success.stdout = f"Preview: {preview_url}"
+        mock_success.stderr = ""
+
+        with patch("subprocess.run", return_value=mock_success):
+            provider = VercelProvider()
+            provider.deploy(tmp_path, {"nextjs_dir": str(tmp_path)})
+
+        deployment_json_path = tmp_path / "docs" / "pipeline" / "deployment.json"
+        assert deployment_json_path.exists()
+        data = json.loads(deployment_json_path.read_text())
+        assert data["preview_url"] == preview_url
+        assert data["platform"] == "vercel"
+        assert "deployed_at" in data
+
+    def test_verify_returns_false_on_gate_failure(self):
+        """verify() returns False when run_deployment_gate fails."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        failing_gate = GateResult(
+            gate_type="deployment",
+            phase_id="3",
+            passed=False,
+            status="BLOCKED",
+            severity="BLOCK",
+            confidence=0.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=["HTTP 503 from URL"],
+        )
+
+        with patch(
+            "tools.deploy_providers.vercel_provider.run_deployment_gate",
+            return_value=failing_gate,
+        ):
+            provider = VercelProvider()
+            result = provider.verify("https://test.vercel.app")
+
+        assert result is False
 
 
 # ---------------------------------------------------------------------------
