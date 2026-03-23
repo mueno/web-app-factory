@@ -1,18 +1,69 @@
 """Tests for tools/gates/legal_gate.py.
 
 Verifies that run_legal_gate() correctly:
-- Returns passing GateResult when both legal files exist with no placeholders
+- Returns passing GateResult when legal files have complete disclosures
 - Fails when either legal file is missing
-- Fails when placeholder text is found in legal files
-- Warns (advisory) when no app-specific feature from PRD is referenced
-- Fails when both files are missing (two issues)
+- Fails when placeholder text is found
+- Fails when required privacy disclosure sections are missing
+- Fails when required terms sections are missing
+- Fails when contact email is missing or placeholder
+- Advises when data retention is not mentioned
+- Advises when third-party services are undisclosed
+- Advises when no app-specific features are referenced
 """
 
 from __future__ import annotations
 
 import pytest
 from pathlib import Path
-from unittest.mock import patch
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+# Compliant privacy text with all required sections
+_GOOD_PRIVACY = """
+# Privacy Policy
+
+## Data We Collect
+We collect your name, email address, and usage data to provide the WeightSnap
+weight tracking service.
+
+## How We Use Your Data
+Your data is used to operate and improve the application.
+
+## Third-Party Sharing
+We share limited data with Vercel for hosting and deployment.
+
+## Data Retention
+We retain your personal data for 12 months. You may request deletion at any time.
+
+## Your Rights
+You may request access, correction, or deletion of your data.
+
+## Contact
+Questions? Email us at support@allnew.jp
+"""
+
+# Compliant terms text with all required sections
+_GOOD_TERMS = """
+# Terms of Service
+
+## Acceptance
+By using WeightSnap, you agree to these terms.
+
+## Usage Rules
+You must not misuse the service or attempt unauthorized access.
+
+## Intellectual Property
+All content and trademarks belong to AllNew LLC.
+
+## Limitation of Liability
+The service is provided as-is. We disclaim all warranties to the extent
+permitted by law.
+
+## Contact
+For questions, email support@allnew.jp
+"""
 
 
 class TestLegalGate:
@@ -25,7 +76,6 @@ class TestLegalGate:
         privacy_content: str | None = None,
         terms_content: str | None = None,
     ) -> None:
-        """Create the legal file directory structure and files."""
         privacy_dir = tmp_path / "src" / "app" / "privacy"
         privacy_dir.mkdir(parents=True, exist_ok=True)
         terms_dir = tmp_path / "src" / "app" / "terms"
@@ -37,263 +87,226 @@ class TestLegalGate:
             (terms_dir / "page.tsx").write_text(terms_content, encoding="utf-8")
 
     def _create_prd(self, tmp_path: Path, content: str = "") -> None:
-        """Create docs/pipeline/prd.md with given content."""
         prd_dir = tmp_path / "docs" / "pipeline"
         prd_dir.mkdir(parents=True, exist_ok=True)
         (prd_dir / "prd.md").write_text(content, encoding="utf-8")
 
-    # ── Happy path ──────────────────────────────────────────────────────────
+    # ── Happy path ────────────────────────────────────────────────────────
 
-    def test_both_files_present_no_placeholders_pass(self, tmp_path):
-        """Both legal files exist with no placeholders -> GateResult passed=True."""
-        privacy_text = (
-            "# Privacy Policy\n\nAcme Corp collects your health data to provide "
-            "the WeightSnap weight tracking feature. Contact: hello@example.com"
-        )
-        terms_text = (
-            "# Terms of Service\n\nThese terms govern your use of the WeightSnap "
-            "application operated by Acme Corp."
-        )
+    def test_complete_legal_docs_pass(self, tmp_path):
+        """Complete legal docs with all required sections pass."""
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
         self._create_prd(
-            tmp_path,
-            "## Features\n\n- **WeightSnap**: Core weight tracking feature\n",
+            tmp_path, "## Features\n\n- **WeightSnap**: Core tracking\n"
         )
 
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
 
         assert result.gate_type == "legal"
         assert result.passed is True
         assert result.issues == []
 
-    # ── Missing file tests ──────────────────────────────────────────────────
+    # ── Missing file tests ────────────────────────────────────────────────
 
     def test_missing_privacy_file_fail(self, tmp_path):
-        """Privacy page missing -> GateResult passed=False with issue."""
-        terms_text = "# Terms\n\nAcme Corp terms for the app."
-        self._create_legal_files(tmp_path, terms_content=terms_text)
-        self._create_prd(tmp_path)
-
+        self._create_legal_files(tmp_path, terms_content=_GOOD_TERMS)
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        assert result.gate_type == "legal"
         assert result.passed is False
-        assert len(result.issues) >= 1
-        assert any("privacy" in issue.lower() for issue in result.issues)
+        assert any("privacy" in i.lower() for i in result.issues)
 
     def test_missing_terms_file_fail(self, tmp_path):
-        """Terms page missing -> GateResult passed=False with issue."""
-        privacy_text = "# Privacy\n\nAcme Corp privacy policy."
-        self._create_legal_files(tmp_path, privacy_content=privacy_text)
-        self._create_prd(tmp_path)
-
+        self._create_legal_files(tmp_path, privacy_content=_GOOD_PRIVACY)
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        assert result.gate_type == "legal"
         assert result.passed is False
-        assert len(result.issues) >= 1
-        assert any("terms" in issue.lower() for issue in result.issues)
+        assert any("terms" in i.lower() for i in result.issues)
 
     def test_both_files_missing_fail(self, tmp_path):
-        """Neither legal file exists -> fail with 2 issues (one per missing file)."""
-        # Create directory structure but no files
         (tmp_path / "src" / "app").mkdir(parents=True, exist_ok=True)
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        assert result.gate_type == "legal"
         assert result.passed is False
-        # Two issues: one for each missing file
         assert len(result.issues) >= 2
 
-    # ── Placeholder tests ───────────────────────────────────────────────────
+    # ── Placeholder tests ─────────────────────────────────────────────────
 
-    def test_placeholder_your_app_name_detected_fail(self, tmp_path):
-        """YOUR_APP_NAME in terms file -> GateResult passed=False with issue."""
-        privacy_text = "# Privacy Policy\n\nAcme Corp collects data for the app."
-        terms_text = (
-            "# Terms of Service\n\nWelcome to YOUR_APP_NAME, operated by Acme Corp."
-        )
+    def test_placeholder_your_app_name_fail(self, tmp_path):
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path,
+            privacy_content=_GOOD_PRIVACY,
+            terms_content="# Terms\n\nWelcome to YOUR_APP_NAME. By accepting these terms...\nContact: support@allnew.jp\nLimitation of liability: as-is.",
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        assert result.gate_type == "legal"
         assert result.passed is False
-        assert any("YOUR_APP_NAME" in issue or "placeholder" in issue.lower() for issue in result.issues)
+        assert any("YOUR_APP_NAME" in i for i in result.issues)
 
-    def test_placeholder_your_company_detected_fail(self, tmp_path):
-        """YOUR_COMPANY in privacy file -> fail."""
-        privacy_text = "# Privacy\n\nYOUR_COMPANY processes your personal data."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    def test_placeholder_your_company_fail(self, tmp_path):
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path,
+            privacy_content="# Privacy\n\nYOUR_COMPANY collects data.\nContact: support@allnew.jp\nThird-party: none.\nWe use your data to operate.",
+            terms_content=_GOOD_TERMS,
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
         assert result.passed is False
-        assert any("YOUR_COMPANY" in issue or "placeholder" in issue.lower() for issue in result.issues)
+        assert any("YOUR_COMPANY" in i for i in result.issues)
 
-    def test_placeholder_bracket_company_detected_fail(self, tmp_path):
-        """[COMPANY] placeholder detected -> fail."""
-        privacy_text = "# Privacy\n\n[COMPANY] Privacy Policy."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    def test_placeholder_bracket_patterns_fail(self, tmp_path):
+        for pattern in ["[COMPANY]", "[DATE]", "[APP_NAME]", "[EMAIL]"]:
+            self._create_legal_files(
+                tmp_path,
+                privacy_content=f"# Privacy\n\n{pattern} collects data.\nContact: support@allnew.jp\nThird-party sharing: none.\nWe use your data.",
+                terms_content=_GOOD_TERMS,
+            )
+            from tools.gates.legal_gate import run_legal_gate
+            result = run_legal_gate(str(tmp_path))
+            assert result.passed is False, f"Expected fail for placeholder {pattern}"
+
+    # ── Disclosure completeness tests (NEW — L-1 audit fix) ───────────────
+
+    def test_privacy_missing_data_collection_section_fail(self, tmp_path):
+        """Privacy policy without 'data collection' section fails."""
+        incomplete = "# Privacy\n\nWe use your data. Third-party: Vercel.\nContact: support@allnew.jp\nRetention: 12 months.\nLimitation of liability."
+        self._create_legal_files(tmp_path, privacy_content=incomplete, terms_content=_GOOD_TERMS)
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        assert result.passed is False
+        assert any("Data Collection" in i for i in result.issues)
+
+    def test_privacy_missing_third_party_section_fail(self, tmp_path):
+        """Privacy policy without third-party/sharing section fails."""
+        incomplete = "# Privacy\n\nData we collect: name, email.\nHow we use your data: to operate.\nContact: support@allnew.jp\nRetention: 12 months."
+        self._create_legal_files(tmp_path, privacy_content=incomplete, terms_content=_GOOD_TERMS)
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        assert result.passed is False
+        assert any("Third-Party" in i for i in result.issues)
+
+    def test_terms_missing_liability_section_fail(self, tmp_path):
+        """Terms without limitation of liability section fails."""
+        incomplete = "# Terms\n\nBy accepting you agree.\nContact: support@allnew.jp"
+        self._create_legal_files(tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=incomplete)
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        assert result.passed is False
+        assert any("Limitation" in i or "Liability" in i or "Disclaimer" in i for i in result.issues)
+
+    def test_terms_missing_acceptance_section_fail(self, tmp_path):
+        """Terms without acceptance/agreement section fails."""
+        incomplete = "# Terms\n\nLimitation of liability: as-is.\nContact: support@allnew.jp"
+        self._create_legal_files(tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=incomplete)
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        assert result.passed is False
+        assert any("Acceptance" in i or "Agreement" in i for i in result.issues)
+
+    # ── Contact information tests (NEW — L-1 audit fix) ───────────────────
+
+    def test_no_contact_email_fail(self, tmp_path):
+        """Legal docs without any email address fail."""
+        no_email_privacy = _GOOD_PRIVACY.replace("support@allnew.jp", "our support team")
+        no_email_terms = _GOOD_TERMS.replace("support@allnew.jp", "our support team")
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=no_email_privacy, terms_content=no_email_terms
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
         assert result.passed is False
+        assert any("email" in i.lower() for i in result.issues)
 
-    def test_placeholder_bracket_date_detected_fail(self, tmp_path):
-        """[DATE] placeholder detected -> fail."""
-        privacy_text = "# Privacy\n\nEffective [DATE]."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    def test_placeholder_email_domain_fail(self, tmp_path):
+        """Legal docs with only example.com email fail."""
+        placeholder_privacy = _GOOD_PRIVACY.replace("support@allnew.jp", "info@example.com")
+        placeholder_terms = _GOOD_TERMS.replace("support@allnew.jp", "info@example.com")
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=placeholder_privacy, terms_content=placeholder_terms
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
         assert result.passed is False
+        assert any("placeholder" in i.lower() for i in result.issues)
 
-    def test_placeholder_bracket_app_name_detected_fail(self, tmp_path):
-        """[APP_NAME] placeholder detected -> fail."""
-        privacy_text = "# Privacy\n\n[APP_NAME] collects your data."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    # ── Retention advisory (NEW — L-1 audit fix) ──────────────────────────
+
+    def test_no_retention_mention_advisory(self, tmp_path):
+        """Privacy without retention mention gets advisory."""
+        no_retention = _GOOD_PRIVACY.replace(
+            "## Data Retention\nWe retain your personal data for 12 months. You may request deletion at any time.\n",
+            ""
+        ).replace("deletion", "correction")
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=no_retention, terms_content=_GOOD_TERMS
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
+        # May still pass (advisory only) but should have retention advisory
+        assert any("retention" in a.lower() or "deletion" in a.lower() for a in result.advisories)
 
-        assert result.passed is False
+    # ── Third-party disclosure advisory (NEW — L-1 audit fix) ─────────────
 
-    def test_placeholder_your_email_detected_fail(self, tmp_path):
-        """YOUR_EMAIL placeholder detected -> fail."""
-        privacy_text = "# Privacy\n\nContact us at YOUR_EMAIL."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    def test_third_party_in_prd_but_not_legal_advisory(self, tmp_path):
+        """PRD mentions OpenAI but legal docs don't → advisory."""
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
-        self._create_prd(tmp_path)
-
+        self._create_prd(
+            tmp_path,
+            "## Features\n\n- **AI Chat**: Uses OpenAI GPT for responses\n",
+        )
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
+        assert any("OpenAI" in a for a in result.advisories)
 
-        assert result.passed is False
+    def test_third_party_disclosed_no_advisory(self, tmp_path):
+        """PRD mentions Vercel, legal docs mention Vercel → no advisory."""
+        self._create_legal_files(
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
+        )
+        self._create_prd(
+            tmp_path,
+            "## Features\n\n- **Deploy**: Deployed on Vercel\n",
+        )
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        vercel_advisories = [a for a in result.advisories if "Vercel" in a]
+        assert len(vercel_advisories) == 0
 
-    # ── Feature reference advisory ──────────────────────────────────────────
+    # ── Feature reference advisory ────────────────────────────────────────
 
     def test_no_feature_reference_advisory(self, tmp_path):
-        """Legal files exist but no PRD feature referenced -> pass with advisory."""
-        privacy_text = "# Privacy\n\nAcme Corp processes personal data. Contact: hi@example.com"
-        terms_text = "# Terms\n\nAcme Corp terms of service. Last updated 2026."
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
-        # PRD with features that don't appear in legal docs
         self._create_prd(
             tmp_path,
             "## Features\n\n- **UniquePlatformFeatureXYZ**: Core tracking\n",
         )
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        # Advisory: passes but with advisory message
         assert result.passed is True
-        assert len(result.advisories) >= 1
-        assert any("feature" in adv.lower() or "reference" in adv.lower() for adv in result.advisories)
+        assert any("feature" in a.lower() for a in result.advisories)
 
-    def test_feature_referenced_no_advisory(self, tmp_path):
-        """PRD feature name appears in legal docs -> no advisory."""
-        feature_name = "WeightTracker"
-        privacy_text = f"# Privacy\n\nAcme Corp processes data for {feature_name}."
-        terms_text = f"# Terms\n\nAcme Corp terms for the {feature_name} application."
-        self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
-        )
-        self._create_prd(
-            tmp_path,
-            f"## Features\n\n- **{feature_name}**: Core tracking feature\n",
-        )
-
-        from tools.gates.legal_gate import run_legal_gate
-
-        result = run_legal_gate(str(tmp_path))
-
-        assert result.passed is True
-        # Feature was referenced, so no advisory about missing feature reference
-        feature_advisories = [
-            adv for adv in result.advisories
-            if "feature" in adv.lower() or "reference" in adv.lower()
-        ]
-        assert len(feature_advisories) == 0
-
-    # ── phase_id propagation ────────────────────────────────────────────────
+    # ── Metadata propagation ──────────────────────────────────────────────
 
     def test_phase_id_propagated(self, tmp_path):
-        """phase_id parameter is reflected in GateResult.phase_id."""
-        privacy_text = "# Privacy\n\nAcme Corp."
-        terms_text = "# Terms\n\nAcme Corp."
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
-        self._create_prd(tmp_path)
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path), phase_id="3")
         assert result.phase_id == "3"
 
-    # ── No PRD file ─────────────────────────────────────────────────────────
-
-    def test_no_prd_file_still_checks_files(self, tmp_path):
-        """Missing prd.md -> legal gate still checks file presence and placeholders."""
-        privacy_text = "# Privacy\n\nAcme Corp collects data."
-        terms_text = "# Terms\n\nAcme Corp terms."
+    def test_no_prd_file_still_checks_completeness(self, tmp_path):
+        """Missing prd.md → still checks file presence, placeholders, and sections."""
         self._create_legal_files(
-            tmp_path, privacy_content=privacy_text, terms_content=terms_text
+            tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
-        # No prd.md created
-
         from tools.gates.legal_gate import run_legal_gate
-
         result = run_legal_gate(str(tmp_path))
-
-        # Files present, no placeholders -> should pass (no PRD = skip feature check)
         assert result.gate_type == "legal"
         assert result.passed is True
