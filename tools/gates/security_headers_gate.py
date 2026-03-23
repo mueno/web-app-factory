@@ -76,15 +76,15 @@ def run_security_headers_gate(url: str, phase_id: str = "3") -> GateResult:
             gate_type="security_headers",
             phase_id=phase_id,
             passed=True,
-            status="PASS",
-            severity="INFO",
-            confidence=0.5,
+            status="NEEDS_REVIEW",
+            severity="WARN",
+            confidence=0.3,
             checked_at=checked_at,
             issues=[],
             advisories=[
                 "Vercel Deployment Protection returned 401 — security headers "
                 "cannot be verified on authenticated preview deployments. "
-                "Verify headers manually on production deployment."
+                "MANUAL REVIEW REQUIRED: verify headers on production deployment."
             ],
         )
 

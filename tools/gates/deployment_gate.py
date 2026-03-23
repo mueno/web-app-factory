@@ -51,7 +51,7 @@ def run_deployment_gate(
             ],
         )
 
-    if response.status_code in (200, 401):
+    if response.status_code == 200:
         return GateResult(
             gate_type="deployment",
             phase_id=phase_id,
@@ -61,6 +61,23 @@ def run_deployment_gate(
             confidence=1.0,
             checked_at=checked_at,
             issues=[],
+        )
+
+    if response.status_code == 401:
+        return GateResult(
+            gate_type="deployment",
+            phase_id=phase_id,
+            passed=True,
+            status="NEEDS_REVIEW",
+            severity="WARN",
+            confidence=0.5,
+            checked_at=checked_at,
+            issues=[],
+            advisories=[
+                f"Deployment returned 401 (auth-protected preview). "
+                f"Health check passed structurally but content is unverified. "
+                f"MANUAL REVIEW REQUIRED on production URL."
+            ],
         )
 
     return GateResult(

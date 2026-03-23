@@ -30,6 +30,24 @@ logger = logging.getLogger(__name__)
 # Moved from phase_3_executor.py — same pattern, same logic
 _VERCEL_URL_RE = re.compile(r"https://[^\s]+\.vercel\.app")
 
+# Allowlist of environment variables passed to Vercel CLI subprocess.
+# Security: prevents leaking unrelated host secrets to build/deploy processes.
+_VERCEL_ENV_ALLOWLIST = frozenset({
+    # System essentials for CLI tools
+    "PATH", "HOME", "USER", "SHELL", "LANG", "LC_ALL", "TERM",
+    "TMPDIR", "TEMP", "TMP",
+    # Node.js
+    "NODE_ENV", "NODE_OPTIONS", "NPM_CONFIG_PREFIX",
+    # Vercel-specific
+    "VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID",
+    "VERCEL_SCOPE",
+})
+
+
+def _filtered_env(allowlist: frozenset[str] = _VERCEL_ENV_ALLOWLIST) -> dict[str, str]:
+    """Return a filtered copy of os.environ containing only allowlisted keys."""
+    return {k: v for k, v in os.environ.items() if k in allowlist}
+
 # Deployment JSON output path relative to project_dir
 _DEPLOYMENT_JSON_PATH = Path("docs") / "pipeline" / "deployment.json"
 
@@ -157,7 +175,7 @@ class VercelProvider(DeployProvider):
                 timeout=60,
                 capture_output=True,
                 text=True,
-                env={**os.environ},
+                env=_filtered_env(),
             )
         except subprocess.TimeoutExpired:
             return "vercel link timed out after 60 seconds"
@@ -194,7 +212,7 @@ class VercelProvider(DeployProvider):
                 timeout=300,
                 capture_output=True,
                 text=True,
-                env={**os.environ},
+                env=_filtered_env(),
             )
         except subprocess.TimeoutExpired:
             return None, "vercel deploy timed out after 300 seconds"
@@ -252,7 +270,7 @@ class VercelProvider(DeployProvider):
                 timeout=360,
                 capture_output=True,
                 text=True,
-                env={**os.environ},
+                env=_filtered_env(),
             )
         except subprocess.TimeoutExpired:
             return "vercel promote timed out after 360 seconds"

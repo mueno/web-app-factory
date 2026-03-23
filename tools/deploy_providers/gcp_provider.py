@@ -25,6 +25,23 @@ logger = logging.getLogger(__name__)
 # gcloud outputs: "Service URL: https://my-service-abc123-uc.a.run.app"
 _GCP_URL_RE = re.compile(r"Service URL:\s+(https://[^\s]+\.run\.app)")
 
+# Allowlist of environment variables passed to gcloud CLI subprocess.
+# Security: prevents leaking unrelated host secrets to deploy processes.
+_GCP_ENV_ALLOWLIST = frozenset({
+    # System essentials
+    "PATH", "HOME", "USER", "SHELL", "LANG", "LC_ALL", "TERM",
+    "TMPDIR", "TEMP", "TMP",
+    # GCP-specific
+    "CLOUDSDK_CONFIG", "CLOUDSDK_CORE_PROJECT", "CLOUDSDK_COMPUTE_REGION",
+    "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT",
+    "GCLOUD_PROJECT",
+})
+
+
+def _filtered_env(allowlist: frozenset[str] = _GCP_ENV_ALLOWLIST) -> dict[str, str]:
+    """Return a filtered copy of os.environ containing only allowlisted keys."""
+    return {k: v for k, v in os.environ.items() if k in allowlist}
+
 
 def _check_gcloud_auth() -> tuple[bool, str]:
     """Run preflight checks for gcloud CLI, auth, and project config.
@@ -191,7 +208,7 @@ class GCPProvider(DeployProvider):
                 capture_output=True,
                 text=True,
                 timeout=600,
-                env={**os.environ},
+                env=_filtered_env(),
             )
         except subprocess.TimeoutExpired:
             return DeployResult(

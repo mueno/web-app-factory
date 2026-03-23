@@ -22,6 +22,18 @@ logger = logging.getLogger(__name__)
 
 _NPM_BUILD_TIMEOUT = 300  # seconds
 
+# Allowlist for npm build subprocess — minimal env for Node.js toolchain.
+_LOCAL_ENV_ALLOWLIST = frozenset({
+    "PATH", "HOME", "USER", "SHELL", "LANG", "LC_ALL", "TERM",
+    "TMPDIR", "TEMP", "TMP",
+    "NODE_ENV", "NODE_OPTIONS", "NPM_CONFIG_PREFIX",
+})
+
+
+def _filtered_env() -> dict[str, str]:
+    """Return a filtered copy of os.environ containing only allowlisted keys."""
+    return {k: v for k, v in os.environ.items() if k in _LOCAL_ENV_ALLOWLIST}
+
 
 class LocalOnlyProvider(DeployProvider):
     """Skip cloud deployment; run npm run build and return localhost URL.
@@ -64,7 +76,7 @@ class LocalOnlyProvider(DeployProvider):
                 capture_output=True,
                 text=True,
                 timeout=_NPM_BUILD_TIMEOUT,
-                env={**os.environ},
+                env=_filtered_env(),
             )
         except subprocess.TimeoutExpired:
             return DeployResult(
