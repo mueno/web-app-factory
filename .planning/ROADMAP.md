@@ -2,25 +2,17 @@
 
 ## Overview
 
-Web App Factory transforms a natural-language app idea into a deployed, production-quality Next.js web application through four phases: a forked pipeline infrastructure, a spec agent that validates and plans, a build agent that generates the application, and a ship phase that enforces quality gates and deploys. Each phase has a quality gate that blocks forward progress until observable success criteria are met.
+Web App Factory transforms a natural-language app idea into a deployed, production-quality Next.js web application. v1.0 shipped a 5-phase pipeline with 10 quality gates and Vercel deployment. v2.0 wraps that proven pipeline in a first-class MCP App distributable via `claude mcp add` — adding installable packaging, a 7-tool public API, a multi-cloud deployment abstraction, and a local dev server for iteration without cloud credentials.
+
+## Milestones
+
+- ✅ **v1.0 Core Pipeline** - Phases 1-7 (shipped 2026-03-22)
+- 🚧 **v2.0 MCP Apps** - Phases 8-13 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Infrastructure** - Pipeline plumbing forked and running — CLI, state, MCP, governance (completed 2026-03-21)
-- [x] **Phase 2: Spec** - Spec agent validates market fit and produces structured PRD (completed 2026-03-21)
-- [x] **Phase 3: Build** - Build agent generates Next.js app that passes build and static analysis gates (completed 2026-03-21)
-- [x] **Phase 4: Ship** - Quality gates (Lighthouse, security, a11y), legal docs, and Vercel deployment (completed 2026-03-21)
-- [x] **Phase 5: Build Pipeline Directory Fix + Governance Wiring** - Fix Phase 2a→2b project_dir handoff, wire GovernanceMonitor into live pipeline (gap closure) (completed 2026-03-21)
-- [x] **Phase 6: Contract Alignment + Ship Fixes** - Align YAML contract paths with implementation, remove duplicate MCP approval gate (gap closure) (completed 2026-03-21)
-- [x] **Phase 7: Ship Directory Fix** - Fix nextjs_dir handoff to Phase 3 executor so deploy and legal operations target the correct directory (gap closure) (completed 2026-03-21)
-
-## Phase Details
+<details>
+<summary>✅ v1.0 Core Pipeline (Phases 1-7) - SHIPPED 2026-03-22</summary>
 
 ### Phase 1: Infrastructure
 **Goal**: The pipeline runs, state persists, governance guards enforce correctness
@@ -35,25 +27,25 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 4/4 plans complete
 
 Plans:
-- [ ] 01-01-PLAN.md — Project skeleton, YAML contract, JSON schema, contract validation
-- [ ] 01-02-PLAN.md — Pipeline state, governance monitor, gates, phase executor base
-- [ ] 01-03-PLAN.md — MCP server, config, agents, error router, quality self-assessment
-- [ ] 01-04-PLAN.md — CLI entry point, startup preflight, pipeline runner
+- [x] 01-01-PLAN.md — Project skeleton, YAML contract, JSON schema, contract validation
+- [x] 01-02-PLAN.md — Pipeline state, governance monitor, gates, phase executor base
+- [x] 01-03-PLAN.md — MCP server, config, agents, error router, quality self-assessment
+- [x] 01-04-PLAN.md — CLI entry point, startup preflight, pipeline runner
 
 ### Phase 2: Spec
 **Goal**: The spec agent produces a validated market analysis and structured PRD that the build agent can consume
 **Depends on**: Phase 1
 **Requirements**: SPEC-01, SPEC-02, SPEC-03, SPEC-04
 **Success Criteria** (what must be TRUE):
-  1. Phase 1a generates a Go/No-Go decision with named competitor analysis, a defined target user, and a tech feasibility memo that references the actual app being built — readable as a real business decision document, not a placeholder
+  1. Phase 1a generates a Go/No-Go decision with named competitor analysis, a defined target user, and a tech feasibility memo that references the actual app being built
   2. Phase 1b produces a PRD with MoSCoW-classified requirements, a component inventory, and a screen specification with component names cross-referenced against the PRD
   3. The spec agent prompt contains no iOS-specific references and is validated by running a smoke test against a sample idea
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 02-01-PLAN.md — Spec agent definition, shared runner utility, test mock infrastructure
-- [ ] 02-02-PLAN.md — Phase 1a executor: idea validation + tech feasibility memo
-- [ ] 02-03-PLAN.md — Phase 1b executor: PRD + screen specification
+- [x] 02-01-PLAN.md — Spec agent definition, shared runner utility, test mock infrastructure
+- [x] 02-02-PLAN.md — Phase 1a executor: idea validation + tech feasibility memo
+- [x] 02-03-PLAN.md — Phase 1b executor: PRD + screen specification
 
 ### Phase 3: Build
 **Goal**: The build agent scaffolds and generates a Next.js application that compiles, type-checks, and passes static analysis gates
@@ -69,9 +61,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 03-01-PLAN.md — Build agent runner, BUILD_AGENT system prompt, Phase 2a scaffold executor
-- [ ] 03-02-PLAN.md — Build gate and static analysis gate executors
-- [ ] 03-03-PLAN.md — Phase 2b code generation executor and pipeline integration
+- [x] 03-01-PLAN.md — Build agent runner, BUILD_AGENT system prompt, Phase 2a scaffold executor
+- [x] 03-02-PLAN.md — Build gate and static analysis gate executors
+- [x] 03-03-PLAN.md — Phase 2b code generation executor and pipeline integration
 
 ### Phase 4: Ship
 **Goal**: The deployed application meets quality thresholds, has legally compliant documents, and is live at a Vercel URL
@@ -88,12 +80,12 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 04-01-PLAN.md — Deploy infrastructure: deploy-agent runner, DEPLOY_AGENT prompt, deployment gate, MCP approval gate, CLI flags
-- [ ] 04-02-PLAN.md — Quality gates: Lighthouse, accessibility (axe-core), security headers, link integrity
-- [ ] 04-03-PLAN.md — Phase 3 executor, legal doc generation, gate dispatch wiring
+- [x] 04-01-PLAN.md — Deploy infrastructure: deploy-agent runner, DEPLOY_AGENT prompt, deployment gate, MCP approval gate, CLI flags
+- [x] 04-02-PLAN.md — Quality gates: Lighthouse, accessibility (axe-core), security headers, link integrity
+- [x] 04-03-PLAN.md — Phase 3 executor, legal doc generation, gate dispatch wiring
 
 ### Phase 5: Build Pipeline Directory Fix + Governance Wiring
-**Goal**: The build pipeline correctly propagates the Next.js project directory from Phase 2a scaffold through Phase 2b code generation and build gates, and the GovernanceMonitor enforces phase ordering at runtime
+**Goal**: The build pipeline correctly propagates the Next.js project directory from Phase 2a through Phase 2b and build gates, and the GovernanceMonitor enforces phase ordering at runtime
 **Depends on**: Phase 4
 **Requirements**: BILD-02, BILD-03, BILD-04, PIPE-05
 **Gap Closure**: Closes gaps from v1.0 milestone audit
@@ -102,9 +94,10 @@ Plans:
   2. The build gate runs `npm run build` and `tsc --noEmit` inside the scaffolded Next.js project directory, not the pipeline project_dir
   3. GovernanceMonitor is instantiated in contract_pipeline_runner.py and blocks phase-skip attempts at runtime
   4. All existing tests continue to pass after directory handoff changes
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 05-01-PLAN.md — project_dir propagation, Phase 2a/2b executor fixes, build gate directory fix, GovernanceMonitor wiring
+- [x] 05-01-PLAN.md — project_dir propagation, Phase 2a/2b executor fixes, build gate directory fix, GovernanceMonitor wiring
 
 ### Phase 6: Contract Alignment + Ship Fixes
 **Goal**: The YAML contract deliverable paths match what executors actually produce, and the MCP approval gate is invoked exactly once
@@ -112,41 +105,123 @@ Plans:
 **Requirements**: CONT-04
 **Gap Closure**: Closes gaps from v1.0 milestone audit
 **Success Criteria** (what must be TRUE):
-  1. Contract legal deliverable paths match the TSX pages that Phase 3 executor generates (`src/app/privacy/page.tsx`, `src/app/terms/page.tsx`)
+  1. Contract legal deliverable paths match the TSX pages that Phase 3 executor generates
   2. Contract deployment deliverable path matches the actual file name (`deployment.json`)
-  3. The MCP approval gate is invoked exactly once per pipeline run (either from Phase 3 executor or from contract gate dispatch, not both)
-  4. Quality self-assessment for Phase 3 correctly reports all deliverables as present (no false "pending" from path mismatches)
+  3. The MCP approval gate is invoked exactly once per pipeline run (not both from executor and contract gate dispatch)
+  4. Quality self-assessment for Phase 3 correctly reports all deliverables as present
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 06-01-PLAN.md — YAML contract path fixes, duplicate MCP approval removal, self-assessment verification
+- [x] 06-01-PLAN.md — YAML contract path fixes, duplicate MCP approval removal, self-assessment verification
 
 ### Phase 7: Ship Directory Fix
-**Goal**: Phase 3 (Ship) executor operates in the generated Next.js project directory for all deploy and legal operations, fixing the 6 unsatisfied requirements identified by milestone audit
+**Goal**: Phase 3 (Ship) executor operates in the generated Next.js project directory for all deploy and legal operations
 **Depends on**: Phase 6
 **Requirements**: DEPL-01, DEPL-02, DEPL-03, LEGL-01, LEGL-02, LEGL-03
-**Gap Closure**: Closes gaps from v1.0 milestone audit (single root cause: nextjs_dir not in PhaseContext.extra)
+**Gap Closure**: Closes gaps from v1.0 milestone audit
 **Success Criteria** (what must be TRUE):
   1. `contract_pipeline_runner.py` passes `nextjs_dir` in `PhaseContext.extra` to the Phase 3 executor
-  2. Phase 3 executor uses `ctx.extra["nextjs_dir"]` as `cwd` for all Vercel CLI operations (`vercel pull`, `vercel build`, `vercel deploy`)
-  3. Deploy agent writes legal documents (`privacy/page.tsx`, `terms/page.tsx`) inside the Next.js project, not the pipeline root
-  4. Deploy gate verifies HTTP 200 on a URL derived from a successful deploy (not an empty/invalid URL)
-  5. All existing tests (439+) continue to pass after the directory handoff fix
+  2. Phase 3 executor uses `ctx.extra["nextjs_dir"]` as `cwd` for all Vercel CLI operations
+  3. Deploy agent writes legal documents inside the Next.js project, not the pipeline root
+  4. Deploy gate verifies HTTP 200 on a URL derived from a successful deploy
+  5. All existing tests continue to pass after the directory handoff fix
   6. New integration test verifies `nextjs_dir` propagation from runner to Phase 3 executor
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 07-01-PLAN.md — nextjs_dir propagation to PhaseContext.extra, Phase 3 executor cwd fix, deploy agent cwd fix, integration test
+- [x] 07-01-PLAN.md — nextjs_dir propagation to PhaseContext.extra, Phase 3 executor cwd fix, deploy agent cwd fix, integration test
+
+</details>
+
+### 🚧 v2.0 MCP Apps (In Progress)
+
+**Milestone Goal:** Make web-app-factory installable via `claude mcp add` with local-first development and multi-cloud deployment.
+
+#### Phase 8: MCP Infrastructure Foundation
+**Goal**: The security architecture, async execution model, and packaging conventions are locked before any user-facing feature is built
+**Depends on**: Phase 7
+**Requirements**: MCPI-01, MCPI-02, MCPI-03, MCPI-04, MCPI-05
+**Success Criteria** (what must be TRUE):
+  1. Running `claude mcp add web-app-factory -- uvx web-app-factory` installs and starts the server with no manual Python setup
+  2. All subprocess calls in MCP tool handlers use list-form arguments with `shlex.quote()` — no `shell=True` path exists in any tool handler
+  3. Calling a pipeline-starting tool returns a `run_id` immediately (under 1 second) and the pipeline continues in a background thread
+  4. All public MCP tools carry a `waf_` prefix and a CI uniqueness assertion prevents collision with the internal approval gate server
+  5. Credentials are stored and retrieved from the OS keychain — no API keys appear in config files or tool outputs
+**Plans**: TBD
+
+#### Phase 9: Deploy Abstraction
+**Goal**: The deployment layer supports three providers through a common interface, and the existing Vercel path remains backward compatible
+**Depends on**: Phase 8
+**Requirements**: DEPL-01, DEPL-02, DEPL-03, DEPL-04, DEPL-05, DEPL-06
+**Success Criteria** (what must be TRUE):
+  1. `DeployProvider` ABC defines `deploy`, `get_url`, and `verify` methods; all three concrete providers implement it without modification to the ABC
+  2. Vercel deployment works identically to v1.0 — existing integration tests pass with the extracted `VercelProvider`
+  3. Google Cloud Run deployment succeeds via `gcloud run deploy --source .` and returns a `*.run.app` URL that passes the deployment gate
+  4. `AWSProvider` raises `NotImplementedError` with actionable guidance pointing to v3.0 timeline and manual CDK instructions
+  5. `LocalOnlyProvider` skips cloud deploy and returns a localhost URL that the Phase 3 executor accepts as a valid deployment result
+  6. The deploy target is selectable via `waf_generate_app` parameter at generation time
+**Plans**: TBD
+
+#### Phase 10: Local Dev Server
+**Goal**: Users can preview generated apps locally before any cloud deployment, with clean process lifecycle management
+**Depends on**: Phase 8
+**Requirements**: LDEV-01, LDEV-02, LDEV-03, LDEV-04, TOOL-06, TOOL-07
+**Success Criteria** (what must be TRUE):
+  1. `waf_start_dev_server` starts `npm run dev` on an auto-detected free port and returns the localhost URL once the server is ready (port detected from stdout, not assumed)
+  2. Calling `waf_start_dev_server` for a run ID that already has a running server returns the existing URL without starting a duplicate process
+  3. `waf_stop_dev_server` terminates the specified server process and removes it from the PID registry
+  4. All dev server processes are cleaned up when the MCP server shuts down — no orphan `npm run dev` processes remain after `waf_stop_dev_server` or SIGTERM
+**Plans**: TBD
+
+#### Phase 11: MCP Tool Layer
+**Goal**: The full pipeline is accessible through four conversational MCP tools that expose generation, status, approval, and run history
+**Depends on**: Phase 8, Phase 9, Phase 10
+**Requirements**: TOOL-01, TOOL-02, TOOL-03, TOOL-04
+**Success Criteria** (what must be TRUE):
+  1. `waf_generate_app` starts a pipeline run in the background, returns a `run_id` within 1 second, and accepts idea text, mode (auto/interactive), deploy target, and optional `resume_run_id`
+  2. `waf_get_status` returns current phase name, progress percentage, and the 5 most recent activity log entries for any run ID — reads `state.json` directly with no caching layer
+  3. `waf_approve_gate` in interactive mode unblocks a waiting pipeline gate and resumes execution; in auto mode it returns a clear error explaining the mode mismatch
+  4. `waf_list_runs` returns all runs from the `output/` directory with status, start time, and output URL — runs that are in progress show live phase information
+**Plans**: TBD
+
+#### Phase 12: Environment Detection and Distribution
+**Goal**: Users can verify their environment is ready before generating, and the package is installable from PyPI via a single command
+**Depends on**: Phase 11
+**Requirements**: TOOL-05, ENVS-01, ENVS-02, ENVS-03
+**Success Criteria** (what must be TRUE):
+  1. `waf_check_env` returns a structured per-tool status report covering Node.js, npm, Python, and any deploy-target-specific CLIs — each entry shows version found (or missing), minimum required, and the exact install command for the user's platform (macOS/Linux)
+  2. `waf_check_env` distinguishes between "tool missing", "tool outdated", and "tool present but not authenticated" — Vercel token scope warning is included when Vercel is the deploy target
+  3. `waf_check_env` offers to execute missing-tool installs with explicit user permission — it does not silently install anything
+  4. `claude mcp add web-app-factory -- uvx web-app-factory` succeeds on a clean macOS and Linux machine with only Python and `uv` installed
+**Plans**: TBD
+
+#### Phase 13: Pipeline Quality
+**Goal**: The Phase 2b build step produces higher-quality output through incremental sub-steps, and form flows are validated end-to-end before deployment
+**Depends on**: Phase 8
+**Requirements**: QUAL-01, QUAL-02
+**Success Criteria** (what must be TRUE):
+  1. Phase 2b execution is split into three checkpointed sub-steps (shared components, pages, integration) — a failure in any sub-step shows exactly which step failed and allows resumption from that checkpoint
+  2. The E2E Playwright gate executes a form submission flow on the built Next.js app and confirms the result page renders the expected output — the pipeline is blocked if this gate fails
+  3. The FLOW-01 form-page parameter consistency gate and the new E2E gate operate independently — either can fail without masking the other
+**Plans**: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
+v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 → 12 (Phase 13 can run after 8, independent of 9-12).
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Infrastructure | 4/4 | Complete    | 2026-03-21 |
-| 2. Spec | 3/3 | Complete    | 2026-03-21 |
-| 3. Build | 3/3 | Complete    | 2026-03-21 |
-| 4. Ship | 3/3 | Complete   | 2026-03-21 |
-| 5. Build Pipeline Fix | 1/1 | Complete   | 2026-03-21 |
-| 6. Contract Alignment | 1/1 | Complete   | 2026-03-21 |
-| 7. Ship Directory Fix | 1/1 | Complete   | 2026-03-21 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Infrastructure | v1.0 | 4/4 | Complete | 2026-03-21 |
+| 2. Spec | v1.0 | 3/3 | Complete | 2026-03-21 |
+| 3. Build | v1.0 | 3/3 | Complete | 2026-03-21 |
+| 4. Ship | v1.0 | 3/3 | Complete | 2026-03-21 |
+| 5. Build Pipeline Fix | v1.0 | 1/1 | Complete | 2026-03-21 |
+| 6. Contract Alignment | v1.0 | 1/1 | Complete | 2026-03-21 |
+| 7. Ship Directory Fix | v1.0 | 1/1 | Complete | 2026-03-22 |
+| 8. MCP Infrastructure Foundation | v2.0 | 0/TBD | Not started | - |
+| 9. Deploy Abstraction | v2.0 | 0/TBD | Not started | - |
+| 10. Local Dev Server | v2.0 | 0/TBD | Not started | - |
+| 11. MCP Tool Layer | v2.0 | 0/TBD | Not started | - |
+| 12. Environment Detection + Distribution | v2.0 | 0/TBD | Not started | - |
+| 13. Pipeline Quality | v2.0 | 0/TBD | Not started | - |

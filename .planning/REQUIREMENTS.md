@@ -117,4 +117,4 @@ Deferred to future release.
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 after v2.0 milestone definition*
+*Last updated: 2026-03-23 — traceability validated against ROADMAP.md v2.0 phases 8-13*
