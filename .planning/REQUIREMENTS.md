@@ -1,161 +1,120 @@
 # Requirements: Web App Factory
 
-**Defined:** 2026-03-21
+**Defined:** 2026-03-23
 **Core Value:** A single command takes a web app idea from concept to deployed, production-quality web application
 
-## v1 Requirements
+## v2.0 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
-### Pipeline Infrastructure
+### MCP Infrastructure
 
-- [x] **PIPE-01**: Pipeline executes phases in order defined by YAML contract, blocking on gate failure
-- [x] **PIPE-02**: Pipeline state persists to `state.json` and `activity-log.jsonl`, surviving interruption
-- [x] **PIPE-03**: Pipeline resumes from last completed phase after interruption (no re-run from scratch)
-- [x] **PIPE-04**: MCP server provides approval gates for human-in-the-loop sign-off
-- [x] **PIPE-05**: Governance monitor detects and blocks phase skipping, direct file edits, and gate bypasses
-- [x] **PIPE-06**: CLI entry point accepts `--idea` and `--project-dir` flags to initiate pipeline
-- [x] **PIPE-07**: Startup preflight validates environment (Node.js, Python, Vercel CLI) before execution
+- [ ] **MCPI-01**: Server is installable via `claude mcp add web-app-factory -- uvx web-app-factory`
+- [ ] **MCPI-02**: Server exposes tools with `waf_` namespace prefix via FastMCP
+- [ ] **MCPI-03**: Pipeline runs in background thread pool (not blocking MCP event loop)
+- [ ] **MCPI-04**: All subprocess calls are audited for shell injection (no `shell=True`, all args via `shlex.quote`)
+- [ ] **MCPI-05**: Credentials (API keys, deploy tokens) stored in OS keychain, never in config files
 
-### Contract Design
+### MCP Tools
 
-- [x] **CONT-01**: YAML contract defines all phases with purpose, deliverables, quality criteria, and gate types
-- [x] **CONT-02**: Each deliverable has `quality_criteria` array driving content verification (not just file existence)
-- [x] **CONT-03**: Contract validated against JSON schema at pipeline startup
-- [x] **CONT-04**: Quality self-assessment JSON generated before every gate submission
+- [ ] **TOOL-01**: `waf_generate_app` accepts idea, mode (auto/interactive), and deploy target; starts pipeline in background
+- [ ] **TOOL-02**: `waf_get_status` returns current phase, progress percentage, and recent activity for a run
+- [ ] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
+- [ ] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
+- [ ] **TOOL-05**: `waf_check_env` detects Node.js, Python, CLI tools and reports missing/outdated with install instructions
+- [ ] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
+- [ ] **TOOL-07**: `waf_stop_dev_server` stops a running dev server by run ID, with orphan cleanup
 
-### Spec Agent
+### Environment Setup
 
-- [x] **SPEC-01**: Phase 1a validates idea with market research, competitor analysis, and Go/No-Go decision
-- [x] **SPEC-02**: Phase 1b generates structured PRD with MoSCoW classification and component inventory
-- [x] **SPEC-03**: Phase 1b produces tech feasibility memo evaluating implementation approach
-- [x] **SPEC-04**: Spec agent uses Claude Agent SDK with web-specific system prompt (no iOS references)
+- [ ] **ENVS-01**: Auto-detect Node.js, npm, Python, Vercel CLI, gcloud CLI presence and version
+- [ ] **ENVS-02**: Provide install commands for each missing tool (platform-aware: macOS/Linux)
+- [ ] **ENVS-03**: Optionally execute install with user permission (not silently)
 
-### Build Agent
+### Local Development
 
-- [x] **BILD-01**: Phase 2a scaffolds Next.js project via `create-next-app` with TypeScript, Tailwind v4, App Router
-- [x] **BILD-02**: Phase 2b generates pages, components, and API routes from PRD specification
-- [x] **BILD-03**: Generated app passes `next build` production build without errors
-- [x] **BILD-04**: Generated app passes `tsc --noEmit` type-check without errors
-- [x] **BILD-05**: Generated app is responsive (mobile-first Tailwind classes)
-- [x] **BILD-06**: Generated app includes error boundaries (`error.tsx`, `not-found.tsx`)
-- [x] **BILD-07**: npm packages validated against registry before install (hallucination prevention)
+- [ ] **LDEV-01**: Start local dev server (`npm run dev`) with auto-detected free port
+- [ ] **LDEV-02**: Return localhost URL to user when server is ready (port detection from stdout)
+- [ ] **LDEV-03**: Track running servers by run ID; prevent duplicate starts
+- [ ] **LDEV-04**: Clean up orphan dev server processes on MCP server shutdown
 
-### Quality Gates
+### Deploy Abstraction
 
-- [x] **GATE-01**: Build gate fails pipeline if `next build` or `tsc --noEmit` returns non-zero
-- [x] **GATE-02**: Lighthouse gate runs against deployed preview URL with thresholds (perf ≥85, a11y ≥90, SEO ≥85)
-- [x] **GATE-03**: Security headers gate verifies CSP, HSTS, X-Frame-Options, X-Content-Type-Options
-- [x] **GATE-04**: Link integrity gate verifies no internal 404s in deployed app
-- [x] **GATE-05**: Static analysis gate flags `"use client"` in `layout.tsx` or `page.tsx`
-- [x] **GATE-06**: Static analysis gate fails on `NEXT_PUBLIC_` + secret-pattern environment variables
-- [x] **GATE-07**: axe-core accessibility check runs in addition to Lighthouse a11y score
+- [ ] **DEPL-01**: DeployProvider abstract interface with deploy/get_url/verify methods
+- [ ] **DEPL-02**: VercelProvider extracted from existing Phase 3 executor (backward compatible)
+- [ ] **DEPL-03**: GCPProvider using `gcloud run deploy --source .` for Google Cloud Run
+- [ ] **DEPL-04**: AWSProvider stub (interface only, raises NotImplementedError with guidance)
+- [ ] **DEPL-05**: LocalOnlyProvider that skips cloud deploy and returns localhost URL
+- [ ] **DEPL-06**: Deploy target selectable via `waf_generate_app` parameter
 
-### Legal
+### Pipeline Quality (Backlog)
 
-- [x] **LEGL-01**: Legal phase generates Privacy Policy from web-adapted template
-- [x] **LEGL-02**: Legal phase generates Terms of Service from web-adapted template
-- [x] **LEGL-03**: Legal documents reference actual app features from build output
+- [ ] **QUAL-01**: Phase 2b executes in incremental sub-steps (shared components → pages → integration) with checkpoint per step (BL-001)
+- [ ] **QUAL-02**: E2E Playwright gate validates form submission → result page flows after build (BL-002)
 
-### Deployment
+## v3.0 Requirements
 
-- [x] **DEPL-01**: Pipeline deploys to Vercel via CLI (`vercel pull → build → deploy --prebuilt`)
-- [x] **DEPL-02**: Preview URL captured in `docs/pipeline/deployment.json` after deploy
-- [x] **DEPL-03**: Deploy gate verifies HTTP 200 on deployed URL within 30 seconds
-- [x] **DEPL-04**: MCP approval gate wraps deployment (human sign-off before production deploy)
+Deferred to future release.
 
-## v2 Requirements
+### Cloud Providers
 
-Deferred to future release. Tracked but not in current roadmap.
+- **CLOUD-01**: AWS CDK full implementation (open-next-cdk) with Lambda/CloudFront
+- **CLOUD-02**: Azure Static Web Apps support
+- **CLOUD-03**: Cloudflare Pages support
 
-### Data Layer
+### Advanced Features
 
-- **DATA-01**: Database provisioning via Supabase or Neon
-- **DATA-02**: ORM integration (Drizzle or Prisma)
-
-### Authentication
-
-- **AUTH-01**: Authentication scaffolding via Clerk or NextAuth
-- **AUTH-02**: Role-based access control patterns
-
-### SEO & Analytics
-
-- **SEO-01**: Sitemap.xml and robots.txt auto-generation
-- **SEO-02**: Open Graph and Twitter card meta tags
-- **SEO-03**: JSON-LD structured data for primary content type
-- **SEO-04**: Analytics integration hook (Vercel Analytics or GA placeholder)
-
-### Multi-Framework
-
-- **FRMK-01**: Vue/Nuxt support as alternative framework
-- **FRMK-02**: Svelte/SvelteKit support as alternative framework
-
-### Advanced Quality
-
-- **QUAL-01**: Visual regression testing gate
-- **QUAL-02**: Bundle size monitoring gate
+- **ADV-01**: Database provisioning (Supabase/Neon + ORM)
+- **ADV-02**: Auth scaffolding (Clerk/NextAuth + RBAC)
+- **ADV-03**: Multi-framework support (Vue/Nuxt, Svelte)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| iOS/Swift code generation | Handled by ios-app-factory; separate system |
-| App Store submission | Web apps deploy to hosting, not app stores |
-| Mobile-native features (APNs push, etc.) | Web-only scope; PWA support is v2+ |
-| Custom domain / DNS management | Vercel subdomain sufficient for v1 |
-| Backend infrastructure (databases, queues) | Doubles pipeline scope; v2 with dedicated review |
-| Multi-framework support | Multiplies gate complexity 3-5x; Next.js only for v1 |
-| Parallel phase execution | Creates state race conditions; serial pipeline only |
+| AWS CDK full implementation | MEDIUM confidence on open-next-cdk stability; stub in v2, full in v3 |
+| MCP App UI (iframe approval cards) | Spec is v0.1, client behavior too variable; text-based approval in v2 |
+| Custom domain / DNS management | Platform subdomain sufficient for generated apps |
+| Backend database provisioning | Frontend + serverless API routes only for v2 |
+| iOS/Swift code generation | Handled by ios-app-factory |
 
 ## Traceability
 
-Which phases cover which requirements. Updated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PIPE-01 | Phase 1 | Complete |
-| PIPE-02 | Phase 1 | Complete |
-| PIPE-03 | Phase 1 | Complete |
-| PIPE-04 | Phase 1 | Complete |
-| PIPE-05 | Phase 5 | Complete |
-| PIPE-06 | Phase 1 | Complete |
-| PIPE-07 | Phase 1 | Complete |
-| CONT-01 | Phase 1 | Complete |
-| CONT-02 | Phase 1 | Complete |
-| CONT-03 | Phase 1 | Complete |
-| CONT-04 | Phase 6 | Complete |
-| SPEC-01 | Phase 2 | Complete |
-| SPEC-02 | Phase 2 | Complete |
-| SPEC-03 | Phase 2 | Complete |
-| SPEC-04 | Phase 2 | Complete |
-| BILD-01 | Phase 3 | Complete |
-| BILD-02 | Phase 5 | Complete |
-| BILD-03 | Phase 5 | Complete |
-| BILD-04 | Phase 5 | Complete |
-| BILD-05 | Phase 3 | Complete |
-| BILD-06 | Phase 3 | Complete |
-| BILD-07 | Phase 3 | Complete |
-| GATE-01 | Phase 3 | Complete |
-| GATE-02 | Phase 4 | Complete |
-| GATE-03 | Phase 4 | Complete |
-| GATE-04 | Phase 4 | Complete |
-| GATE-05 | Phase 3 | Complete |
-| GATE-06 | Phase 3 | Complete |
-| GATE-07 | Phase 4 | Complete |
-| LEGL-01 | Phase 7 | Complete |
-| LEGL-02 | Phase 7 | Complete |
-| LEGL-03 | Phase 7 | Complete |
-| DEPL-01 | Phase 7 | Complete |
-| DEPL-02 | Phase 7 | Complete |
-| DEPL-03 | Phase 7 | Complete |
-| DEPL-04 | Phase 4 | Complete |
+| MCPI-01 | Phase 8 | Pending |
+| MCPI-02 | Phase 8 | Pending |
+| MCPI-03 | Phase 8 | Pending |
+| MCPI-04 | Phase 8 | Pending |
+| MCPI-05 | Phase 8 | Pending |
+| TOOL-01 | Phase 11 | Pending |
+| TOOL-02 | Phase 11 | Pending |
+| TOOL-03 | Phase 11 | Pending |
+| TOOL-04 | Phase 11 | Pending |
+| TOOL-05 | Phase 12 | Pending |
+| TOOL-06 | Phase 10 | Pending |
+| TOOL-07 | Phase 10 | Pending |
+| ENVS-01 | Phase 12 | Pending |
+| ENVS-02 | Phase 12 | Pending |
+| ENVS-03 | Phase 12 | Pending |
+| LDEV-01 | Phase 10 | Pending |
+| LDEV-02 | Phase 10 | Pending |
+| LDEV-03 | Phase 10 | Pending |
+| LDEV-04 | Phase 10 | Pending |
+| DEPL-01 | Phase 9 | Pending |
+| DEPL-02 | Phase 9 | Pending |
+| DEPL-03 | Phase 9 | Pending |
+| DEPL-04 | Phase 9 | Pending |
+| DEPL-05 | Phase 9 | Pending |
+| DEPL-06 | Phase 9 | Pending |
+| QUAL-01 | Phase 13 | Pending |
+| QUAL-02 | Phase 13 | Pending |
 
 **Coverage:**
-- v1 requirements: 36 total
-- Mapped to phases: 36
+- v2.0 requirements: 27 total
+- Mapped to phases: 27
 - Unmapped: 0 ✓
-- Pending (gap closure): 6 (DEPL-01/02/03, LEGL-01/02/03 → Phase 7)
 
 ---
-*Requirements defined: 2026-03-21*
-*Last updated: 2026-03-22 after gap closure phase creation (DEPL-01/02/03, LEGL-01/02/03 reset to Pending for Phase 7)*
+*Requirements defined: 2026-03-23*
+*Last updated: 2026-03-23 after v2.0 milestone definition*
