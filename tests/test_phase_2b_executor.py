@@ -116,7 +116,7 @@ class TestPhase2bBuildExecutorBasic:
         assert "load_spec" in sub_steps
         assert "generate_code" in sub_steps
         assert "validate_packages" in sub_steps
-        assert "self_assess" in sub_steps
+        # self_assess is now handled by contract_pipeline_runner (CONT-04)
 
 
 # ---------------------------------------------------------------------------
@@ -206,8 +206,7 @@ class TestPhase2bBuildExecutorAgentPrompt:
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1
@@ -231,8 +230,7 @@ class TestPhase2bBuildExecutorAgentPrompt:
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1
@@ -256,8 +254,7 @@ class TestPhase2bBuildExecutorAgentPrompt:
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1
@@ -283,8 +280,7 @@ class TestPhase2bBuildExecutorAgentPrompt:
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1
@@ -312,8 +308,7 @@ class TestPhase2bBuildExecutorAgentPrompt:
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1
@@ -363,8 +358,7 @@ class TestPhase2bBuildExecutorNpmValidation:
         validate_mock = MagicMock(return_value={"zod": True})
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="build output"), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", validate_mock), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", validate_mock):
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         assert validate_mock.called
@@ -385,8 +379,7 @@ class TestPhase2bBuildExecutorNpmValidation:
         validate_mock = MagicMock(return_value={"fake-nonexistent-pkg": False})
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="build output"), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", validate_mock), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", validate_mock):
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         # Should still succeed even if a package doesn't exist
@@ -414,8 +407,7 @@ class TestPhase2bBuildExecutorSuccess:
         run_agent_mock = MagicMock(return_value="mocked build agent output")
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", run_agent_mock), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         assert run_agent_mock.called
@@ -430,29 +422,12 @@ class TestPhase2bBuildExecutorSuccess:
         _create_spec_files(ctx.project_dir)
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="build completed"), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         assert result.success is True
 
-    def test_execute_generates_quality_self_assessment_on_success(self, tmp_path):
-        """execute() calls generate_quality_self_assessment after successful code generation."""
-        import importlib
-        import tools.phase_executors.phase_2b_executor as mod
-        importlib.reload(mod)
-
-        ctx = _make_ctx(tmp_path)
-        _create_spec_files(ctx.project_dir)
-
-        assess_mock = MagicMock()
-
-        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="build done"), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment", assess_mock):
-            result = mod.Phase2bBuildExecutor().execute(ctx)
-
-        assert assess_mock.called
+    # Quality self-assessment is now generated by contract_pipeline_runner (CONT-04).
 
     def test_execute_passes_nextjs_dir_to_run_build_agent(self, tmp_path):
         """execute() passes the Next.js project dir (not pipeline root) to run_build_agent.
@@ -471,8 +446,7 @@ class TestPhase2bBuildExecutorSuccess:
         run_agent_mock = MagicMock(return_value="build done")
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", run_agent_mock), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             result = mod.Phase2bBuildExecutor().execute(ctx)
 
         call_kwargs = run_agent_mock.call_args
@@ -508,8 +482,7 @@ class TestPhase2bBuildExecutorSuccess:
             return "mocked output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}), \
-             patch("tools.phase_executors.phase_2b_executor.generate_quality_self_assessment"):
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
         assert len(captured_prompts) == 1

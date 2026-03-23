@@ -60,6 +60,7 @@ def _extract_feature_names(prd_content: str) -> list[str]:
 def run_legal_gate(
     project_dir: str,
     phase_id: str = "3",
+    prd_dir: str | None = None,
 ) -> GateResult:
     """Run legal quality gate against the generated project.
 
@@ -72,6 +73,9 @@ def run_legal_gate(
     Args:
         project_dir: Root directory of the generated Next.js project.
         phase_id: Pipeline phase identifier (default "3" — ship phase).
+        prd_dir: Directory containing docs/pipeline/prd.md. Defaults to
+            project_dir if not specified. Use this when the Next.js project
+            is in a subdirectory and the PRD lives in the pipeline root.
 
     Returns:
         GateResult with gate_type="legal".
@@ -120,7 +124,8 @@ def run_legal_gate(
             )
 
     # ── Check 3: Feature reference check (advisory) ────────────────────────
-    prd_path = project_path / _PRD_PATH
+    prd_base = Path(prd_dir) if prd_dir else project_path
+    prd_path = prd_base / _PRD_PATH
     if prd_path.exists() and existing_files:
         try:
             prd_content = prd_path.read_text(encoding="utf-8")

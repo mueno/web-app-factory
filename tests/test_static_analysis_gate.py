@@ -290,3 +290,108 @@ class TestStaticAnalysisGateResult:
         result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
 
         assert result.status == "BLOCKED"
+
+
+class TestErrorBoundaryCheck:
+    """Tests for the error boundary check (BILD-06)."""
+
+    def test_detects_missing_error_tsx_for_async_page(self, tmp_path):
+        """page.tsx with async fetch but no error.tsx is flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/dashboard/page.tsx",
+            "export default async function Dashboard() {\n  const res = await fetch('/api/data');\n}",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("error.tsx" in issue for issue in result.issues)
+
+    def test_passes_when_error_tsx_exists_with_use_client(self, tmp_path):
+        """page.tsx with async fetch AND proper error.tsx passes."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/dashboard/page.tsx",
+            "export default async function Dashboard() {\n  const res = await fetch('/api/data');\n}",
+        )
+        _write_file(
+            tmp_path,
+            "src/app/dashboard/error.tsx",
+            '"use client"\n\nexport default function Error() { return <div>Error</div> }',
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
+
+    def test_detects_error_tsx_missing_use_client(self, tmp_path):
+        """error.tsx without 'use client' directive is flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/dashboard/page.tsx",
+            "export default async function Dashboard() {\n  const res = await fetch('/api/data');\n}",
+        )
+        _write_file(
+            tmp_path,
+            "src/app/dashboard/error.tsx",
+            "export default function Error() { return <div>Error</div> }",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("use client" in issue.lower() for issue in result.issues)
+
+    def test_no_issue_for_sync_page(self, tmp_path):
+        """page.tsx without async data fetching does not require error.tsx."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/about/page.tsx",
+            "export default function About() { return <div>About</div> }",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
+
+
+class TestResponsivePatternCheck:
+    """Tests for the responsive design check (BILD-05)."""
+
+    def test_detects_hardcoded_large_pixel_width(self, tmp_path):
+        """Hardcoded pixel widths >= 1000px are flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/components/Hero.tsx",
+            'export default function Hero() { return <div style={{width: "1200px"}}>Hero</div> }',
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("pixel width" in issue.lower() or "responsive" in issue.lower() for issue in result.issues)
+
+    def test_passes_on_responsive_tailwind(self, tmp_path):
+        """Normal Tailwind responsive classes pass without issues."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/components/Card.tsx",
+            'export default function Card() { return <div className="w-full md:w-1/2 lg:w-1/3">Card</div> }',
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
