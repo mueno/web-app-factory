@@ -395,3 +395,81 @@ class TestResponsivePatternCheck:
         result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
 
         assert result.passed is True
+
+
+class TestFormPageParamsCheck:
+    """Tests for the form-page parameter consistency check (FLOW-01)."""
+
+    def test_detects_param_mismatch(self, tmp_path):
+        """Form sends 'originCity' but page reads 'origin' — mismatch detected."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/components/Form.tsx",
+            '"use client";\nimport { useRouter } from "next/navigation";\n'
+            "export function Form() {\n"
+            "  const router = useRouter();\n"
+            '  const params = new URLSearchParams({ originCity: "Tokyo", venueSlug: "dome" });\n'
+            "  router.push(`/results?${params.toString()}`);\n"
+            "}",
+        )
+        _write_file(
+            tmp_path,
+            "src/app/results/page.tsx",
+            "export default function Results({ searchParams }) {\n"
+            '  const origin = typeof params.origin === "string" ? params.origin : "";\n'
+            '  const venue = typeof params.venue === "string" ? params.venue : "";\n'
+            "  return <div>{origin} {venue}</div>;\n"
+            "}",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("FLOW-01" in issue for issue in result.issues)
+
+    def test_passes_when_params_match(self, tmp_path):
+        """Form sends same keys that page reads — no issue."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/components/Form.tsx",
+            '"use client";\nimport { useRouter } from "next/navigation";\n'
+            "export function Form() {\n"
+            "  const router = useRouter();\n"
+            '  const params = new URLSearchParams({ origin: "Tokyo", venue: "dome", budget: "50000" });\n'
+            "  router.push(`/results?${params.toString()}`);\n"
+            "}",
+        )
+        _write_file(
+            tmp_path,
+            "src/app/results/page.tsx",
+            "export default function Results({ searchParams }) {\n"
+            '  const origin = typeof params.origin === "string" ? params.origin : "";\n'
+            '  const venue = typeof params.venue === "string" ? params.venue : "";\n'
+            '  const budget = typeof params.budget === "string" ? params.budget : "";\n'
+            "  return <div>{origin} {venue} {budget}</div>;\n"
+            "}",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        flow_issues = [i for i in result.issues if "FLOW-01" in i]
+        assert len(flow_issues) == 0
+
+    def test_no_issue_when_no_forms(self, tmp_path):
+        """No URLSearchParams in the project — no FLOW-01 issues."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/page.tsx",
+            "export default function Home() { return <div>Home</div> }",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        flow_issues = [i for i in result.issues if "FLOW-01" in i]
+        assert len(flow_issues) == 0

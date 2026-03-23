@@ -136,6 +136,7 @@ phases:
           - "No 'use client' directive appears in layout.tsx or root page.tsx (server components by default)"
           - "No NEXT_PUBLIC_ prefixed environment variable contains sensitive data (API keys, secrets)"
           - "All components in the PRD component inventory have corresponding .tsx files in src/components/"
+          - "All form submissions and router.push calls use parameter names that exactly match the receiving page's searchParams access — verified via shared TypeScript interfaces in src/lib/types.ts"
 
     gates:
       - type: "build"
