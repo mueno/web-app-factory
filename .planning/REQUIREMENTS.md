@@ -22,8 +22,8 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 - [ ] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
 - [ ] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
 - [ ] **TOOL-05**: `waf_check_env` detects Node.js, Python, CLI tools and reports missing/outdated with install instructions
-- [ ] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
-- [ ] **TOOL-07**: `waf_stop_dev_server` stops a running dev server by run ID, with orphan cleanup
+- [x] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
+- [x] **TOOL-07**: `waf_stop_dev_server` stops a running dev server by run ID, with orphan cleanup
 
 ### Environment Setup
 
@@ -92,8 +92,8 @@ Deferred to future release.
 | TOOL-03 | Phase 11 | Pending |
 | TOOL-04 | Phase 11 | Pending |
 | TOOL-05 | Phase 12 | Pending |
-| TOOL-06 | Phase 10 | Pending |
-| TOOL-07 | Phase 10 | Pending |
+| TOOL-06 | Phase 10 | Complete |
+| TOOL-07 | Phase 10 | Complete |
 | ENVS-01 | Phase 12 | Pending |
 | ENVS-02 | Phase 12 | Pending |
 | ENVS-03 | Phase 12 | Pending |

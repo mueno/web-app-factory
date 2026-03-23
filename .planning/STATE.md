@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: executing
-stopped_at: Completed 10-local-dev-server 10-01-PLAN.md
-last_updated: "2026-03-23T13:26:45.535Z"
+stopped_at: Completed 10-local-dev-server 10-02-PLAN.md
+last_updated: "2026-03-23T13:30:26.363Z"
 last_activity: 2026-03-23 — Phase 09 Plan 02 complete (VercelProvider extracted + Phase3ShipExecutor refactored to DeployProvider)
 progress:
   total_phases: 13
-  completed_phases: 9
+  completed_phases: 10
   total_plans: 24
-  completed_plans: 23
+  completed_plans: 24
   percent: 95
 ---
 
@@ -59,6 +59,7 @@ Carried from v1.0 + v2.0 research:
 - [Phase Phase 09-deploy-abstraction Plan 02]: VercelProvider.deploy() orchestrates provision+preview+promote atomically; phase_3_executor is now subprocess-free and deploy-target-agnostic
 - [Phase 10-local-dev-server]: start_new_session=True on Popen enables os.killpg for full npm/node/next process tree termination
 - [Phase 10-local-dev-server]: _PROC_MAP separate from frozen DevServerInfo registry — mutable Popen cannot live in frozen dataclass
+- [Phase 10-local-dev-server]: [Phase 10-local-dev-server Plan 02]: waf_start_dev_server uses run_in_executor because start_dev_server blocks up to 30s; waf_stop_dev_server calls stop_dev_server directly (fast path)
 
 ### Pending Todos
 
@@ -74,6 +75,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:26:45.532Z
-Stopped at: Completed 10-local-dev-server 10-01-PLAN.md
+Last session: 2026-03-23T13:30:26.360Z
+Stopped at: Completed 10-local-dev-server 10-02-PLAN.md
 Resume file: None
