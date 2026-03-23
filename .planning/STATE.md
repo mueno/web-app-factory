@@ -21,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application
-**Current focus:** Phase 8 — MCP Infrastructure Foundation (ready to plan)
+**Current focus:** Phase 9 — Deploy Abstraction
 
 ## Current Position
 
@@ -30,7 +30,7 @@ Plan: —
 Status: Ready to plan
 Last activity: 2026-03-23 — v2.0 roadmap created (Phases 8-13, 27 requirements mapped)
 
-Progress: [░░░░░░░░░░] 0% (v2.0 milestone)
+Progress: [██░░░░░░░░] 17% (v2.0 milestone — Phase 8 of 13 complete)
 
 ## Accumulated Context
 
@@ -60,12 +60,12 @@ Carried from v1.0 + v2.0 research:
 
 ### Blockers/Concerns
 
-- FastMCP task=True marked experimental — verify production-readiness in Phase 8; fallback ThreadPoolExecutor pattern documented in research
+- ✅ ~~FastMCP task=True marked experimental~~ — Resolved: Phase 8 uses ThreadPoolExecutor bridge pattern instead (proven reliable)
 - open-next-cdk Python version MEDIUM confidence — run integration test in Phase 9 before committing; fallback is Vercel + GCP only
 - Vercel API tokens cannot be project-scoped (platform constraint) — waf_check_env must warn users explicitly
 
 ## Session Continuity
 
-Last session: 2026-03-23T07:18:18.769Z
-Stopped at: Completed 08-mcp-infrastructure-foundation-02-PLAN.md
+Last session: 2026-03-23
+Stopped at: Phase 8 complete, ready to plan Phase 9
 Resume file: None

@@ -76,6 +76,10 @@ A single command takes a web app idea from concept to deployed, production-quali
 | MCP App distribution (v2) | Users install via `claude mcp add`, no manual setup | — Pending |
 | Local-first development (v2) | Preview before deploy, no cloud dependency for iteration | — Pending |
 | Multi-cloud deploy (v2) | User choice: Vercel, AWS, GCP | — Pending |
+| FastMCP 3.x for public server (v2) | `from fastmcp import FastMCP` canonical import; `list_tools()` for introspection | ✓ Phase 8 |
+| waf_ prefix enforced in CI (v2) | Static assertion prevents tool name collisions between public/internal servers | ✓ Phase 8 |
+| ThreadPoolExecutor async bridge (v2) | run_id returned before executor submission to prevent queue-full blocking | ✓ Phase 8 |
+| keyring + env-var fallback (v2) | Credential values never logged; graceful degradation in headless/CI | ✓ Phase 8 |
 
 ---
-*Last updated: 2026-03-23 after v2.0 milestone start*
+*Last updated: 2026-03-23 after Phase 8*

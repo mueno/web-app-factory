@@ -150,9 +150,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 08-01-PLAN.md — Package skeleton, FastMCP server entry point, pyproject.toml updates, tool namespace CI assertion
-- [ ] 08-02-PLAN.md — Async pipeline bridge (ThreadPoolExecutor), input validation, subprocess security audit
-- [ ] 08-03-PLAN.md — OS keychain credential module with env-var fallback
+- [x] 08-01-PLAN.md — Package skeleton, FastMCP server entry point, pyproject.toml updates, tool namespace CI assertion
+- [x] 08-02-PLAN.md — Async pipeline bridge (ThreadPoolExecutor), input validation, subprocess security audit
+- [x] 08-03-PLAN.md — OS keychain credential module with env-var fallback
 
 #### Phase 9: Deploy Abstraction
 **Goal**: The deployment layer supports three providers through a common interface, and the existing Vercel path remains backward compatible
@@ -224,7 +224,7 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 5. Build Pipeline Fix | v1.0 | 1/1 | Complete | 2026-03-21 |
 | 6. Contract Alignment | v1.0 | 1/1 | Complete | 2026-03-21 |
 | 7. Ship Directory Fix | v1.0 | 1/1 | Complete | 2026-03-22 |
-| 8. MCP Infrastructure Foundation | 3/3 | Complete   | 2026-03-23 | - |
+| 8. MCP Infrastructure Foundation | v2.0 | 3/3 | Complete | 2026-03-23 |
 | 9. Deploy Abstraction | v2.0 | 0/TBD | Not started | - |
 | 10. Local Dev Server | v2.0 | 0/TBD | Not started | - |
 | 11. MCP Tool Layer | v2.0 | 0/TBD | Not started | - |
