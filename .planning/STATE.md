@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: planning
-stopped_at: Completed 08-mcp-infrastructure-foundation-01-PLAN.md
-last_updated: "2026-03-23T07:11:57.422Z"
+stopped_at: Completed 08-mcp-infrastructure-foundation-03-PLAN.md
+last_updated: "2026-03-23T07:16:03.773Z"
 last_activity: 2026-03-23 — v2.0 roadmap created (Phases 8-13, 27 requirements mapped)
 progress:
   total_phases: 13
   completed_phases: 7
   total_plans: 19
-  completed_plans: 17
+  completed_plans: 18
   percent: 0
 ---
 
@@ -47,6 +47,7 @@ Carried from v1.0 + v2.0 research:
 - [Phase 08-mcp-infrastructure-foundation]: FastMCP 3.x tool introspection uses asyncio.run(mcp.list_tools()) not _tool_manager._tools (path doesn't exist in fastmcp 3.x)
 - [Phase 08-mcp-infrastructure-foundation]: Public server uses 'from fastmcp import FastMCP'; internal server uses 'from mcp.server.fastmcp import FastMCP' — maintaining clear import separation
 - [Phase 08-mcp-infrastructure-foundation]: Flat-layout project requires [tool.setuptools.packages.find] include=['web_app_factory*'] to prevent multi-package discovery error on uv pip install -e .
+- [Phase 08-mcp-infrastructure-foundation]: Credential values never logged at any level — key names and type(exc).__name__ only, per security-core.md contract
 
 ### Pending Todos
 
@@ -62,6 +63,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T07:11:57.419Z
-Stopped at: Completed 08-mcp-infrastructure-foundation-01-PLAN.md
+Last session: 2026-03-23T07:16:03.770Z
+Stopped at: Completed 08-mcp-infrastructure-foundation-03-PLAN.md
 Resume file: None
