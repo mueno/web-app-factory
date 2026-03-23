@@ -1,10 +1,11 @@
 """Tests for the async pipeline bridge (MCPI-03).
 
 These tests verify:
-1. start_pipeline_async() returns a run_id string in under 1 second
+1. start_pipeline_async() returns (run_id, plan) tuple in under 1 second
 2. The pipeline runs in a background thread (not blocking the event loop)
 3. run_id format is YYYYMMDD-HHMMSS-slug
 4. _ACTIVE_RUNS dict tracks running pipelines
+5. Execution plan is generated and stored in progress store
 """
 from __future__ import annotations
 
@@ -33,10 +34,13 @@ class TestReturnRunIdImmediately:
             from web_app_factory._pipeline_bridge import start_pipeline_async
 
             start = time.monotonic()
-            run_id = asyncio.run(start_pipeline_async("a recipe app", "./output/TestApp"))
+            result = asyncio.run(start_pipeline_async("a recipe app", "./output/TestApp"))
             elapsed = time.monotonic() - start
 
+        assert isinstance(result, tuple), f"Expected tuple, got {type(result)}"
+        run_id, plan = result
         assert isinstance(run_id, str), f"run_id must be a string, got {type(run_id)}"
+        assert plan is not None, "plan must not be None"
         assert elapsed < 1.0, f"start_pipeline_async took {elapsed:.2f}s — must return in under 1 second"
 
 
@@ -60,7 +64,7 @@ class TestPipelineRunsInBackground:
             importlib.reload(_pipeline_bridge)
 
             with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=record_and_return):
-                run_id = asyncio.run(_pipeline_bridge.start_pipeline_async("my todo app", "./output/TodoApp"))
+                run_id, _plan = asyncio.run(_pipeline_bridge.start_pipeline_async("my todo app", "./output/TodoApp"))
 
                 # Wait up to 3 seconds for pipeline to actually execute
                 called = called_event.wait(timeout=3.0)
@@ -83,7 +87,7 @@ class TestRunIdFormat:
             importlib.reload(_pipeline_bridge)
 
             with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=noop_pipeline):
-                run_id = asyncio.run(_pipeline_bridge.start_pipeline_async("A recipe manager", "./output/RecipeApp"))
+                run_id, _plan = asyncio.run(_pipeline_bridge.start_pipeline_async("A recipe manager", "./output/RecipeApp"))
 
         # YYYYMMDD-HHMMSS-slug pattern
         pattern = r"^\d{8}-\d{6}-[a-z0-9-]+$"
@@ -110,7 +114,7 @@ class TestActiveRunsTracking:
             importlib.reload(_pipeline_bridge)
 
             with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=slow_pipeline):
-                run_id = asyncio.run(_pipeline_bridge.start_pipeline_async("task tracker app", "./output/TaskApp"))
+                run_id, _plan = asyncio.run(_pipeline_bridge.start_pipeline_async("task tracker app", "./output/TaskApp"))
 
                 # run_id should be in _ACTIVE_RUNS immediately after start
                 assert run_id in _pipeline_bridge._ACTIVE_RUNS, (
@@ -143,7 +147,7 @@ class TestDeployTargetForwarding:
                     return {"status": "completed"}
 
                 with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
-                    asyncio.run(
+                    _run_id, _plan = asyncio.run(
                         _pipeline_bridge.start_pipeline_async(
                             "gcp test app",
                             "./output/GCPApp",
@@ -173,7 +177,7 @@ class TestDeployTargetForwarding:
             importlib.reload(_pipeline_bridge)
 
             with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
-                asyncio.run(
+                _run_id, _plan = asyncio.run(
                     _pipeline_bridge.start_pipeline_async(
                         "default deploy app",
                         "./output/DefaultApp",

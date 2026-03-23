@@ -20,12 +20,13 @@ References (from Phase 8 research, Pattern 2 / Pitfall 5):
   * Store the Future in _ACTIVE_RUNS so callers can poll or await it.
 
 Public API:
-    start_pipeline_async(idea, project_dir, *, ...) -> str (run_id)
+    start_pipeline_async(idea, project_dir, *, ...) -> tuple[str, ExecutionPlan]
 
 Internal:
     _EXECUTOR       — shared ThreadPoolExecutor
     _ACTIVE_RUNS    — dict[run_id, asyncio.Future]
     _generate_run_id(idea) -> str
+    _load_contract(contract_path) -> dict
     _run_pipeline_sync(**kwargs)  — thin wrapper; patched in tests
 """
 from __future__ import annotations
@@ -61,6 +62,24 @@ _DEFAULT_CONTRACT_PATH = _PROJECT_ROOT / "contracts" / "pipeline-contract.web.v1
 _CONTRACTS_DIR = (_PROJECT_ROOT / "contracts").resolve()
 
 
+def _load_contract(contract_path: str | None = None) -> dict[str, Any]:
+    """Load and validate the pipeline contract YAML.
+
+    Used by both plan generation (pre-execution) and _run_pipeline_sync.
+    """
+    import yaml  # noqa: PLC0415
+
+    resolved = Path(contract_path or str(_DEFAULT_CONTRACT_PATH)).resolve()
+    try:
+        resolved.relative_to(_CONTRACTS_DIR)
+    except ValueError:
+        raise ValueError(
+            f"contract_path must be under {_CONTRACTS_DIR}, got {resolved}"
+        )
+    with open(resolved, encoding="utf-8") as fh:
+        return yaml.safe_load(fh)
+
+
 def _generate_run_id(idea: str) -> str:
     """Generate a run ID in the format YYYYMMDD-HHMMSS-<idea-slug>.
 
@@ -89,23 +108,12 @@ def _run_pipeline_sync(**kwargs: Any) -> dict[str, Any]:
     in tests completely isolates the bridge from the real pipeline.
     """
     from tools.contract_pipeline_runner import run_pipeline  # noqa: PLC0415
-    import yaml  # noqa: PLC0415
 
     # Load contract if not provided
     contract = kwargs.pop("contract", None)
     if contract is None:
         contract_path = kwargs.get("contract_path", str(_DEFAULT_CONTRACT_PATH))
-        # P1 security: validate contract_path is under contracts/ directory
-        resolved = Path(contract_path).resolve()
-        try:
-            resolved.relative_to(_CONTRACTS_DIR)
-        except ValueError:
-            raise ValueError(
-                f"contract_path must be under {_CONTRACTS_DIR}, "
-                f"got {resolved}"
-            )
-        with open(resolved, encoding="utf-8") as fh:
-            contract = yaml.safe_load(fh)
+        contract = _load_contract(contract_path)
 
     return run_pipeline(contract, **kwargs)
 
@@ -119,11 +127,11 @@ async def start_pipeline_async(
     contract_path: str | None = None,
     company_name: str | None = None,
     contact_email: str | None = None,
-) -> str:
-    """Start the pipeline in a background thread and return a run_id immediately.
+) -> tuple[str, Any]:
+    """Start the pipeline in a background thread and return (run_id, plan).
 
-    The MCP event loop is never blocked.  The pipeline runs in a thread from
-    ``_EXECUTOR`` and the resulting Future is stored in ``_ACTIVE_RUNS``.
+    Generates an execution plan from the contract BEFORE submitting to the
+    thread pool, so the caller can display it immediately.
 
     Args:
         idea:           The app idea string (plain text description).
@@ -136,19 +144,39 @@ async def start_pipeline_async(
         contact_email:  Contact email for legal document generation.
 
     Returns:
-        run_id: String identifier for this pipeline run, formatted as
-                "YYYYMMDD-HHMMSS-<idea-slug>".  Callers use this to poll
-                the run status via waf_get_status().
+        Tuple of (run_id, ExecutionPlan). The pipeline runs in the background.
     """
-    # Step 1: Generate run_id BEFORE submitting to executor (Pitfall 5: avoids
-    # blocking if the thread pool queue is momentarily full).
+    from web_app_factory._plan_generator import generate_plan  # noqa: PLC0415
+    from web_app_factory._progress_store import ProgressEvent, get_store  # noqa: PLC0415
+
+    # Step 1: Generate run_id BEFORE submitting to executor (Pitfall 5).
     run_id = _generate_run_id(idea)
 
-    # Step 2: Build kwargs for the synchronous pipeline function.
+    # Step 2: Load contract and generate execution plan.
+    contract = _load_contract(contract_path)
+    plan = generate_plan(contract, idea, run_id, deploy_target)
+
+    # Step 3: Store plan in progress store for waf_get_status.
+    store = get_store()
+    store.set_plan(run_id, plan)
+
+    # Step 4: Create progress callback bound to this run.
+    def _on_progress(event_type: str, phase_id: str, message: str, detail: dict) -> None:
+        store.emit(ProgressEvent(
+            timestamp=datetime.now(tz=timezone.utc).isoformat(),
+            run_id=run_id,
+            event_type=event_type,
+            phase_id=phase_id,
+            message=message,
+            detail=detail,
+        ))
+
+    # Step 5: Build kwargs for the synchronous pipeline function.
     pipeline_kwargs: dict[str, Any] = {
         "project_dir": project_dir,
         "idea": idea,
         "dry_run": (mode == "dry_run"),
+        "on_progress": _on_progress,
     }
     if contract_path:
         pipeline_kwargs["contract_path"] = contract_path
@@ -158,7 +186,7 @@ async def start_pipeline_async(
         pipeline_kwargs["contact_email"] = contact_email
     pipeline_kwargs["deploy_target"] = deploy_target
 
-    # Safety cap: reject if too many concurrent/completed runs are tracked
+    # Step 6: Safety cap — reject if too many concurrent runs
     if len(_ACTIVE_RUNS) >= _MAX_ACTIVE_RUNS:
         # Evict completed futures before rejecting
         _evict_completed_runs()
@@ -175,11 +203,11 @@ async def start_pipeline_async(
         lambda: _run_pipeline_sync(**pipeline_kwargs),
     )
 
-    # Step 4: Track the future and register cleanup callback.
+    # Step 7: Track the future and register cleanup callback.
     _ACTIVE_RUNS[run_id] = future
     future.add_done_callback(lambda _f, _rid=run_id: _on_run_complete(_rid))
 
-    return run_id
+    return run_id, plan
 
 
 def _on_run_complete(run_id: str) -> None:
