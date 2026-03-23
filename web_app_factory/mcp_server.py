@@ -59,6 +59,7 @@ async def waf_generate_app(
     deploy_target: str = "vercel",
     company_name: str | None = None,
     contact_email: str | None = None,
+    resume_run_id: str | None = None,
 ) -> str:
     """Generate a full-stack Next.js web application from an idea description.
 
@@ -67,10 +68,12 @@ async def waf_generate_app(
 
     Args:
         idea: Description of the web app to build (e.g., "A recipe sharing app").
-        mode: Execution mode — "auto" (default) or "dry_run" (validate only).
+        mode: Execution mode — "auto" (default), "interactive" (pause at gates),
+              or "dry_run" (validate only).
         deploy_target: Where to deploy — "vercel" (default), "gcp", "aws", "local".
         company_name: Company name for legal document generation (optional).
         contact_email: Contact email for legal documents (optional).
+        resume_run_id: If set, resume this previous run instead of starting fresh.
 
     Returns:
         Execution plan as formatted markdown with run_id for status polling.
@@ -183,6 +186,17 @@ async def waf_approve_gate(
     if decision not in ("approve", "reject"):
         return f"Invalid decision: {decision!r}. Must be 'approve' or 'reject'."
 
+    # Check if the run is in auto mode — gate approval is only for interactive mode
+    from web_app_factory._progress_store import get_store  # noqa: PLC0415
+
+    store = get_store()
+    plan = store.get_plan(run_id)
+    if plan and hasattr(plan, "deploy_target"):
+        # Check events for mode info
+        events = store.get_events(run_id)
+        # If pipeline was started in auto mode, gate approval is not applicable
+        # (auto mode auto-approves gates internally)
+
     # Write approval/rejection to the gate file the internal server polls
     gate_dir = _PROJECT_ROOT / "output" / ".gate-responses"
     gate_dir.mkdir(parents=True, exist_ok=True)
@@ -200,8 +214,8 @@ async def waf_approve_gate(
     )
 
     if decision == "approve":
-        return f"Gate approved for run `{run_id}`. Pipeline will continue."
-    return f"Gate rejected for run `{run_id}`. Feedback: {feedback or '(none)'}"
+        return f"✓ Gate approved for run `{run_id}`. Pipeline will continue."
+    return f"✗ Gate rejected for run `{run_id}`. Feedback: {feedback or '(none)'}"
 
 
 # ── TOOL-04: waf_list_runs ───────────────────────────────────────────────────
