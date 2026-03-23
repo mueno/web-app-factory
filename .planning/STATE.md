@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: planning
-stopped_at: Completed 08-mcp-infrastructure-foundation-03-PLAN.md
-last_updated: "2026-03-23T07:16:03.773Z"
+stopped_at: Completed 08-mcp-infrastructure-foundation-02-PLAN.md
+last_updated: "2026-03-23T07:18:18.772Z"
 last_activity: 2026-03-23 — v2.0 roadmap created (Phases 8-13, 27 requirements mapped)
 progress:
   total_phases: 13
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 19
-  completed_plans: 18
+  completed_plans: 19
   percent: 0
 ---
 
@@ -48,6 +48,9 @@ Carried from v1.0 + v2.0 research:
 - [Phase 08-mcp-infrastructure-foundation]: Public server uses 'from fastmcp import FastMCP'; internal server uses 'from mcp.server.fastmcp import FastMCP' — maintaining clear import separation
 - [Phase 08-mcp-infrastructure-foundation]: Flat-layout project requires [tool.setuptools.packages.find] include=['web_app_factory*'] to prevent multi-package discovery error on uv pip install -e .
 - [Phase 08-mcp-infrastructure-foundation]: Credential values never logged at any level — key names and type(exc).__name__ only, per security-core.md contract
+- [Phase 08-mcp-infrastructure-foundation]: Use _run_pipeline_sync() wrapper to isolate import boundary for test patching without complex mock machinery
+- [Phase 08-mcp-infrastructure-foundation]: Generate run_id BEFORE executor submission (Pitfall 5: prevents queue-full blocking on run_id return)
+- [Phase 08-mcp-infrastructure-foundation]: Static subprocess audit test catches shell=True regressions in CI before merge
 
 ### Pending Todos
 
@@ -63,6 +66,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T07:16:03.770Z
-Stopped at: Completed 08-mcp-infrastructure-foundation-03-PLAN.md
+Last session: 2026-03-23T07:18:18.769Z
+Stopped at: Completed 08-mcp-infrastructure-foundation-02-PLAN.md
 Resume file: None

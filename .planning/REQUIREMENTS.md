@@ -11,8 +11,8 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 - [x] **MCPI-01**: Server is installable via `claude mcp add web-app-factory -- uvx web-app-factory`
 - [x] **MCPI-02**: Server exposes tools with `waf_` namespace prefix via FastMCP
-- [ ] **MCPI-03**: Pipeline runs in background thread pool (not blocking MCP event loop)
-- [ ] **MCPI-04**: All subprocess calls are audited for shell injection (no `shell=True`, all args via `shlex.quote`)
+- [x] **MCPI-03**: Pipeline runs in background thread pool (not blocking MCP event loop)
+- [x] **MCPI-04**: All subprocess calls are audited for shell injection (no `shell=True`, all args via `shlex.quote`)
 - [x] **MCPI-05**: Credentials (API keys, deploy tokens) stored in OS keychain, never in config files
 
 ### MCP Tools
@@ -84,8 +84,8 @@ Deferred to future release.
 |-------------|-------|--------|
 | MCPI-01 | Phase 8 | Complete |
 | MCPI-02 | Phase 8 | Complete |
-| MCPI-03 | Phase 8 | Pending |
-| MCPI-04 | Phase 8 | Pending |
+| MCPI-03 | Phase 8 | Complete |
+| MCPI-04 | Phase 8 | Complete |
 | MCPI-05 | Phase 8 | Complete |
 | TOOL-01 | Phase 11 | Pending |
 | TOOL-02 | Phase 11 | Pending |
