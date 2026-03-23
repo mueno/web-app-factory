@@ -1,527 +1,624 @@
-# Architecture Research
+# Architecture Patterns: MCP App Integration
 
-**Domain:** Automated web application generation pipeline (fork of ios-app-factory)
-**Researched:** 2026-03-21
-**Confidence:** HIGH
-
-## Standard Architecture
-
-### System Overview
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                         CLI Entry Point                              │
-│  factory.py  --idea "..."  --project-dir ./output/AppName            │
-└───────────────────────────────┬──────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼──────────────────────────────────────┐
-│                    Pipeline Orchestration Layer                       │
-│  ┌──────────────────────────┐  ┌────────────────────────────────┐   │
-│  │  contract_pipeline_runner│  │  pipeline_state                │   │
-│  │  (YAML-driven phase loop)│  │  (state.json, activity-log)    │   │
-│  └────────────┬─────────────┘  └────────────────────────────────┘   │
-│               │                                                      │
-│  ┌────────────▼───────────────────────────────────────────────────┐  │
-│  │                   pipeline_runtime/                            │  │
-│  │  governance_monitor  error_router  startup_preflight           │  │
-│  └────────────────────────────────────────────────────────────────┘  │
-└───────────────────────────────┬──────────────────────────────────────┘
-                                │  dispatches per phase
-┌───────────────────────────────▼──────────────────────────────────────┐
-│                     Phase Executor Layer                              │
-│  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────────────┐ │
-│  │ phase_1a  │  │ phase_1b  │  │ phase_2a  │  │ phase_3_deploy    │ │
-│  │ (idea     │  │ (spec &   │  │ (scaffold │  │ (Vercel deploy,   │ │
-│  │  validate)│  │  design)  │  │  & build) │  │  CI setup)        │ │
-│  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────────┬─────────┘ │
-└────────┼──────────────┼──────────────┼───────────────────┼───────────┘
-         │              │              │                   │
-┌────────▼──────────────▼──────────────▼───────────────────▼───────────┐
-│                    Web-Specific Agent Layer                           │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐  ┌───────────────┐  │
-│  │ spec-agent │  │ build-agent│  │ test-agent │  │ deploy-agent  │  │
-│  │            │  │            │  │            │  │               │  │
-│  └────────────┘  └────────────┘  └────────────┘  └───────────────┘  │
-└──────────────────────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────────────┐
-│                        Gate Layer                                      │
-│  ┌──────────────┐  ┌────────────────┐  ┌────────────┐  ┌──────────┐  │
-│  │ artifact_gate│  │ lighthouse_gate│  │ build_gate │  │ legal    │  │
-│  │ (file exist) │  │ (perf/a11y/SEO)│  │ (npm build)│  │ gate     │  │
-│  └──────────────┘  └────────────────┘  └────────────┘  └──────────┘  │
-└───────────────────────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────────────┐
-│                     MCP Server (Human Gate)                            │
-│  approve_gate  phase_reporter  (stdin/stdout FastMCP)                  │
-└───────────────────────────────────────────────────────────────────────┘
-         │
-┌────────▼──────────────────────────────────────────────────────────────┐
-│                     Generated App Output                               │
-│  output/{AppName}/                                                     │
-│    src/  (Next.js app)   docs/pipeline/  (state, gates, handoff)       │
-└───────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Responsibilities
-
-| Component | Responsibility | Reuse Status |
-|-----------|----------------|--------------|
-| `factory.py` | CLI entry point, argument parsing, pipeline dispatch | Adapt (strip iOS flags, add web flags) |
-| `contracts/pipeline-contract.web.v1.yaml` | Phase ordering, deliverables, quality criteria, gate types | New — web-specific YAML replacing iOS YAML |
-| `tools/contract_pipeline_runner.py` | YAML-driven phase loop, gate enforcement, resume logic | Reuse as-is (domain-agnostic) |
-| `tools/pipeline_state.py` | Run lifecycle, state.json, activity-log.jsonl, handoff.md | Reuse as-is (domain-agnostic) |
-| `pipeline_runtime/governance_monitor.py` | Phase ordering enforcement, bypass detection | Reuse as-is (domain-agnostic) |
-| `pipeline_runtime/error_router.py` | Gate failure classification, agent delegation | Reuse with minor agent-name changes |
-| `pipeline_runtime/startup_preflight.py` | Environment checks, single-flight lock | Reuse with web tool checks (Node.js, Vercel CLI) |
-| `tools/factory_mcp_server.py` | approve_gate, phase_reporter MCP tools | Reuse as-is (domain-agnostic) |
-| `tools/phase_executors/phase_*.py` | Per-phase LLM orchestration and artifact generation | New — all iOS executors replaced with web executors |
-| `agents/definitions.py` | Agent prompt definitions per specialization | New — web-focused agent prompts |
-| `tools/gates/` | Quality gate checkers (build, content, runtime) | Partially new — iOS gates replaced with web gates |
+**Domain:** MCP App packaging + local dev server + multi-cloud deploy for web-app-factory v2.0
+**Researched:** 2026-03-23
+**Confidence:** HIGH (MCP packaging, FastMCP tasks), MEDIUM (deploy abstraction, local server lifecycle)
 
 ---
 
-## Recommended Project Structure
+## Context: What v1.0 Already Has
 
-### web-app-factory Repository
-
-```
-web-app-factory/
-├── factory.py                         # CLI entry point (adapted from ios-app-factory)
-├── pyproject.toml                     # Python dependencies
-├── uv.lock
-│
-├── contracts/
-│   └── pipeline-contract.web.v1.yaml  # SINGLE SOURCE — phases, deliverables, gates
-│
-├── agents/
-│   └── definitions.py                 # 5 web-specialized agent prompts
-│
-├── pipeline_runtime/                  # Copied from ios-app-factory (unchanged)
-│   ├── governance_monitor.py
-│   ├── error_router.py
-│   ├── startup_preflight.py
-│   └── bypass_intent_detector.py
-│
-├── tools/
-│   ├── contract_pipeline_runner.py    # Copied from ios-app-factory (unchanged)
-│   ├── pipeline_state.py              # Copied from ios-app-factory (unchanged)
-│   ├── factory_mcp_server.py          # Copied from ios-app-factory (unchanged)
-│   ├── skill_evidence.py              # Copied from ios-app-factory (unchanged)
-│   │
-│   ├── phase_executors/               # ALL NEW — web-specific executors
-│   │   ├── __init__.py
-│   │   ├── base.py
-│   │   ├── phase_1a_idea.py           # Idea validation, market research
-│   │   ├── phase_1b_spec.py           # PRD, wireframes, tech spec
-│   │   ├── phase_2a_scaffold.py       # Next.js scaffold, project init
-│   │   ├── phase_2b_build.py          # Component generation, API routes
-│   │   ├── phase_2c_test.py           # Unit tests, E2E, Playwright
-│   │   ├── phase_3a_legal.py          # ToS, Privacy Policy generation
-│   │   └── phase_3b_deploy.py         # Vercel deploy, GitHub Actions setup
-│   │
-│   └── gates/                         # PARTIALLY NEW — web-specific gates
-│       ├── __init__.py
-│       ├── gate_policy.py             # Copied from ios-app-factory
-│       ├── gate_result.py             # Copied from ios-app-factory
-│       ├── artifact_gate.py           # NEW — required file existence check
-│       ├── build_gate.py              # NEW — `npm run build` succeeds
-│       ├── lighthouse_gate.py         # NEW — Lighthouse CI perf/a11y/SEO scores
-│       ├── security_headers_gate.py   # NEW — CSP, HSTS, X-Frame-Options
-│       ├── link_integrity_gate.py     # NEW — no broken links or 404s
-│       ├── legal_gate.py              # NEW — ToS and Privacy Policy present
-│       ├── deploy_gate.py             # NEW — Vercel deploy URL live and responsive
-│       └── tool_invocation_gate.py    # Copied from ios-app-factory
-│
-├── config/
-│   └── settings.py                    # Adapted from ios-app-factory
-│
-└── output/                            # Generated apps land here
-    └── {AppName}/                     # One directory per generated app
-        ├── src/                       # Next.js application source
-        └── docs/pipeline/             # Pipeline artifacts (state, gates, handoff)
-```
-
-### Generated App Structure (Next.js)
-
-Each generated app in `output/{AppName}/` follows this structure:
+The existing pipeline has three layers worth understanding before adding v2.0 concerns:
 
 ```
-{AppName}/
-├── package.json
-├── next.config.js
-├── tsconfig.json
-├── tailwind.config.js
-├── .env.example
-├── .gitignore
-│
-├── src/
-│   ├── app/                          # Next.js App Router
-│   │   ├── layout.tsx                # Root layout
-│   │   ├── page.tsx                  # Home page
-│   │   ├── (marketing)/              # Marketing pages group
-│   │   │   ├── about/page.tsx
-│   │   │   └── pricing/page.tsx
-│   │   └── api/                      # API routes (serverless functions)
-│   │       └── [route]/route.ts
-│   │
-│   ├── components/
-│   │   ├── ui/                       # Primitive components (Button, Card, etc.)
-│   │   └── [feature]/                # Feature-specific components
-│   │
-│   ├── lib/
-│   │   ├── utils.ts                  # Shared utilities
-│   │   └── [service].ts              # Service clients
-│   │
-│   └── types/
-│       └── index.ts
-│
-├── public/                           # Static assets
-│
-├── docs/                             # User-facing docs
-│   ├── privacy-policy.md
-│   ├── terms-of-service.md
-│   └── idea-validation.md            # From Phase 1a
-│
-└── docs/pipeline/                    # Pipeline execution artifacts (never shipped)
-    ├── runs/{run_id}/
-    │   ├── state.json
-    │   └── handoff.md
-    ├── activity-log.jsonl
-    └── quality-self-assessment-*.json
+factory.py (CLI) → contract_pipeline_runner → phase executors (1a/1b/2a/2b/3)
+                                          ↑
+             pipeline_state (state.json, activity-log.jsonl)
+             factory_mcp_server (approve_gate, phase_reporter)  ← internal use only
+             pipeline_runtime (startup_preflight, governance_monitor, error_router)
+```
+
+The existing `factory_mcp_server.py` (FastMCP, stdio) is an **internal process** — it handles human approval gates and phase progress logging. It is started as a subprocess by the pipeline and is NOT the user-facing MCP App. This distinction is critical for v2.0 design.
+
+---
+
+## Recommended Architecture for v2.0
+
+### Overview
+
+v2.0 adds a new user-facing layer on top of the existing pipeline. The existing code does not change its internal contracts — the MCP App becomes a thin adapter that calls `run_pipeline()` and `load_contract()` the same way `factory.py` does today.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│   USER-FACING MCP APP LAYER (NEW)                           │
+│                                                             │
+│   web_app_factory/mcp_app.py  ← FastMCP server             │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │  Tools (exposed to Claude):                         │   │
+│   │    generate_app(idea, deploy_target, mode)          │   │
+│   │    get_pipeline_status(run_id)                      │   │
+│   │    approve_phase(run_id, phase, decision)           │   │
+│   │    list_runs()                                      │   │
+│   │    get_preview_url(run_id)                          │   │
+│   │    start_local_server(run_id)                       │   │
+│   │    stop_local_server(run_id)                        │   │
+│   └─────────────────────────────────────────────────────┘   │
+└─────────────────────┬───────────────────────────────────────┘
+                      │  calls existing API
+┌─────────────────────▼───────────────────────────────────────┐
+│   EXISTING PIPELINE (UNCHANGED)                             │
+│                                                             │
+│   contract_pipeline_runner.run_pipeline()                   │
+│   factory.py (CLI remains functional)                       │
+│   pipeline_state, phase_executors, gates, agents            │
+│                                                             │
+│   Internal MCP: factory_mcp_server.py (approve + reporter)  │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────┐
+│   NEW SUPPORTING MODULES                                    │
+│                                                             │
+│   deploy/                                                   │
+│     deploy_provider.py    ← abstract base                   │
+│     vercel_provider.py    ← existing logic extracted here   │
+│     aws_provider.py       ← new                             │
+│     gcp_provider.py       ← new                             │
+│     provider_registry.py  ← maps name -> class              │
+│                                                             │
+│   local_server/                                             │
+│     server_manager.py     ← subprocess lifecycle            │
+│     port_allocator.py     ← find free port                  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Component Boundaries
+## Integration Point 1: MCP App Packaging
 
-### Reuse-As-Is (Copy Verbatim)
+### How `claude mcp add` Works
 
-These components are domain-agnostic and require no modification:
+MCP servers for Claude Code are installed via:
+```bash
+# Python package via uvx (recommended for PyPI distribution)
+claude mcp add web-app-factory -- uvx web-app-factory
 
-| Component | Why Reusable |
-|-----------|--------------|
-| `tools/contract_pipeline_runner.py` | Reads any YAML contract; phase loop logic is domain-free |
-| `tools/pipeline_state.py` | Manages run IDs, state.json, activity-log — no domain knowledge |
-| `tools/factory_mcp_server.py` | approve_gate and phase_reporter are domain-agnostic MCP tools |
-| `pipeline_runtime/governance_monitor.py` | Monitors tool call ordering, not domain logic |
-| `pipeline_runtime/error_router.py` | Classifies failures by severity; agent names are configurable |
-| `tools/skill_evidence.py` | Records skill invocation evidence; skill names are variable |
-| `tools/gates/gate_policy.py` | Gate pass/fail policy evaluation; domain-free |
-| `tools/gates/gate_result.py` | GateResult dataclass; domain-free |
-| `tools/gates/tool_invocation_gate.py` | Checks that required tools were called; domain-free |
+# Or directly from local checkout (development)
+claude mcp add web-app-factory -- uv --directory /path/to/web-app-factory run web_app_factory/mcp_app.py
 
-### Adapt (Thin Wrapper or Config Change)
-
-| Component | What Changes |
-|-----------|-------------|
-| `factory.py` | Remove iOS-specific args (`--asc-app-id`, `--mode rejection-fix`); add web args (`--deploy-target`, `--framework`) |
-| `pipeline_runtime/startup_preflight.py` | Replace Xcode/xcodebuild checks with Node.js/npm/Vercel CLI checks |
-| `config/settings.py` | Replace App Store Director paths with Vercel project config |
-| `agents/definitions.py` | Replace iOS agent prompts with web agent prompts; same dataclass structure |
-
-### New (Web-Specific)
-
-| Component | What It Does |
-|-----------|-------------|
-| `contracts/pipeline-contract.web.v1.yaml` | 5-phase web pipeline definition (phases: 1a, 1b, 2a, 2b, 3) |
-| `tools/phase_executors/phase_*.py` | 5-7 executor files — one per phase/sub-phase, all web-focused |
-| `tools/gates/lighthouse_gate.py` | Runs `lhci autorun` against deployed or local preview URL |
-| `tools/gates/build_gate.py` | Runs `npm run build` in generated app directory, checks exit code |
-| `tools/gates/security_headers_gate.py` | Checks HTTP response headers via requests or Playwright |
-| `tools/gates/deploy_gate.py` | Verifies Vercel deployment URL is live and returns HTTP 200 |
-| `tools/gates/link_integrity_gate.py` | Crawls internal links in generated app, checks for 404s |
-| `tools/gates/legal_gate.py` | Checks that ToS and Privacy Policy files exist and are non-empty |
-
----
-
-## Data Flow
-
-### Pipeline Execution Flow
-
-```
-User:  python factory.py --idea "SaaS dashboard for X" --project-dir ./output/MyApp
-            │
-            ▼
-factory.py  → startup_preflight() → checks Node.js, npm, Vercel CLI present
-            │
-            ▼
-contract_pipeline_runner.load_contract("contracts/pipeline-contract.web.v1.yaml")
-            │
-            ▼
-pipeline_state.init_run(run_id, app_name, project_dir)
-  → creates: output/MyApp/docs/pipeline/runs/{run_id}/state.json
-  → creates: output/MyApp/docs/pipeline/activity-log.jsonl
-            │
-            ▼ (for each phase in YAML)
-phase_executor.execute(phase_id, phase_spec, project_dir)
-  → spec-agent / build-agent / test-agent / deploy-agent (Claude Agent SDK)
-  → agent writes deliverables to output/MyApp/docs/ and output/MyApp/src/
-            │
-            ▼
-pipeline_state.phase_complete(phase_id)
-  → updates state.json
-            │
-            ▼
-gate_checker.run_gates(phase_spec.gates, project_dir)
-  → artifact_gate: checks required files exist
-  → build_gate: runs `npm run build`
-  → lighthouse_gate: runs lhci against localhost preview
-  → legal_gate: checks docs/privacy-policy.md, docs/terms-of-service.md
-            │
-   gate FAIL▼               gate PASS▼
-error_router.route()         approve_gate (MCP) → human approval
-  → escalate or retry             │
-                                  ▼
-                            next phase begins
+# Or via npx for node-based servers (not applicable here)
 ```
 
-### Phase-to-Artifact Data Flow
+The server runs as a **stdio process** (stdin/stdout JSON-RPC). This is the same transport the existing `factory_mcp_server.py` uses. Claude Code keeps it running for the session lifetime.
 
+### pyproject.toml Entry Point (Required)
+
+```toml
+[project.scripts]
+web-app-factory = "web_app_factory.mcp_app:main"
 ```
-Phase 1a (Idea Validation)
-  → docs/idea-validation.md
-  → docs/pipeline/concept-sheet.md
-  → docs/pipeline/tech-feasibility-memo.json
-        │
-        ▼ (input to Phase 1b)
-Phase 1b (Spec & Design)
-  → docs/pipeline/prd.md
-  → docs/pipeline/screen-spec.json         (wireframe descriptions)
-  → docs/pipeline/design-principles.json
-        │
-        ▼ (input to Phase 2a)
-Phase 2a (Scaffold)
-  → src/  (full Next.js project skeleton via `npx create-next-app`)
-  → package.json, tsconfig.json, tailwind.config.js
-  → .github/workflows/ci.yml
-        │
-        ▼ (input to Phase 2b)
-Phase 2b (Build)
-  → src/app/**  (pages, API routes)
-  → src/components/**
-  → src/lib/**
-        │
-        ▼ (input to Phase 3a and 3b)
-Phase 3a (Legal)
-  → docs/privacy-policy.md
-  → docs/terms-of-service.md
 
-Phase 3b (Deploy)
-  → vercel.json
-  → .github/workflows/deploy.yml
-  → [Vercel deployment URL in state.json]
+Where `main()` calls `mcp.run(transport="stdio")`. This is the executable that `uvx web-app-factory` runs after PyPI install.
+
+The package name on PyPI must match: `web-app-factory` (kebab case). The Python module uses underscore: `web_app_factory`.
+
+### MCP App Source Layout Change
+
+The current project has no top-level Python package (code is in `tools/`, `pipeline_runtime/`, `agents/`, `config/`). For `uvx web-app-factory` to work, there needs to be an importable package. Two options:
+
+**Option A: Add `web_app_factory/` package (recommended)**
+```
+web_app_factory/
+  __init__.py
+  mcp_app.py          ← new user-facing MCP server
+  _pipeline_bridge.py ← thin wrapper calling run_pipeline()
+```
+The existing `tools/`, `pipeline_runtime/`, etc. stay as-is. `mcp_app.py` imports from them.
+
+**Option B: Make the project root itself the package**
+Not recommended — breaks existing relative imports in `tools/`.
+
+**Verdict: Option A.** Add `web_app_factory/` as the new public API surface. Internal modules untouched.
+
+### .mcp.json for Project-scoped Installation
+
+For teams sharing the repo, add `.mcp.json` at project root:
+```json
+{
+  "mcpServers": {
+    "web-app-factory": {
+      "command": "uv",
+      "args": ["--directory", ".", "run", "web_app_factory/mcp_app.py"],
+      "env": {
+        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  }
+}
 ```
 
 ---
 
-## Phase Structure for Web App Pipeline
+## Integration Point 2: MCP Tool → Pipeline Entry Point Mapping
 
-The iOS pipeline has 11 phases (1a, 1b, 1b+, 2c, 2d, 2a, 2b, 3, 4a, 5, 6). The web pipeline should be leaner — 5 phases covering the same logical steps without App Store review, Xcode build system complexity, or device testing:
+### Tool Design Principles
 
-| Phase | Name | Purpose | Key Deliverables | Gates |
-|-------|------|---------|-----------------|-------|
-| 1a | Idea Validation | Market research, feasibility, Go/No-Go | idea-validation.md, concept-sheet.md, tech-feasibility-memo.json | artifact_gate, tool_invocation_gate |
-| 1b | Spec & Design | PRD, screen specs, design system | prd.md, screen-spec.json, design-principles.json | artifact_gate, content_quality_gate |
-| 2a | Scaffold | Next.js project init, CI config | src/ (skeleton), package.json, CI YAML | artifact_gate, build_gate (TypeScript check) |
-| 2b | Build | Page generation, API routes, styling | src/app/**, src/components/** | build_gate (npm build), lighthouse_gate (local) |
-| 3 | Ship | Legal docs, Vercel deploy, CI pipeline | privacy-policy.md, ToS, Vercel URL, GitHub Actions | legal_gate, deploy_gate, link_integrity_gate, lighthouse_gate (prod) |
+The pipeline is inherently long-running (minutes to hours). MCP tools must either:
+1. Return immediately with a `run_id` and let the user poll via `get_pipeline_status`, or
+2. Use FastMCP's `task=True` background task decorator (FastMCP 3.x) with progress tracking.
 
-**Rationale for 5 phases vs 11:**
-- No App Store review (Phase 5 in iOS) — web deployment is instant
-- No Xcode build complexity (multiple iOS sub-phases) — npm/Next.js build is simpler
-- No separate icon/screenshot pipeline (iOS Phase 2c/2d) — web images are part of Phase 2b
-- Legal still required but no ASC metadata — single Phase 3a step
+**Verdict: Use FastMCP background tasks for `generate_app`, immediate returns for status/control tools.**
 
----
-
-## Architectural Patterns
-
-### Pattern 1: YAML Contract as Single Source of Truth
-
-**What:** The pipeline-contract.web.v1.yaml file drives everything — phase order, deliverables, quality criteria, and gate types. Phase executors and gate checkers are selected dynamically by the contract runner based on the phase ID.
-
-**When to use:** Always. Adding a phase means adding a YAML block, not changing Python orchestration.
-
-**Build order implication:** The YAML contract must be written first (Phase 1 of the roadmap). All downstream components are slaves to what the contract declares.
-
-```yaml
-phases:
-  - id: "2b"
-    name: "Build"
-    purpose: "Generate production-quality Next.js pages and API routes"
-    deliverables:
-      - name: "Home Page"
-        path: "src/app/page.tsx"
-        quality_criteria:
-          - "Uses Tailwind CSS utility classes, not inline styles"
-          - "Implements responsive breakpoints (mobile, tablet, desktop)"
-          - "Passes WCAG AA accessibility check"
-    gates:
-      - type: build
-        description: "npm run build exits 0"
-        fail_action: block
-      - type: lighthouse
-        description: "Lighthouse performance >= 80"
-        checks:
-          min_performance: 80
-          min_accessibility: 90
-          min_seo: 80
-        fail_action: block
+FastMCP 3.x `task=True` pattern:
+```python
+@mcp.tool(task=True)
+async def generate_app(idea: str, deploy_target: str = "vercel") -> str:
+    """Generate and deploy a web application from an idea."""
+    # runs in background, returns immediately to Claude with task_id
+    # progress updates via Progress dependency
+    ...
 ```
 
-### Pattern 2: Phase Executor Registry
+### Tool → Pipeline Mapping
 
-**What:** Phase executors are registered by phase ID. The contract runner looks up `phase_executors/phase_{id}.py` and calls `execute(phase_spec, project_dir, agent_sdk)`. This mirrors ios-app-factory's pattern exactly.
+| MCP Tool | Calls Into | Notes |
+|----------|-----------|-------|
+| `generate_app(idea, deploy_target, mode)` | `run_pipeline()` | Background task. Returns run_id. |
+| `get_pipeline_status(run_id)` | `load_state()` | Reads state.json. Immediate. |
+| `approve_phase(run_id, decision)` | Writes approval response file | Same mechanism as current `approve_gate` |
+| `list_runs()` | Scans output/ dir for state.json files | Immediate. |
+| `get_preview_url(run_id)` | Reads `deployment.json` | Immediate. |
+| `start_local_server(run_id)` | `ServerManager.start()` | Immediate, returns port. |
+| `stop_local_server(run_id)` | `ServerManager.stop()` | Immediate. |
+| `check_environment()` | `run_startup_preflight()` | Environment check. Immediate. |
 
-**When to use:** When adding a new phase. New executor file, no changes to contract runner.
+### The `approve_phase` Tool: Replacing the File-Poll Gate
 
-**Trade-offs:** Naming convention is a contract. If the file doesn't match the phase ID, the runner raises `ExecutorNotFound`.
+Current architecture: `factory_mcp_server.py` exposes `approve_gate` as an MCP tool that the Claude **agent** running the pipeline calls. The agent polls a file.
+
+v2.0 architecture: The user-facing MCP App exposes `approve_phase` that the **user's Claude session** calls when they want to approve or reject. The internal agent still calls `approve_gate`. The MCP App bridges these:
+
+```
+User Claude ──[approve_phase(run_id, "yes")]──► MCP App
+                                                   │ writes response file
+                                              Internal agent polls file
+                                              Internal agent reads "yes"
+                                              Internal agent proceeds
+```
+
+This means the existing file-based polling in `approve_gate` is preserved. The MCP App just writes the response file in the correct format. No changes to `factory_mcp_server.py`.
+
+### Interactive (Phase-by-Phase) Mode
+
+The `mode` parameter on `generate_app` controls whether the pipeline auto-approves gates or waits:
 
 ```python
-# tools/phase_executors/base.py
-class BasePhaseExecutor:
-    def execute(self, phase_spec: PhaseSpec, project_dir: Path, sdk) -> PhaseResult:
-        raise NotImplementedError
-
-# tools/phase_executors/phase_2b_build.py
-class Phase2bBuildExecutor(BasePhaseExecutor):
-    def execute(self, phase_spec, project_dir, sdk) -> PhaseResult:
-        agent = sdk.create_agent(AGENTS["build-agent"])
-        result = agent.run(
-            f"Build the Next.js application in {project_dir}/src/ "
-            f"according to the spec in {project_dir}/docs/pipeline/prd.md"
-        )
-        return PhaseResult(phase_id="2b", artifacts=result.artifacts)
+generate_app(idea="recipe app", mode="interactive")  # pauses at each gate
+generate_app(idea="recipe app", mode="auto")          # auto-approves (WEB_FACTORY_APPROVAL_TIMEOUT_SEC=0 → auto)
 ```
 
-### Pattern 3: Gate Type Dispatch
-
-**What:** Gates in the YAML have a `type` field (`build`, `lighthouse`, `artifact`, `legal`, etc.). The gate dispatcher maps type strings to gate checker classes. iOS had 26 gates; web needs fewer, focused on different concerns.
-
-**When to use:** When a phase needs an automated quality check. Add a gate entry to the YAML; the gate class is looked up by type string.
-
-**Web-specific gate types to implement:**
-
-| Gate Type | Implementation | Threshold |
-|-----------|---------------|-----------|
-| `artifact` | Check file exists, non-empty | Required |
-| `build` | Run `npm run build`, check exit code | Exit 0 |
-| `lighthouse` | `lhci autorun --config=lighthouserc.json` | Perf >= 80, A11y >= 90, SEO >= 80 |
-| `security_headers` | HTTP response header check (CSP, HSTS) | All present |
-| `link_integrity` | Crawl internal links, check 404s | 0 broken links |
-| `legal` | File existence + minimum word count | 200+ words each |
-| `deploy` | GET deployment URL, check HTTP 200 | HTTP 200 within 30s |
-| `tool_invocation` | Evidence that required tools were called | All required refs present |
+In `interactive` mode, the pipeline pauses at `approve_gate`. The MCP App can surface the pending approval as a notification to the user. The user calls `approve_phase` to unblock.
 
 ---
 
-## Integration Points
+## Integration Point 3: Deploy Provider Abstraction Layer
 
-### External Services
+### Problem
 
-| Service | Integration Pattern | Notes |
-|---------|---------------------|-------|
-| Vercel CLI | `subprocess.run(["vercel", "deploy", "--prod"])` in deploy-agent | Requires `VERCEL_TOKEN` env var; zero-config for Next.js |
-| GitHub API | GitHub Actions YAML generated as artifact, not via API | No token needed for generation; user pushes |
-| Lighthouse CI | `subprocess.run(["lhci", "autorun"])` in lighthouse_gate.py | Requires `lighthouserc.json` in generated app |
-| Claude Agent SDK | Phase executors call `sdk.query(agent, prompt)` | Same SDK as ios-app-factory |
-| FastMCP | MCP server for approve_gate, phase_reporter | Same MCP server as ios-app-factory, reused as-is |
+Phase 3 executor (`phase_3_executor.py`) has Vercel tightly coupled throughout — `vercel link`, `vercel deploy`, `vercel promote`. To support AWS Amplify and GCP Cloud Run, this logic must be extracted behind an interface.
 
-### Internal Boundaries
+### Abstraction Interface
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| factory.py → contract_pipeline_runner | Direct Python function call | `run_pipeline(contract_path, project_dir, idea)` |
-| contract_pipeline_runner → phase_executors | Module import + `executor.execute()` | Executor selected by phase_id string lookup |
-| phase_executors → agents | Claude Agent SDK `sdk.query()` | Each executor owns one agent interaction |
-| contract_pipeline_runner → gates | Gate class instantiation + `gate.check(project_dir)` | Gate selected by type string from YAML |
-| gates → generated app | Read-only file system inspection | Gates never write to generated app; only read |
-| factory_mcp_server → human | stdin/stdout FastMCP protocol | User receives approval request in terminal |
-| pipeline_state → disk | `state.json` writes in `docs/pipeline/runs/{run_id}/` | All state mutations go through pipeline_state API |
+```python
+# deploy/deploy_provider.py
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+@dataclass
+class DeployResult:
+    success: bool
+    preview_url: str | None = None
+    production_url: str | None = None
+    error: str | None = None
+    raw_output: str = ""
+
+class DeployProvider(ABC):
+    """Abstract deploy provider. One implementation per cloud target."""
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Provider identifier: 'vercel', 'aws', 'gcp'"""
+        ...
+
+    @abstractmethod
+    def provision(self, project_dir: str, project_name: str) -> DeployResult:
+        """Link/initialize the project with the platform."""
+        ...
+
+    @abstractmethod
+    def deploy_preview(self, project_dir: str) -> DeployResult:
+        """Deploy to a preview/staging environment. Returns preview_url."""
+        ...
+
+    @abstractmethod
+    def deploy_production(self, project_dir: str, preview_url: str) -> DeployResult:
+        """Promote preview to production."""
+        ...
+
+    @abstractmethod
+    def is_authenticated(self) -> bool:
+        """Check if credentials are available for this provider."""
+        ...
+```
+
+### Provider Implementations
+
+**VercelProvider** (extracted from existing phase_3_executor.py):
+- `provision`: `vercel link --yes`
+- `deploy_preview`: `vercel deploy` → parse URL from stdout with `_VERCEL_URL_RE`
+- `deploy_production`: `vercel promote {preview_url} --yes --timeout=5m`
+
+**AWSProvider** (new):
+- Uses `amplify` CLI or `aws cloudfront` + S3
+- Next.js on AWS: AWS Amplify is the lowest-friction option for Next.js
+- `provision`: `amplify init && amplify add hosting`
+- `deploy_preview`: `amplify publish` with branch-based preview
+- Complexity: HIGH — Amplify requires AWS credentials, region, account ID
+
+**GCPProvider** (new):
+- Uses Cloud Run (containerized) or Firebase Hosting
+- For Next.js: Firebase Hosting + Cloud Functions or Cloud Run
+- `provision`: `firebase init hosting` or `gcloud run deploy`
+- Complexity: HIGH — requires Dockerfile for Cloud Run; Firebase is simpler but limited
+
+**Verdict for v2.0:** Vercel is fully implemented (extracted). AWS and GCP are stubbed with clear provider interface. The architecture is set, implementations are deferred.
+
+### Provider Registry
+
+```python
+# deploy/provider_registry.py
+_REGISTRY: dict[str, type[DeployProvider]] = {}
+
+def register_provider(cls: type[DeployProvider]) -> type[DeployProvider]:
+    _REGISTRY[cls().name] = cls
+    return cls
+
+def get_provider(name: str) -> DeployProvider:
+    cls = _REGISTRY.get(name)
+    if cls is None:
+        raise ValueError(f"Unknown deploy provider: {name!r}. Available: {list(_REGISTRY)}")
+    return cls()
+```
+
+### Phase 3 Executor Refactor
+
+The key change: `Phase3ShipExecutor` receives a `DeployProvider` instance (injected via `PhaseContext.extra["deploy_provider"]`) instead of calling `vercel` CLI directly.
+
+```python
+# In contract_pipeline_runner.py (or factory.py):
+from deploy.provider_registry import get_provider
+
+provider = get_provider(args.deploy_target)  # "vercel", "aws", "gcp"
+# inject into PhaseContext.extra
+ctx = PhaseContext(..., extra={"deploy_provider": provider})
+```
+
+This is a surgical change to Phase 3 only. Phases 1a, 1b, 2a, 2b are untouched.
 
 ---
 
-## Build Order Implications for Roadmap
+## Integration Point 4: Local Dev Server Lifecycle
 
-The dependency graph dictates this construction order:
+### Requirements
 
-1. **Milestone 1: Infrastructure fork** — Copy domain-agnostic components from ios-app-factory verbatim (`pipeline_state.py`, `contract_pipeline_runner.py`, `factory_mcp_server.py`, `governance_monitor.py`, `error_router.py`). Write the pyproject.toml and basic `factory.py` CLI stub. Write a minimal `pipeline-contract.web.v1.yaml` with placeholder phases. Validate the plumbing with a dry-run.
+- Start `npm run dev` in the generated project's Next.js directory
+- Detect when the server is ready (port listening, not just process started)
+- Return the URL to the user
+- Track running servers by `run_id`
+- Stop servers on request or session end
 
-2. **Milestone 2: YAML contract** — Define all 5 phases with full deliverable lists and quality criteria. Define gate types. This is the schema everything else is built against. No agent code yet.
+### Implementation: ServerManager
 
-3. **Milestone 3: Phase executors 1a + 1b** — Implement spec-agent. Validate that Phase 1a produces idea-validation.md and Phase 1b produces prd.md. Artifact gates only needed at this stage.
+```python
+# local_server/server_manager.py
 
-4. **Milestone 4: Phase executors 2a + 2b** — Implement build-agent. Scaffold and build a real Next.js project. Add build_gate (npm build). This is the highest-risk milestone — LLM-generated Next.js code may have quality variance.
+import asyncio
+import subprocess
+import socket
+import time
+from pathlib import Path
 
-5. **Milestone 5: Web-specific gates** — Implement lighthouse_gate, security_headers_gate, link_integrity_gate. These require a running local Next.js server, so they depend on Milestone 4 being stable.
+class LocalDevServer:
+    def __init__(self, run_id: str, project_dir: Path, port: int):
+        self.run_id = run_id
+        self.project_dir = project_dir
+        self.port = port
+        self.process: subprocess.Popen | None = None
+        self.url: str = f"http://localhost:{port}"
 
-6. **Milestone 6: Phase 3 (Legal + Deploy)** — Implement legal-agent and deploy-agent. Add legal_gate and deploy_gate. Vercel CLI integration here.
+    def start(self) -> None:
+        """Start npm run dev. Non-blocking."""
+        self.process = subprocess.Popen(
+            ["npm", "run", "dev", "--", "-p", str(self.port)],
+            cwd=str(self.project_dir),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
 
-7. **Milestone 7: End-to-end validation** — Run the full 5-phase pipeline against a real idea. Fix any integration issues. Document the runbook.
+    def wait_ready(self, timeout: float = 60.0) -> bool:
+        """Poll until port is listening or timeout. Returns True if ready."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            try:
+                with socket.create_connection(("localhost", self.port), timeout=1.0):
+                    return True
+            except (ConnectionRefusedError, OSError):
+                time.sleep(1.0)
+        return False
 
-**Critical dependency:** Milestones 3-6 are blocked on Milestone 2 (YAML contract). If the contract schema changes, phase executors and gates may need updates. Lock the contract schema early.
+    def stop(self) -> None:
+        if self.process and self.process.poll() is None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+
+class ServerManager:
+    """Tracks active local dev servers by run_id."""
+
+    def __init__(self) -> None:
+        self._servers: dict[str, LocalDevServer] = {}
+
+    def start(self, run_id: str, project_dir: Path) -> tuple[bool, str]:
+        """Start dev server. Returns (success, url_or_error)."""
+        if run_id in self._servers:
+            s = self._servers[run_id]
+            if s.process and s.process.poll() is None:
+                return True, s.url  # already running
+
+        port = self._find_free_port()
+        server = LocalDevServer(run_id, project_dir, port)
+        server.start()
+        if server.wait_ready():
+            self._servers[run_id] = server
+            return True, server.url
+        server.stop()
+        return False, "Server did not start within timeout"
+
+    def stop(self, run_id: str) -> None:
+        server = self._servers.pop(run_id, None)
+        if server:
+            server.stop()
+
+    def stop_all(self) -> None:
+        for server in list(self._servers.values()):
+            server.stop()
+        self._servers.clear()
+
+    @staticmethod
+    def _find_free_port(start: int = 3000, end: int = 3100) -> int:
+        for port in range(start, end):
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind(("localhost", port))
+                    return port
+            except OSError:
+                continue
+        raise RuntimeError("No free port found in range 3000-3100")
+```
+
+**MCP App lifecycle:** `ServerManager` is a module-level singleton in `mcp_app.py`. On MCP server shutdown, `stop_all()` is called. This ensures no orphaned `npm run dev` processes.
 
 ---
 
-## Anti-Patterns
+## Component Boundaries (New vs. Modified)
 
-### Anti-Pattern 1: Rewriting Infrastructure Instead of Forking
+### New Components
 
-**What people do:** Conclude that ios-app-factory's infrastructure is "too iOS-specific" and rewrite contract_pipeline_runner, pipeline_state, and governance_monitor from scratch for web.
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| User-facing MCP server | `web_app_factory/mcp_app.py` | Exposes tools to Claude, background tasks |
+| Pipeline bridge | `web_app_factory/_pipeline_bridge.py` | Calls `run_pipeline()` in thread pool |
+| Deploy provider base | `deploy/deploy_provider.py` | Abstract interface |
+| Deploy provider registry | `deploy/provider_registry.py` | Maps name → class |
+| Vercel provider (extracted) | `deploy/vercel_provider.py` | Existing Vercel logic |
+| AWS provider (stub) | `deploy/aws_provider.py` | Stub + interface |
+| GCP provider (stub) | `deploy/gcp_provider.py` | Stub + interface |
+| Local server manager | `local_server/server_manager.py` | Subprocess lifecycle |
+| Port allocator | `local_server/port_allocator.py` | (inline in server_manager or separate) |
 
-**Why it's wrong:** These files are domain-agnostic — they contain no iOS knowledge. Rewriting them multiplies maintenance burden (two diverging implementations) and loses battle-tested behavior (gate enforcement, bypass detection, run ID management, activity logging).
+### Modified Components
 
-**Do this instead:** Copy verbatim. Treat them as an external library. The only change allowed is updating the PHASE_ORDER constant in pipeline_state.py to reflect the web phase IDs.
+| Component | Location | Change |
+|-----------|----------|--------|
+| Phase 3 executor | `tools/phase_executors/phase_3_executor.py` | Accept `DeployProvider` from `PhaseContext.extra`; call `provider.deploy_preview()` etc. instead of `vercel` directly |
+| `PhaseContext` | `tools/phase_executors/base.py` | `extra` dict already exists — no schema change needed |
+| `startup_preflight.py` | `pipeline_runtime/startup_preflight.py` | Make Vercel CLI check conditional on deploy_target=vercel |
+| `pyproject.toml` | root | Add `[project.scripts]` entry point for `web-app-factory` |
+| `config/settings.py` | root | Add env vars for deploy provider selection |
 
-### Anti-Pattern 2: One Executor Per Phase ID But Unlimited Size
+### Unchanged Components
 
-**What people do:** Create `phase_2b_build.py` and put all build logic (scaffold, codegen, testing, linting) into a single 1000-line file because it is "one phase."
-
-**Why it's wrong:** Phase 2b (Build) is the most complex phase. Unbounded file size leads to the same God File problem that plagues ios-app-factory's `all_phases.py` (5,733 lines).
-
-**Do this instead:** Apply the ios-app-factory split pattern. `phase_2b_build.py` is the entry point and orchestrator; extract `phase_2b_scaffold.py`, `phase_2b_codegen.py`, `phase_2b_styles.py` as sub-modules. Cap each at 400 lines per the code-health rule.
-
-### Anti-Pattern 3: Importing iOS Gate Classes Directly
-
-**What people do:** To save time, import `tools/gates/build_gate.py` from ios-app-factory and try to reuse it for npm builds because it has similar structure.
-
-**Why it's wrong:** ios-app-factory's `build_gate.py` invokes xcodebuild, checks xcresult bundles, and looks for iOS-specific artifacts. It will always fail for npm/Next.js targets.
-
-**Do this instead:** Write new gate classes with the same base class interface (`gate_result.py` GateResult is reusable), but with entirely new implementation targeting npm, Lighthouse CI, and HTTP responses.
-
-### Anti-Pattern 4: Generating Complete App Source in Phase 1a
-
-**What people do:** Ask the spec-agent to write actual React components during idea validation "to validate the concept faster."
-
-**Why it's wrong:** Phase 1a artifacts are planning documents. If the idea is rejected at the human approval gate after 1a, all generated code is waste. More importantly, mixing planning and implementation in the same phase makes it impossible to apply quality gates cleanly.
-
-**Do this instead:** Phase 1a produces only markdown planning documents. Source code generation begins strictly in Phase 2a (scaffold) and Phase 2b (build). Gate boundaries enforce this separation.
+Everything else: `factory_mcp_server.py`, `contract_pipeline_runner.py`, `pipeline_state.py`, all gate implementations (1–9), phase executors 1a/1b/2a/2b, `governance_monitor.py`, `error_router.py`, YAML contract.
 
 ---
 
-## Scaling Considerations
+## Data Flow Changes
 
-This is a developer tool pipeline running locally or in CI — not a multi-tenant web service. Scaling considerations are different from a user-facing product:
+### v1.0 Flow (unchanged internally)
 
-| Concern | Single Developer | Team / CI |
-|---------|-----------------|-----------|
-| Parallel pipelines | Single-flight lock prevents concurrent runs | Lock is per `project_dir`; different apps can run in parallel |
-| LLM token costs | Phase 2b (codegen) is the most expensive phase — $2-8 per run estimate | Budget flag (`--budget`) from ios-app-factory controls maximum spend |
-| Lighthouse gate speed | Requires spawning a Next.js dev server; adds ~60s per run | Run `next build && next start` once per pipeline; share server across gate checks in Phase 3 |
-| Vercel deploy speed | Cold deploy ~30-60s; subsequent deploys ~15-30s | Use `vercel deploy --prod --prebuilt` after local `vercel build` to minimize Vercel build time |
+```
+User → CLI (factory.py) → run_pipeline() → phases → state.json
+```
+
+### v2.0 Additional Flow
+
+```
+User Claude session
+       │ calls MCP tool
+       ▼
+MCP App (web_app_factory/mcp_app.py)
+  generate_app(idea="...", deploy_target="vercel")
+       │ submits background task
+       ▼
+Thread pool / asyncio task
+  _pipeline_bridge.run_pipeline_async(idea, project_dir, deploy_provider)
+       │ calls
+       ▼
+  contract_pipeline_runner.run_pipeline(...)
+       │ phases 1a → 1b → 2a → 2b → 3
+       │ Phase 3 calls provider.deploy_preview()
+       │ deploy_provider = VercelProvider() (or AWSProvider etc.)
+       │ state changes written to state.json
+       ▼
+  returns {"status": "completed", "run_id": "..."}
+
+User Claude session
+  get_pipeline_status(run_id) → reads state.json → returns summary
+  get_preview_url(run_id) → reads deployment.json → returns URL
+  start_local_server(run_id) → ServerManager.start() → returns localhost:3000
+```
+
+### State Files (Unchanged Locations)
+
+```
+output/{slug}/
+  docs/pipeline/
+    runs/{run_id}/
+      state.json          ← phase status (read by get_pipeline_status)
+      handoff.md          ← human-readable summary
+    activity-log.jsonl    ← events log
+    deployment.json       ← preview_url, production_url (read by get_preview_url)
+    startup-preflight.json
+```
+
+---
+
+## Suggested Build Order (Dependency-Driven)
+
+**Phase A: Foundation (no deps)**
+1. Add `web_app_factory/` package with `__init__.py`
+2. Update `pyproject.toml` with entry point and package discovery
+3. Write `web_app_factory/mcp_app.py` skeleton with FastMCP, no tools yet
+4. Write `web_app_factory/_pipeline_bridge.py` wrapping `run_pipeline()` in asyncio
+
+**Phase B: Deploy Abstraction (deps: Phase A)**
+5. Create `deploy/deploy_provider.py` (abstract base + `DeployResult`)
+6. Create `deploy/provider_registry.py`
+7. Extract Vercel logic from `phase_3_executor.py` into `deploy/vercel_provider.py`
+8. Modify `phase_3_executor.py` to use `PhaseContext.extra["deploy_provider"]`
+9. Add AWS and GCP stubs
+10. Update `startup_preflight.py` to gate Vercel CLI check on `deploy_target`
+
+**Phase C: Local Server (deps: Phase A)**
+11. Write `local_server/server_manager.py`
+12. Write integration tests for start/stop/port-detection
+
+**Phase D: MCP Tools (deps: Phase A, B, C)**
+13. Add `generate_app` tool (background task, calls `_pipeline_bridge`)
+14. Add `get_pipeline_status`, `list_runs`, `get_preview_url` tools
+15. Add `approve_phase` tool (writes approval file)
+16. Add `start_local_server`, `stop_local_server` tools
+17. Add `check_environment` tool (calls `run_startup_preflight`)
+
+**Phase E: Environment Detection + UX Polish**
+18. Add environment setup guidance in `check_environment` responses
+19. Add `.mcp.json` for project-scoped installation
+20. Update `README.md` with `claude mcp add` installation instruction
+
+**Why this order:**
+- Deploy abstraction (Phase B) can be done independently of MCP packaging
+- Local server (Phase C) can be done independently of deploy abstraction
+- MCP tools (Phase D) depend on B and C being testable
+- Phases B and C can be done in parallel; Phase D requires both complete
+
+---
+
+## Key Architectural Decisions
+
+### 1. User-facing MCP App is a Separate Module from Internal MCP Server
+
+Do not extend `factory_mcp_server.py` with user-facing tools. That server is an internal agent tool (approve_gate, phase_reporter). The user-facing MCP App is a separate FastMCP instance in `web_app_factory/mcp_app.py`.
+
+**Rationale:** Different trust boundaries, different transports (internal server may be started per-pipeline-run; user-facing server runs for entire session), different tool contracts.
+
+### 2. `run_pipeline()` Called in Thread Pool (Not Direct Async)
+
+`run_pipeline()` is synchronous (blocking I/O via subprocess). Calling it directly in an async FastMCP tool would block the event loop. Wrap it:
+
+```python
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+_executor = ThreadPoolExecutor(max_workers=2)
+
+async def _run_pipeline_async(idea: str, project_dir: str, **kwargs) -> dict:
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        _executor,
+        lambda: run_pipeline(contract=..., idea=idea, project_dir=project_dir, **kwargs)
+    )
+```
+
+**Do NOT make `run_pipeline()` itself async** — it uses `subprocess.run()` calls throughout which would need `asyncio.create_subprocess_exec()`. That's a large refactor across all phase executors.
+
+### 3. Deploy Provider Injected via `PhaseContext.extra`
+
+The `extra: dict` field on `PhaseContext` already exists and is free-form. Injecting `deploy_provider` there avoids adding a typed field that breaks the dataclass `frozen=True` pattern and avoids a schema migration for the contract YAML.
+
+### 4. Vercel CLI Check Made Conditional in Preflight
+
+Currently, `startup_preflight.py` always checks for `vercel` CLI. With multi-cloud, the check should only fail if `deploy_target == "vercel"`. Pass `deploy_target` to `run_startup_preflight()`.
+
+### 5. MCP App Server is a Singleton Process, Not Per-Run
+
+The FastMCP server in `mcp_app.py` starts once when Claude loads the MCP server and stays alive. Multiple `generate_app` calls create multiple pipeline runs (different `run_id`). The `ServerManager` must be thread-safe (or use asyncio locks) since background tasks can run concurrently.
+
+---
+
+## Pitfalls Specific to This Integration
+
+### Blocking `run_pipeline()` in Async Context
+
+The biggest risk. `run_pipeline()` calls `subprocess.run()` (blocking) across all phase executors. If called directly in an async FastMCP tool without `run_in_executor`, it will block the entire MCP server event loop, preventing `get_pipeline_status` from responding while a pipeline runs.
+
+**Prevention:** Always use `loop.run_in_executor()` for `run_pipeline()`.
+
+### MCP Server Lifetime vs. Pipeline Lifetime
+
+The FastMCP stdio server exits when Claude's session ends. If a pipeline is running and the session closes, the pipeline thread is orphaned. The `run_pipeline()` function writes state to disk, so the pipeline can be resumed via `--resume` in a new session, but in-progress state is not cleanly handed off.
+
+**Prevention:** Write `run_id` to a well-known location (e.g., `~/.web-factory/active-runs.json`) so the next session can resume. Or accept the limitation and document it.
+
+### Deploy Provider Stub APIs Break Phase 3 Tests
+
+Extracting Vercel logic into `VercelProvider` changes the surface that Phase 3 executor tests mock. All existing Phase 3 tests mock `subprocess.run` for `vercel` commands. After extraction, they need to mock `VercelProvider.deploy_preview()` instead.
+
+**Prevention:** Add `deploy_provider` injection support to existing Phase 3 tests before refactoring the executor.
+
+### npm Run Dev Port Conflicts
+
+Port 3000 is the Next.js default and is often already in use. The `ServerManager._find_free_port()` must search starting from 3000. If the user has multiple runs active, each needs its own port.
+
+**Prevention:** `_find_free_port()` scans 3000-3100 using socket bind test (already in design above).
+
+### `uvx web-app-factory` Requires All Dependencies at PyPI Publish Time
+
+When users install via `uvx`, all dependencies (`fastmcp`, `mcp`, `claude-agent-sdk`, `pyyaml`, etc.) must be published in `pyproject.toml` `[project.dependencies]`. They already are. But the user also needs Node.js, npm, and optionally Vercel CLI installed separately — `uvx` cannot provide these.
+
+**Prevention:** `check_environment` MCP tool surfaces missing dependencies clearly with install instructions. `startup_preflight.py` already does this — surface its output in the MCP tool response.
 
 ---
 
 ## Sources
 
-- ios-app-factory codebase: `/Users/masa/Development/ios-app-factory/` (HIGH confidence — direct inspection)
-- Next.js App Router project structure: [Next.js Official Docs](https://nextjs.org/docs/app/getting-started/project-structure) (HIGH confidence)
-- Vercel CLI + GitHub Actions: [Vercel Knowledge Base](https://vercel.com/kb/guide/how-can-i-use-github-actions-with-vercel) (HIGH confidence)
-- Lighthouse CI integration: [GoogleChrome/lighthouse](https://github.com/GoogleChrome/lighthouse) (HIGH confidence)
-- Monorepo patterns for generated apps: [Next.js Monorepo Discussion](https://github.com/vercel/next.js/discussions/50866) (MEDIUM confidence — discussion thread, not official docs)
-
----
-*Architecture research for: Automated web application generation pipeline (web-app-factory)*
-*Researched: 2026-03-21*
+- [MCP Apps Blog Post](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/) — MCP Apps extension specification
+- [Anthropic Desktop Extensions](https://www.anthropic.com/engineering/desktop-extensions) — .mcpb packaging for Claude Desktop
+- [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp) — `claude mcp add` syntax, stdio/http/sse transports, uvx installation
+- [FastMCP Background Tasks](https://gofastmcp.com/servers/tasks) — task=True decorator, Progress dependency (HIGH confidence)
+- [FastMCP 3.0 Launch](https://www.jlowin.dev/blog/fastmcp-3-launch) — Component composition, authorization, OpenTelemetry
+- [MCP Official Build Guide](https://modelcontextprotocol.io/docs/develop/build-server) — Python package structure, uv/uvx patterns, Claude Desktop config
+- [OpenNext](https://opennext.js.org/) — Next.js multi-platform deployment adapters (AWS, Cloudflare, Netlify)
+- [Next.js Deployment Guide](https://nextjs.org/docs/pages/getting-started/deploying) — Platform deployment options (MEDIUM confidence, AWS/GCP specifics)

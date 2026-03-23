@@ -1,230 +1,514 @@
-# Stack Research
+# Technology Stack
 
-**Domain:** Automated web app generation pipeline (Python orchestration) + Generated Next.js/React web applications
-**Researched:** 2026-03-21
-**Confidence:** HIGH (core pipeline stack verified via PyPI + official docs; generated app stack verified via Next.js official blog + npm)
+**Project:** web-app-factory
+**Researched:** 2026-03-23
+**Scope of this update:** v2.0 additions only — MCP App distribution, local dev server, multi-cloud deployment, environment detection. Do not change the v1.0 stack already documented below.
 
 ---
 
-## Stack 1: Pipeline (Python Orchestration)
+## v2.0 Stack Additions (NEW — Research for This Milestone)
 
-The pipeline is a fork of ios-app-factory. The Python infrastructure is already chosen and running. Research here confirms versions are current and no changes are needed.
+### Distribution: MCP App Packaging
 
-### Core Technologies
+**Decision: `fastmcp install claude-code` command (not .mcpb)**
 
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Python | 3.10+ | Runtime | Required by Claude Agent SDK; ios-app-factory already uses 3.10+ |
-| `claude-agent-sdk` | 0.1.50 (PyPI, 2026-03-20) | LLM orchestration — phase executors talk to Claude via agent loop | Same tools, context management, and hooks as Claude Code itself; gives built-in MCP tool support in-process; ios-app-factory proven on this exact SDK |
-| `fastmcp` | 3.1.1 (PyPI, 2026-03-14) | MCP server for approval gates and phase reporting | De-facto standard for Python MCP servers; 1M+ downloads/day; 70% of MCP servers use some version; fully replaces `mcp` package for server authoring |
-| `uv` | latest (Astral) | Package manager and task runner | 10–100x faster than pip; `uv run pytest` ensures lockfile sync before test; `uv lock --frozen` gives deterministic CI installs; ios-app-factory already uses it |
-| `ruff` | 0.15.4+ | Linter + formatter (replaces Black + isort + flake8) | Single tool, 10–100x faster than ESLint/Black/isort in combination; ios-app-factory already configured with it |
-| `pytest` | 9.0+ | Test runner | Standard Python testing; ios-app-factory test suite already uses it |
+The MCP ecosystem has two distribution paths. The right one for this project is the `fastmcp` CLI installer.
 
-### Supporting Libraries
+| Path | Mechanism | Best For | Python Limitation |
+|------|-----------|----------|-------------------|
+| `fastmcp install claude-code server.py` | Calls `claude mcp add` under the hood, adds to `~/.claude.json` (user scope) | CLI tool users, developers | None — uv handles deps |
+| `.mcpb` Desktop Extension | ZIP bundle with `manifest.json`, double-click install in Claude Desktop | End-user one-click install | Compiled C extensions (pydantic, mcp SDK) cannot be portably bundled |
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| `jsonschema` | 4.20+ | Validate YAML contract schemas at pipeline startup | Always — gate contracts and deliverable manifests must be schema-validated |
-| `pyyaml` | 6.0+ | Parse phase contracts (YAML) | Always — pipeline contracts are YAML |
-| `httpx` | 0.28+ | Async HTTP for any API calls phase executors make | When a phase executor needs to call external APIs (e.g., Vercel REST API, npm registry) |
-| `playwright` | 1.58.2 | Browser automation for quality gate checks (Lighthouse, security headers, link integrity) | In the web-quality-gate phase executor; headless Chromium for automated quality checks |
+**Use `fastmcp install claude-code`** because:
+- This project's users are developers with `uv` installed (or can install it)
+- The `mcp` Python SDK requires `pydantic` which has compiled C extensions that break `.mcpb` portability
+- `fastmcp install` auto-generates the correct `claude mcp add` command with `uv run` transport
+- The resulting `~/.claude.json` entry works across all projects (user scope) — appropriate for a pipeline tool
 
-### Development Tools
+The `.mcpb` path is a FUTURE option if a non-technical end-user distribution channel is needed, but it requires either switching to a Node.js wrapper or stripping all compiled extensions.
 
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `uv` | Dependency resolution, lockfile, virtual env | Use `uv sync` to install, `uv run` to execute. `uv.lock` must be committed. |
-| `ruff check` | Lint | Runs in CI pre-commit; configured in `pyproject.toml` with `target-version = "py310"` |
-| `ruff format` | Format | Replaces Black; same config file |
-| `mypy` | Static type checking | Optional at dev time but valuable for pipeline code; ios-app-factory uses it |
-| `pytest-asyncio` | Async test support | Required if phase executors use async code with the Agent SDK |
-
-### Installation (Pipeline)
+#### Installation Command Generated
 
 ```bash
-# Install uv (if not present)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+# What fastmcp install claude-code server.py generates behind the scenes:
+claude mcp add web-app-factory --scope user -- \
+  uv run --with fastmcp fastmcp run /path/to/web_app_factory/mcp_server.py
+```
 
-# Sync from lockfile (CI / first setup)
-uv sync
+#### Manual `claude mcp add` Equivalent
 
-# Add dependencies
-uv add claude-agent-sdk fastmcp jsonschema pyyaml httpx playwright
-uv add --dev mypy pytest ruff pyyaml
+```bash
+# For users who prefer manual setup, or for project-scoped install:
+claude mcp add web-app-factory --scope project -- \
+  uv run --with "web-app-factory[mcp]" web-app-factory-mcp
 
-# Install Playwright browsers
-uv run playwright install chromium
+# With env vars:
+claude mcp add web-app-factory --scope user \
+  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" -- \
+  uv run --with "web-app-factory[mcp]" web-app-factory-mcp
+```
+
+**Scope recommendation:** `--scope user` for personal dev tool (available across all projects). Use `--scope project` if teams want to share the MCP server config via `.mcp.json` in the repo.
+
+#### pyproject.toml entry point
+
+```toml
+[project.scripts]
+web-app-factory-mcp = "web_app_factory.mcp_server:main"
+web-app-factory = "web_app_factory.cli:main"
+
+[project.optional-dependencies]
+mcp = ["fastmcp>=3.1.0"]
+```
+
+**Confidence:** HIGH — verified via FastMCP docs (gofastmcp.com) and Claude Code MCP docs.
+
+---
+
+### MCP App API: FastMCP 3.x Tool Definitions
+
+**Decision: Use FastMCP 3.1.1 (already a dependency — no version bump needed)**
+
+The existing `fastmcp>=3.1.0` dependency is sufficient. The v2.0 MCP server exposes tools using the standard FastMCP decorator pattern:
+
+```python
+from fastmcp import FastMCP
+
+mcp = FastMCP("web-app-factory")
+
+@mcp.tool()
+async def generate_app(
+    idea: str,
+    target: str = "vercel",
+    mode: str = "auto"
+) -> str:
+    """Generate a web app from an idea description."""
+    ...
+
+@mcp.tool()
+async def get_status(pipeline_id: str) -> dict:
+    """Get the current pipeline status."""
+    ...
+
+@mcp.tool()
+async def approve_phase(pipeline_id: str, phase_id: str) -> str:
+    """Approve a phase checkpoint in interactive mode."""
+    ...
+```
+
+No new dependencies needed — `fastmcp>=3.1.0` already covers this.
+
+**Confidence:** HIGH — FastMCP 3.1.1 is current (March 14, 2026), already in pyproject.toml.
+
+---
+
+### Local Dev Server: Subprocess-Managed Next.js
+
+**Decision: `next dev` for local preview (not `next build` + standalone `server.js`)**
+
+For local development preview before cloud deploy, use `next dev` via Python subprocess. This is the correct choice because:
+- `next dev` starts in seconds; `next build` + `node .next/standalone/server.js` takes 30–120s
+- The goal is preview/iteration, not production accuracy
+- Standalone mode (`output: 'standalone'`) is reserved for cloud deployment packaging
+
+For the final "build and deploy" step, use standalone mode to produce `server.js` for AWS/GCP container deployments.
+
+#### Port Detection
+
+Use Python's `socket` stdlib (not an external library) to find an available port before starting:
+
+```python
+import socket
+import subprocess
+
+def find_free_port(preferred: int = 3000) -> int:
+    """Find an available port, trying preferred first."""
+    for port in [preferred, preferred + 1, preferred + 2, 3100, 3200, 8080]:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("localhost", port))
+                return port
+            except OSError:
+                continue
+    # Fallback: let OS assign
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("localhost", 0))
+        return s.getsockname()[1]
+
+def start_local_dev_server(app_dir: str) -> tuple[subprocess.Popen, int]:
+    port = find_free_port()
+    proc = subprocess.Popen(
+        ["npm", "run", "dev", "--", "-p", str(port)],
+        cwd=app_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    return proc, port
+```
+
+**Do NOT add `portpicker`** — it is a Google test-infra library designed for unit tests, not production port management. The stdlib `socket.bind(('localhost', 0))` pattern is idiomatic and has zero dependencies.
+
+#### `next.config.ts` for dual mode
+
+The generated apps must support both dev and standalone:
+
+```typescript
+// next.config.ts — supports both next dev (local) and standalone (cloud)
+const nextConfig: NextConfig = {
+  output: process.env.NEXT_BUILD_TARGET === "standalone" ? "standalone" : undefined,
+  // ... rest of config
+};
+```
+
+Pipeline sets `NEXT_BUILD_TARGET=standalone` before running `next build` for cloud deploy.
+
+**Confidence:** HIGH — verified from Next.js official docs and confirmed PORT env var handling in server.js.
+
+---
+
+### Multi-Cloud Deployment
+
+**Decision: Three-tier deploy abstraction with platform-specific CLI wrappers**
+
+Build a `DeploymentProvider` abstract base class with three implementations. No shared "cloud SDK" meta-library — each provider uses its native tool.
+
+```python
+from abc import ABC, abstractmethod
+
+class DeploymentProvider(ABC):
+    @abstractmethod
+    async def deploy(self, app_dir: str, env_vars: dict) -> DeploymentResult: ...
+
+    @abstractmethod
+    async def check_prerequisites(self) -> list[str]: ...  # returns list of missing tools
+```
+
+#### Provider 1: Vercel (existing, enhanced)
+
+**Tool: `vercel-cli` Python package (v50.35.0, auto-updated)**
+
+```python
+# pyproject.toml addition:
+# "vercel-cli>=50.0.0"
+from vercel_cli import run_vercel
+
+exit_code = run_vercel(
+    ["deploy", "--prod", "--yes"],
+    cwd=app_dir,
+    env={"VERCEL_TOKEN": token, "VERCEL_ORG_ID": org_id, "VERCEL_PROJECT_ID": proj_id}
+)
+```
+
+Why `vercel-cli` Python package over raw `subprocess` + system `vercel`:
+- Bundles its own Node.js binary (via `nodejs-wheel-binaries`) — no Node.js installation required from user
+- `run_vercel()` is a proper Python API, not a subprocess string
+- Auto-updated via GitHub Actions tracking npm releases
+- Version 50.35.0 released March 22, 2026 — actively maintained
+
+**Do NOT require system-installed Node.js for Vercel deployment.**
+
+**New dependency:** `vercel-cli>=50.0.0`
+
+**Confidence:** HIGH — verified pypi.org and GitHub repo (101 releases, active CI).
+
+#### Provider 2: AWS (new)
+
+**Tool: `aws-cdk-lib` + `open-next-cdk` Python packages**
+
+```toml
+# pyproject.toml additions (optional-dependencies, cloud extras):
+[project.optional-dependencies]
+aws = [
+    "aws-cdk-lib>=2.240.0",
+    "open-next-cdk>=0.1.0",
+    "constructs>=10.0.0",
+]
+```
+
+Architecture (CloudFront + Lambda@Edge + S3):
+1. Next.js app built with `output: 'standalone'`
+2. `open-next-cdk` converts standalone output to Lambda-compatible format
+3. `aws-cdk-lib` synthesizes CloudFormation template
+4. `cdk deploy` (CLI, invoked via subprocess) deploys the stack
+
+Why `open-next-cdk` over `cdk-nextjs` (cdklabs):
+- `open-next-cdk` has explicit Python package support on PyPI
+- `cdk-nextjs` (cdklabs) is TypeScript-first; Python bindings are generated JSII and can lag
+- `open-next-cdk` uses OpenNext which supports all Next.js features in serverless context
+
+Prerequisite checks the provider must validate:
+- AWS CLI installed (`shutil.which("aws")`)
+- AWS credentials configured (`~/.aws/credentials` or `AWS_ACCESS_KEY_ID` env)
+- CDK bootstrapped in target region (check via `aws cloudformation describe-stacks --stack-name CDKToolkit`)
+
+**Confidence:** MEDIUM — `open-next-cdk` Python version verified on PyPI; architecture confirmed via multiple sources; exact version pinning needs validation at implementation time.
+
+#### Provider 3: Google Cloud (new)
+
+**Tool: `gcloud` CLI via subprocess (no Python SDK wrapper)**
+
+For GCP Cloud Run deployments, use `gcloud run deploy --source .` directly. Do NOT add `google-cloud-run` Python client library because:
+- The Python client library (`google-cloud-run 0.15.0`) is a REST API wrapper, not a deployment tool
+- The actual deployment workflow requires Docker image build + push + service update — the `gcloud` CLI handles all of this atomically with `--source .`
+- Adding Google Auth SDK dependencies (`google-auth`, `google-api-python-client`) adds significant weight for marginal benefit
+
+Architecture (Cloud Run + Artifact Registry):
+1. Next.js app built with `output: 'standalone'`
+2. `Dockerfile` generated by pipeline using multi-stage build
+3. `gcloud run deploy --source . --region us-central1 --allow-unauthenticated` handles build+push+deploy
+
+```python
+import subprocess
+import shutil
+
+def deploy_to_cloud_run(app_dir: str, project_id: str, service_name: str, region: str = "us-central1") -> str:
+    if not shutil.which("gcloud"):
+        raise EnvironmentError("gcloud CLI not found. Install Google Cloud SDK.")
+
+    result = subprocess.run(
+        [
+            "gcloud", "run", "deploy", service_name,
+            "--source", ".",
+            "--project", project_id,
+            "--region", region,
+            "--platform", "managed",
+            "--allow-unauthenticated",
+            "--memory", "512Mi",
+            "--cpu-boost",  # reduces cold start
+            "--format", "json",
+        ],
+        cwd=app_dir,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout  # JSON with service URL
+```
+
+Prerequisite checks:
+- `shutil.which("gcloud")` — gcloud CLI installed
+- `shutil.which("docker")` — Docker installed (required by `gcloud run deploy --source`)
+- `gcloud auth print-access-token` — authenticated
+- Project ID configured
+
+**No new Python dependencies for GCP.** Only stdlib `subprocess` and `shutil`.
+
+**Confidence:** HIGH — gcloud deploy pattern verified from official Google Cloud documentation and Next.js deploy-google-cloud-run template (2026).
+
+---
+
+### Environment Detection
+
+**Decision: stdlib only (`shutil.which`, `subprocess`, `socket`) — no new dependencies**
+
+Environment detection runs before pipeline start to give users clear actionable errors. It checks three categories:
+
+#### Category 1: Python Environment
+
+```python
+import sys
+
+MINIMUM_PYTHON = (3, 10)
+
+def check_python() -> list[str]:
+    issues = []
+    if sys.version_info < MINIMUM_PYTHON:
+        issues.append(f"Python {'.'.join(map(str, MINIMUM_PYTHON))}+ required, found {sys.version}")
+    return issues
+```
+
+#### Category 2: Node.js / npm (required for generated app development)
+
+```python
+import shutil
+import subprocess
+import re
+
+NODE_MINIMUM = (20, 9, 0)
+
+def check_node() -> list[str]:
+    issues = []
+    node_path = shutil.which("node")
+    if not node_path:
+        issues.append("Node.js not found. Install from https://nodejs.org (v20.9+ required for Next.js 16)")
+        return issues
+
+    result = subprocess.run(["node", "--version"], capture_output=True, text=True)
+    match = re.match(r"v(\d+)\.(\d+)\.(\d+)", result.stdout.strip())
+    if match:
+        version = tuple(int(x) for x in match.groups())
+        if version < NODE_MINIMUM:
+            issues.append(f"Node.js {'.'.join(map(str, NODE_MINIMUM))}+ required, found {result.stdout.strip()}")
+
+    npm_path = shutil.which("npm")
+    if not npm_path:
+        issues.append("npm not found. Reinstall Node.js.")
+
+    return issues
+```
+
+#### Category 3: Cloud CLI Tools (per-provider, checked lazily)
+
+```python
+PROVIDER_PREREQUISITES = {
+    "vercel": [],  # vercel-cli Python package bundles its own Node.js
+    "aws": [
+        ("aws", "AWS CLI — install via https://aws.amazon.com/cli/"),
+        ("cdk", "AWS CDK CLI — pip install aws-cdk-cli OR npm install -g aws-cdk"),
+    ],
+    "gcp": [
+        ("gcloud", "Google Cloud SDK — install via https://cloud.google.com/sdk/install"),
+        ("docker", "Docker — required for gcloud source deploy"),
+    ],
+}
+
+def check_cloud_prerequisites(provider: str) -> list[str]:
+    issues = []
+    for cmd, install_hint in PROVIDER_PREREQUISITES.get(provider, []):
+        if not shutil.which(cmd):
+            issues.append(f"'{cmd}' not found. {install_hint}")
+    return issues
+```
+
+#### Category 4: Anthropic API Key
+
+```python
+import os
+
+def check_api_key() -> list[str]:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        return ["ANTHROPIC_API_KEY environment variable not set."]
+    return []
+```
+
+**No new dependencies.** All checks use `shutil`, `subprocess`, `os`, `socket`, and `re` from stdlib.
+
+**Confidence:** HIGH — standard Python patterns, no library API to verify.
+
+---
+
+### Summary: New Dependencies for v2.0
+
+| Package | Version | Added To | Why |
+|---------|---------|---------|-----|
+| `vercel-cli` | `>=50.0.0` | `dependencies` (always) | Python wrapper for Vercel CLI; bundles Node.js; replaces subprocess-based vercel deploy |
+| `aws-cdk-lib` | `>=2.240.0` | `optional-dependencies[aws]` | AWS CDK Python constructs for CloudFormation/Lambda/S3 |
+| `open-next-cdk` | `>=0.1.0` | `optional-dependencies[aws]` | Converts Next.js standalone output to Lambda-compatible format |
+| `constructs` | `>=10.0.0` | `optional-dependencies[aws]` | Required peer dep for aws-cdk-lib |
+
+**No new dependencies** for:
+- GCP deployment (stdlib subprocess + gcloud CLI)
+- Environment detection (stdlib only)
+- Local dev server (stdlib socket + subprocess)
+- MCP distribution (fastmcp already in dependencies)
+
+#### Updated pyproject.toml additions
+
+```toml
+[project]
+dependencies = [
+    "claude-agent-sdk>=0.1.50",
+    "fastmcp>=3.1.0",
+    "httpx>=0.28.0",
+    "jsonschema>=4.20.0",
+    "mcp>=1.26.0",
+    "pyyaml>=6.0",
+    "vercel-cli>=50.0.0",  # NEW: Python wrapper for Vercel CLI
+]
+
+[project.optional-dependencies]
+aws = [
+    "aws-cdk-lib>=2.240.0",
+    "constructs>=10.0.0",
+    "open-next-cdk>=0.1.0",
+]
+mcp = []  # fastmcp already in main deps; this extra exists for documentation clarity
+
+[project.scripts]
+web-app-factory = "web_app_factory.cli:main"
+web-app-factory-mcp = "web_app_factory.mcp_server:main"
 ```
 
 ---
 
-## Stack 2: Generated Web Applications (Next.js)
+### What NOT to Add (v2.0 Scope)
 
-These are the apps the pipeline produces. Each generated project gets this exact stack scaffolded.
+| Package | Why Not |
+|---------|---------|
+| `portpicker` | Test-infrastructure library; stdlib `socket.bind(('localhost', 0))` is idiomatic and sufficient |
+| `google-cloud-run` Python SDK | REST API wrapper, not a deploy tool; `gcloud` CLI does the job with zero Python dependencies |
+| `google-auth` / `google-api-python-client` | Heavy; not needed when `gcloud` CLI handles auth |
+| `.mcpb` / `@anthropic-ai/mcpb` toolchain | Broken for Python MCP servers with compiled deps (pydantic); use `fastmcp install claude-code` instead |
+| `semver` (PyPI) | Stdlib `tuple` comparison on version strings is sufficient for our detection needs |
+| `cdk-nextjs` (cdklabs TypeScript) | TypeScript-first; Python JSII bindings lag; `open-next-cdk` has native Python package |
+| Node.js as system requirement | `vercel-cli` Python package bundles its own Node.js; users should not need to install Node.js to USE the factory (they need it to DEVELOP the generated apps) |
 
-### Core Technologies
+---
+
+### Integration Points with Existing Stack
+
+| Existing Component | v2.0 Integration |
+|-------------------|------------------|
+| `deploy-agent` (Phase 3) | Extends to call `DeploymentProvider.deploy()` instead of hardcoded Vercel CLI commands |
+| `fastmcp` MCP server (approval gates) | The same server gets the three new tools: `generate_app`, `get_status`, `approve_phase` |
+| `pipeline_state.py` | Stores `deployment_provider` selection and `local_preview_url` in pipeline state |
+| `next.config.ts` (generated apps) | Adds `output: process.env.NEXT_BUILD_TARGET === 'standalone' ? 'standalone' : undefined` |
+| `vercel.json` generator | Continues to work; no changes needed for Vercel path |
+| CLI entry point | Adds `--cloud [vercel|aws|gcp]` flag and `--local-only` flag |
+
+---
+
+## v1.0 Stack (Unchanged — Reference)
+
+The sections below are preserved from the v1.0 research (2026-03-21). Do not modify based on v2.0 research — these are validated and in production.
+
+---
+
+### Stack 1: Pipeline (Python Orchestration)
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| Next.js | 16.2.0 (released 2026-03-17) | Full-stack React framework | App Router is mature and default; Turbopack is now stable default bundler (2–5x faster builds); Cache Components + PPR solve the static/dynamic dichotomy; Vercel-native; `create-next-app` scaffolds TypeScript + Tailwind by default. **Node.js 20.9+ required.** |
-| React | 19.2 | UI library | Bundled with Next.js 16; View Transitions, `useEffectEvent`, and `Activity` are production-ready; Server Components are the idiomatic pattern for generated apps |
-| TypeScript | 5.1+ | Type safety | Next.js 16 minimum; `next.config.ts` is the default; required for Zod inference to work correctly |
-| Tailwind CSS | 4.2.2 (2026-03-18) | Utility-first styling | Oxide engine (Rust) makes full builds 5x faster; CSS-first config (`@theme` directive); single `@import "tailwindcss"` replaces all directives; `create-next-app` includes it by default |
-| shadcn/ui | latest (no pinned version — copies source) | Component library | Copies components as local TypeScript files — no version conflicts, no library lock-in; built on Radix UI primitives for WAI-ARIA compliance; fully compatible with Tailwind v4; generates components into `src/components/ui/` |
+| Python | 3.10+ | Runtime | Required by Claude Agent SDK |
+| `claude-agent-sdk` | 0.1.50 | LLM orchestration | Agent loop + MCP tool support; proven in v1.0 |
+| `fastmcp` | 3.1.1 | MCP server for approval gates | De-facto standard; 1M+ downloads/day |
+| `uv` | latest | Package manager | 10–100x faster than pip; already used |
+| `ruff` | 0.15.4+ | Linter + formatter | Single tool; already configured |
+| `pytest` | 9.0+ | Test runner | Standard; 447+ tests already pass |
 
-### Supporting Libraries
+### Stack 2: Generated Web Applications (Next.js)
 
-| Library | Version | Purpose | When to Use |
-|---------|---------|---------|-------------|
-| Zod | 4.x | Runtime schema validation | Always — Server Actions must validate input at runtime because TypeScript types vanish; use `z.safeParse()` in all Server Actions |
-| React Hook Form | 7.x | Form state management | When the generated app has forms; pairs with Zod resolver (`@hookform/resolvers`) for unified client+server validation |
-| `@tanstack/react-query` | 5.x | Server state / data fetching for CSR patterns | When the app has dynamic data fetched client-side; skip if the app is purely Server Component–driven |
-| `next-themes` | 0.4+ | Dark/light mode | For generated apps that need theme switching; trivial to add |
-| Lucide React | latest | Icon library | Default icon set for shadcn/ui components; consistent and tree-shakable |
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 16.2.0 | Full-stack React framework; App Router; Turbopack |
+| React | 19.2 | UI library |
+| TypeScript | 5.1+ | Type safety |
+| Tailwind CSS | 4.2.2 | Styling; Oxide engine |
+| shadcn/ui | latest | Component library |
+| Zod | 4.x | Runtime validation |
+| Vitest | 4.1.0 | Unit testing |
+| Playwright | 1.58.2 | E2E + quality gates |
 
-### Testing Stack (Per Generated App)
-
-| Tool | Version | Purpose | When to Use |
-|------|---------|---------|-------------|
-| Vitest | 4.1.0 | Unit + integration testing | For React component tests, utility functions, Server Action logic; native ESM support is 6x faster cold start than Jest; replaces Jest completely |
-| `@testing-library/react` | 16.x | React component rendering in Vitest | For component unit tests |
-| Playwright | 1.58.2 | E2E + quality gate tests | For pipeline quality gates AND as the generated app's own E2E test suite; headless Chromium for CI |
-| `@axe-core/playwright` | 4.x | WCAG accessibility checks | Pipeline quality gate: accessibility score is a pass/fail criterion; `@axe-core/playwright` integrates with Playwright natively (avoids the React 18+ incompatibility of `@axe-core/react`) |
-
-### Quality Gate Tools (Pipeline-Driven, Run Against Generated App)
-
-| Tool | Purpose | How Used |
-|------|---------|---------|
-| Playwright + Lighthouse (via Chrome DevTools Protocol) | Performance score gate | Pipeline `quality-gate` phase executor launches headless Chrome, connects via CDP, runs Lighthouse; fail if score < 90 |
-| `@axe-core/playwright` | WCAG 2.1 AA gate | Playwright page visit + `checkA11y()` on every generated page; fail on any critical/serious violations |
-| `nosecone` (npm) or `next.config.ts` headers | Security headers gate | Pipeline verifies CSP, HSTS, X-Frame-Options, X-Content-Type-Options are set; `nosecone` provides sensible defaults for Next.js |
-| ESLint (flat config, v9) | Code quality gate | `next lint` was removed in Next.js 16; pipeline runs `eslint` directly; `@next/eslint-plugin-next` defaults to flat config in v16 |
-
-### Deployment
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| Vercel CLI | Programmatic deployment from pipeline | `vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`; requires `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` as env vars |
-| `vercel.json` | Deployment configuration | Generated by pipeline; defines rewrites, security headers, function timeouts |
-| GitHub Actions | CI/CD for the generated app post-deploy | Pipeline scaffolds a `.github/workflows/ci.yml`; runs Vitest + Playwright + Lighthouse on every PR |
-
-### Development Tools (Per Generated App)
-
-| Tool | Purpose | Notes |
-|------|---------|-------|
-| `create-next-app` | Project scaffold | `npx create-next-app@latest --typescript --tailwind --app --src-dir --turbopack`; produces the baseline the pipeline then populates |
-| Turbopack | Default bundler (Next.js 16) | No configuration needed; 2–5x faster builds; opt out with `--webpack` only if custom webpack plugins are required (unusual for generated apps) |
-| ESLint 9 (flat config) | Linting | `eslint.config.mjs`; `@next/eslint-plugin-next` included; run separately from `next build` (removed in v16) |
-
-### Installation (Generated App)
-
-```bash
-# Scaffold
-npx create-next-app@latest my-app --typescript --tailwind --app --src-dir --turbopack
-cd my-app
-
-# UI components (shadcn/ui)
-npx shadcn@latest init
-
-# Core runtime deps
-npm install zod react-hook-form @hookform/resolvers next-themes lucide-react
-
-# Testing
-npm install -D vitest @testing-library/react @testing-library/user-event @vitejs/plugin-react jsdom
-npm install -D playwright @playwright/test @axe-core/playwright
-
-# Security headers
-npm install nosecone
-
-# Dev
-npm install -D eslint eslint-config-next
-```
-
----
-
-## Alternatives Considered
-
-| Recommended | Alternative | When to Use Alternative |
-|-------------|-------------|-------------------------|
-| Next.js 16 App Router | Remix | If the app is form-heavy/mutation-heavy and you prefer loader/action over Server Components; smaller community today |
-| Next.js 16 App Router | Vite + React SPA | If there is absolutely no SSR need and no API routes; simpler but no server-side generation |
-| Vercel | Railway / Fly.io | If the generated app needs persistent server processes or long-running workers (outside v1 scope) |
-| Vercel | AWS Amplify | If the organization has an AWS-only mandate; significantly more config overhead |
-| Vitest | Jest | Never for new Next.js 16 projects — Vitest is faster, supports native ESM, and is the officially recommended testing framework in Next.js docs |
-| Tailwind CSS v4 | Tailwind CSS v3 | Never for new projects — v3 is end-of-life; the Oxide engine and CSS-first config are strictly better |
-| Zod v4 | Yup / Joi | If the codebase has heavy existing Yup investment; Zod v4 is faster and TypeScript-first |
-| `fastmcp` 3.x | `mcp` (base Python SDK) | Never — FastMCP is the maintained superset; the base SDK incorporated FastMCP 1.0 and then diverged |
-| `@axe-core/playwright` | `@axe-core/react` | `@axe-core/react` does not support React 18+; use the Playwright integration for all accessibility testing |
-
----
-
-## What NOT to Use
-
-| Avoid | Why | Use Instead |
-|-------|-----|-------------|
-| Next.js Pages Router (new files) | App Router is the default in v16; Pages Router is in maintenance mode | App Router only |
-| `middleware.ts` | Deprecated in Next.js 16 in favor of `proxy.ts`; will be removed in v17 | `proxy.ts` |
-| `next lint` command | Removed from Next.js 16 | Run `eslint` directly |
-| `experimental.ppr` flag | Removed in Next.js 16; replaced by `cacheComponents` | `cacheComponents: true` in `next.config.ts` |
-| Jest in new Next.js projects | Slower cold start (6x), no native ESM, worse DX with Server Components | Vitest 4.x |
-| `@axe-core/react` | Does not support React 18+ — silently misses violations | `@axe-core/playwright` |
-| `create-react-app` | Unmaintained; no SSR; no Turbopack | `create-next-app@latest` |
-| CSS Modules as primary styling | More verbose than Tailwind for generated code; harder for AI to reason about | Tailwind CSS v4 |
-| Python `pip` or `poetry` directly | uv is 10–100x faster and already used by ios-app-factory; consistency required | `uv` |
-| `mcp` Python SDK (server authoring) | Raw SDK requires more boilerplate; FastMCP 3.x is the standard wrapper | `fastmcp` |
-
----
-
-## Stack Patterns by Variant
-
-**If the generated app has no dynamic data (fully static site):**
-- Use `output: 'export'` in `next.config.ts` for static export
-- Deploy to Vercel or GitHub Pages
-- Skip `@tanstack/react-query`
-
-**If the generated app has a database:**
-- Add Prisma ORM + Neon (serverless Postgres) or Turso (SQLite at edge)
-- This is outside v1 scope but the stack supports it without changes
-
-**If the generated app needs authentication:**
-- Add Clerk (managed auth, easiest) or NextAuth.js v5 (self-hosted)
-- This is outside v1 scope but the generated scaffold can include stub auth setup
-
-**If the pipeline CI needs faster test feedback:**
-- Use `vitest --pool=forks` for CPU-bound tests
-- Parallelize Playwright tests with `--workers=4`
-
----
-
-## Version Compatibility
-
-| Package | Compatible With | Notes |
-|---------|-----------------|-------|
-| Next.js 16.x | Node.js 20.9+, React 19.2, TypeScript 5.1+ | Node.js 18 dropped in Next.js 16; minimum is now 20.9.0 LTS |
-| Tailwind CSS 4.x | Next.js 16, `@tailwindcss/vite` for Turbopack | No `tailwind.config.js` needed; CSS-only config |
-| shadcn/ui | Tailwind CSS 4.x (full support since Jan 2026) | Run `npx shadcn@latest init` to get Tailwind v4 config |
-| Zod v4 | TypeScript 5.x | Breaking change from v3: import path changed to `"zod"` (no sub-path needed) |
-| Vitest 4.x | Vite 6.x | Bundled together; check `@vitejs/plugin-react` is on matching major |
-| `claude-agent-sdk` 0.1.50 | Python 3.10–3.13 | Uses bundled Claude CLI binary; Python 3.12+ recommended for best type inference |
-| `fastmcp` 3.1.1 | Python 3.10+, `mcp` 1.x | Drop-in replacement for raw `mcp` server authoring; ios-app-factory's existing `mcp>=1.26.0` dep is compatible |
+Full v1.0 stack details: See git history for 2026-03-21 STACK.md.
 
 ---
 
 ## Sources
 
-- [Next.js 16 Release Blog](https://nextjs.org/blog/next-16) — Verified: version 16.2.0, Node.js 20.9+ minimum, Turbopack stable, `proxy.ts` replaces `middleware.ts`, `next lint` removed — **HIGH confidence**
-- [PyPI: claude-agent-sdk](https://pypi.org/project/claude-agent-sdk/) — Verified: version 0.1.50, Python 3.10+ — **HIGH confidence**
-- [PyPI: fastmcp](https://pypi.org/project/fastmcp/) — Verified: version 3.1.1, Python 3.10+, Apache-2.0 — **HIGH confidence**
-- [Tailwind CSS releases (GitHub)](https://github.com/tailwindlabs/tailwindcss/releases) — Verified: latest stable v4.2.2 — **HIGH confidence**
-- [Vitest blog](https://vitest.dev/blog/vitest-4) — Verified: current stable is 4.1.0 (March 2026) — **HIGH confidence**
-- [Playwright releases (GitHub)](https://github.com/microsoft/playwright/releases) — Verified: 1.58.2 current stable — **HIGH confidence**
-- WebSearch: Zod v4 stable (2025/2026), 14x faster string parsing — **MEDIUM confidence** (multiple sources agree, no single official version number pinned from PyPI)
-- WebSearch: `@axe-core/react` React 18+ incompatibility — **HIGH confidence** (confirmed in official Deque documentation and multiple independent sources)
-- WebSearch: Vercel CLI programmatic deploy pattern (`vercel pull` → `vercel build` → `vercel deploy --prebuilt`) — **HIGH confidence** (Vercel official KB)
-- WebSearch: `nosecone` library for Next.js security headers — **MEDIUM confidence** (emerging tool, less established than manual `next.config.ts` headers)
-- ios-app-factory `pyproject.toml` — Verified existing pipeline deps (`claude-agent-sdk>=0.1.35`, `mcp>=1.26.0`, `fastmcp` via factory_mcp_server.py pattern) — **HIGH confidence**
+- [FastMCP PyPI — v3.1.1, March 14 2026](https://pypi.org/project/fastmcp/) — **HIGH confidence**
+- [FastMCP Claude Code Integration](https://gofastmcp.com/integrations/claude-code) — `fastmcp install claude-code` command details — **HIGH confidence**
+- [FastMCP MCP JSON Configuration](https://gofastmcp.com/integrations/mcp-json-configuration) — `uv run` transport pattern — **HIGH confidence**
+- [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp) — `claude mcp add --scope user|project` scopes — **HIGH confidence**
+- [mcpb GitHub](https://github.com/modelcontextprotocol/mcpb) — .mcpb format; Python compiled extension limitation — **HIGH confidence**
+- [Anthropic Desktop Extensions Blog](https://www.anthropic.com/engineering/desktop-extensions) — .mcpb is for Claude Desktop; Python limitation confirmed — **HIGH confidence**
+- [vercel-cli Python PyPI — v50.35.0](https://github.com/nuage-studio/vercel-cli-python) — bundles Node.js, `run_vercel()` API, 101 releases active — **HIGH confidence**
+- [open-next-cdk PyPI](https://pypi.org/project/open-next-cdk/) — Python package for CDK + Next.js on AWS — **MEDIUM confidence** (architecture verified, exact latest version requires implementation-time pinning)
+- [aws-cdk-lib PyPI — v2.240.0+](https://pypi.org/project/aws-cdk-lib/) — Python CDK library, Python 3.9+ — **HIGH confidence**
+- [Google Cloud Run — Deploy Next.js](https://docs.cloud.google.com/run/docs/quickstarts/frameworks/deploy-nextjs-service) — `gcloud run deploy --source .` pattern — **HIGH confidence**
+- [google-cloud-run PyPI — v0.15.0](https://pypi.org/project/google-cloud-run/) — REST API client (NOT recommended for deploy automation) — **HIGH confidence** (confirmed it is the wrong tool)
+- [Next.js output standalone docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/output) — standalone mode, `server.js`, `PORT` env var — **HIGH confidence**
+- WebSearch: `next dev` port flag, `-p` option — **HIGH confidence** (multiple consistent sources)
 
 ---
-*Stack research for: web-app-factory — Python pipeline orchestration + Next.js generated apps*
-*Researched: 2026-03-21*
+
+*Stack research for: web-app-factory v2.0 — MCP App distribution, local dev server, multi-cloud deploy*
+*Researched: 2026-03-23*
