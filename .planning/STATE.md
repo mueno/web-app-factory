@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
-status: executing
-stopped_at: Completed 09-deploy-abstraction/09-03-PLAN.md
-last_updated: "2026-03-23T08:03:49.810Z"
-last_activity: 2026-03-23 — Phase 09 Plan 01 complete (DeployProvider ABC + AWSProvider + LocalOnlyProvider)
+status: completed
+stopped_at: Completed 09-deploy-abstraction/09-02-PLAN.md
+last_updated: "2026-03-23T08:12:50.686Z"
+last_activity: 2026-03-23 — Phase 09 Plan 03 complete (GCPProvider + deploy_target wiring end-to-end)
 progress:
   total_phases: 13
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 22
-  completed_plans: 21
+  completed_plans: 22
   percent: 95
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 ## Current Position
 
 Phase: 9 of 13 (Deploy Abstraction)
-Plan: 3 of 3 complete
-Status: Phase 09 complete — GCPProvider + deploy_target wiring done
-Last activity: 2026-03-23 — Phase 09 Plan 03 complete (GCPProvider + deploy_target wiring end-to-end)
+Plan: 2 of 3 complete
+Status: In progress — Plan 02 done, Plan 03 (GCPProvider) ready to start
+Last activity: 2026-03-23 — Phase 09 Plan 02 complete (VercelProvider extracted + Phase3ShipExecutor refactored to DeployProvider)
 
-Progress: [██████████] 95% (v2.0 milestone — Phase 9 all 3 plans complete)
+Progress: [██████████] 95% (v2.0 milestone — Phase 9 Plan 02 of 3 complete)
 
 ## Accumulated Context
 
@@ -56,6 +56,7 @@ Carried from v1.0 + v2.0 research:
 - [Phase 09-deploy-abstraction Plan 01]: LocalOnlyProvider.verify() returns True unconditionally — deployment_gate skipped for local targets per user decision
 - [Phase 09-deploy-abstraction]: GCPProvider extracts Service URL from stderr (not stdout) — gcloud run deploy writes URL to stderr
 - [Phase 09-deploy-abstraction]: deploy_target unconditionally forwarded in pipeline_kwargs (not conditional on truthiness like company_name) — always has a string value
+- [Phase Phase 09-deploy-abstraction Plan 02]: VercelProvider.deploy() orchestrates provision+preview+promote atomically; phase_3_executor is now subprocess-free and deploy-target-agnostic
 
 ### Pending Todos
 
@@ -71,6 +72,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T08:03:49.806Z
-Stopped at: Completed 09-deploy-abstraction/09-03-PLAN.md
-Resume file: None
+Last session: 2026-03-23T08:12:50.684Z
+Stopped at: Completed 09-deploy-abstraction/09-02-PLAN.md
+Resume file: .planning/phases/09-deploy-abstraction/09-03-PLAN.md
