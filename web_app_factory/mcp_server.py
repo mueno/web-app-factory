@@ -8,15 +8,18 @@ Tool namespace convention:
   This is enforced by tests/test_mcp_server_tool_names.py — any tool
   registered without the prefix will cause CI to fail.
 
-Tools (TOOL-01 through TOOL-04):
-  waf_generate_app  — Start pipeline, return execution plan + run_id
-  waf_get_status    — Poll current progress of a pipeline run
-  waf_approve_gate  — Approve or reject an interactive-mode gate
-  waf_list_runs     — List all pipeline runs with status
+Tools (TOOL-01 through TOOL-07):
+  waf_generate_app      — Start pipeline, return execution plan + run_id
+  waf_get_status        — Poll current progress of a pipeline run
+  waf_approve_gate      — Approve or reject an interactive-mode gate
+  waf_list_runs         — List all pipeline runs with status
+  waf_start_dev_server  — Start a local dev server for a completed pipeline run
+  waf_stop_dev_server   — Stop a running local dev server for a pipeline run
 """
 
 from __future__ import annotations
 
+import asyncio
 import re
 import sys
 from pathlib import Path
@@ -259,6 +262,54 @@ def _scan_disk_runs() -> list[dict]:
                     pass
 
     return runs
+
+
+# ── TOOL-06: waf_start_dev_server ────────────────────────────────────────────
+
+@mcp.tool()
+async def waf_start_dev_server(run_id: str) -> str:
+    """Start a local dev server for a completed pipeline run.
+
+    Spawns `npm run dev` for the generated Next.js app associated with
+    the given run_id and waits up to 30 seconds for the server to be
+    ready. Returns a localhost URL once the server is listening.
+
+    Args:
+        run_id: The run identifier returned by waf_generate_app.
+
+    Returns:
+        Markdown with the localhost URL, or an error message if the
+        server could not be started within the timeout.
+    """
+    from web_app_factory._dev_server import start_dev_server  # noqa: PLC0415
+
+    # start_dev_server blocks for up to 30s — run in executor to avoid
+    # blocking the asyncio event loop.
+    return await asyncio.get_event_loop().run_in_executor(
+        None, start_dev_server, run_id
+    )
+
+
+# ── TOOL-07: waf_stop_dev_server ─────────────────────────────────────────────
+
+@mcp.tool()
+async def waf_stop_dev_server(run_id: str) -> str:
+    """Stop a running local dev server for a pipeline run.
+
+    Sends SIGTERM to the process group of the dev server associated with
+    the given run_id and waits for it to terminate. Escalates to SIGKILL
+    after a short timeout if the process does not exit gracefully.
+
+    Args:
+        run_id: The run identifier returned by waf_generate_app.
+
+    Returns:
+        Confirmation that the server was stopped, or a "not running"
+        message if no server was found for the given run_id.
+    """
+    from web_app_factory._dev_server import stop_dev_server  # noqa: PLC0415
+
+    return stop_dev_server(run_id)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
