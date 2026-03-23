@@ -3,6 +3,8 @@
 Performs regex-based file scanning for:
 - GATE-05: 'use client' misplacement in layout.tsx and page.tsx
 - GATE-06: NEXT_PUBLIC_ secret-pattern environment variable exposure
+- BILD-06: error.tsx existence for route segments with async data fetching
+- BILD-05: Mobile-first responsive Tailwind pattern usage
 
 Exported function: run_static_analysis_gate
 """
@@ -32,6 +34,14 @@ _SECRET_SCAN_EXTENSIONS = {".ts", ".tsx", ".js", ".jsx", ".env", ".env.local"}
 
 # Root-level env files scanned for GATE-06 (in addition to src/ files)
 _ROOT_ENV_FILES = [".env", ".env.local"]
+
+# BILD-06: Patterns indicating async data fetching in page.tsx
+_ASYNC_DATA_RE = re.compile(
+    r"async\s+function|await\s+fetch\(|\.json\(\)|getServerSideProps|getStaticProps"
+)
+
+# BILD-05: Hardcoded pixel widths that break responsiveness
+_HARDCODED_WIDTH_RE = re.compile(r'(?:width:\s*["\']?\d{4,}px|w-\[\d{4,}px\])')
 
 
 def _now_iso() -> str:
@@ -65,13 +75,9 @@ def _check_use_client(project_dir: Path) -> list[str]:
     return issues
 
 
-def _should_skip(path: Path, project_dir: Path) -> bool:
+def _should_skip(path: Path) -> bool:
     """Return True if the path should be skipped during scanning."""
-    # Skip node_modules anywhere in the path
-    parts = path.parts
-    if "node_modules" in parts:
-        return True
-    return False
+    return "node_modules" in path.parts
 
 
 def _check_next_public_secrets(project_dir: Path) -> list[str]:
@@ -112,7 +118,7 @@ def _check_next_public_secrets(project_dir: Path) -> list[str]:
         for filepath in src_dir.rglob("*"):
             if not filepath.is_file():
                 continue
-            if _should_skip(filepath, project_dir):
+            if _should_skip(filepath):
                 continue
             # Check extension — also match .env and .env.local by name
             name = filepath.name
@@ -123,12 +129,93 @@ def _check_next_public_secrets(project_dir: Path) -> list[str]:
     return issues
 
 
+def _check_error_boundaries(project_dir: Path) -> list[str]:
+    """BILD-06: Verify error.tsx exists for route segments with async data fetching.
+
+    Scans all page.tsx files under src/app/ for async patterns. If found,
+    checks that a sibling error.tsx exists with 'use client' directive.
+    Returns list of issue strings.
+    """
+    issues: list[str] = []
+    src_app = project_dir / "src" / "app"
+    if not src_app.exists():
+        return issues
+
+    for page_file in src_app.rglob("page.tsx"):
+        if _should_skip(page_file):
+            continue
+
+        try:
+            content = page_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        if not _ASYNC_DATA_RE.search(content):
+            continue
+
+        # This page has async data fetching — error.tsx must exist
+        error_file = page_file.parent / "error.tsx"
+        rel_dir = page_file.parent.relative_to(project_dir)
+
+        if not error_file.exists():
+            issues.append(
+                f"{rel_dir}/: page.tsx has async data fetching but no error.tsx boundary"
+            )
+            continue
+
+        # error.tsx must have 'use client'
+        try:
+            error_content = error_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        if not _USE_CLIENT_RE.search(error_content):
+            issues.append(
+                f"{rel_dir}/error.tsx: missing 'use client' directive (required for error boundaries)"
+            )
+
+    return issues
+
+
+def _check_responsive_patterns(project_dir: Path) -> list[str]:
+    """BILD-05: Check for responsive Tailwind usage and flag hardcoded widths.
+
+    Advisory-level: warns on hardcoded large pixel widths that break responsiveness.
+    Returns list of issue strings.
+    """
+    issues: list[str] = []
+    src_dir = project_dir / "src"
+    if not src_dir.exists():
+        return issues
+
+    for filepath in src_dir.rglob("*.tsx"):
+        if _should_skip(filepath):
+            continue
+
+        try:
+            content = filepath.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        lines = content.splitlines()
+        for lineno, line in enumerate(lines, start=1):
+            if _HARDCODED_WIDTH_RE.search(line):
+                rel_path = filepath.relative_to(project_dir)
+                issues.append(
+                    f"{rel_path}:{lineno}: hardcoded pixel width breaks responsive design"
+                )
+
+    return issues
+
+
 def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResult:
     """Run static analysis gate checks on the generated project.
 
-    Performs two checks:
+    Performs four checks:
     1. GATE-05: No 'use client' in layout.tsx or page.tsx
     2. GATE-06: No NEXT_PUBLIC_ secret-pattern environment variables exposed
+    3. BILD-06: error.tsx exists for route segments with async data fetching
+    4. BILD-05: No hardcoded pixel widths that break responsive design
 
     Args:
         project_dir: Absolute path to the generated Next.js project directory.
@@ -142,9 +229,11 @@ def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResu
 
     issues: list[str] = []
 
-    # Run both checks
+    # Run all checks
     issues.extend(_check_use_client(base))
     issues.extend(_check_next_public_secrets(base))
+    issues.extend(_check_error_boundaries(base))
+    issues.extend(_check_responsive_patterns(base))
 
     passed = len(issues) == 0
     status = "PASS" if passed else "BLOCKED"
