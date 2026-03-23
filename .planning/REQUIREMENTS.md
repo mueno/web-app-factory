@@ -33,10 +33,10 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 ### Local Development
 
-- [ ] **LDEV-01**: Start local dev server (`npm run dev`) with auto-detected free port
-- [ ] **LDEV-02**: Return localhost URL to user when server is ready (port detection from stdout)
-- [ ] **LDEV-03**: Track running servers by run ID; prevent duplicate starts
-- [ ] **LDEV-04**: Clean up orphan dev server processes on MCP server shutdown
+- [x] **LDEV-01**: Start local dev server (`npm run dev`) with auto-detected free port
+- [x] **LDEV-02**: Return localhost URL to user when server is ready (port detection from stdout)
+- [x] **LDEV-03**: Track running servers by run ID; prevent duplicate starts
+- [x] **LDEV-04**: Clean up orphan dev server processes on MCP server shutdown
 
 ### Deploy Abstraction
 
@@ -97,10 +97,10 @@ Deferred to future release.
 | ENVS-01 | Phase 12 | Pending |
 | ENVS-02 | Phase 12 | Pending |
 | ENVS-03 | Phase 12 | Pending |
-| LDEV-01 | Phase 10 | Pending |
-| LDEV-02 | Phase 10 | Pending |
-| LDEV-03 | Phase 10 | Pending |
-| LDEV-04 | Phase 10 | Pending |
+| LDEV-01 | Phase 10 | Complete |
+| LDEV-02 | Phase 10 | Complete |
+| LDEV-03 | Phase 10 | Complete |
+| LDEV-04 | Phase 10 | Complete |
 | DEPL-01 | Phase 9 | Complete |
 | DEPL-02 | Phase 9 | Complete |
 | DEPL-03 | Phase 9 | Complete |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: executing
-stopped_at: Phase 10 context gathered
-last_updated: "2026-03-23T13:06:02.546Z"
+stopped_at: Completed 10-local-dev-server 10-01-PLAN.md
+last_updated: "2026-03-23T13:26:45.535Z"
 last_activity: 2026-03-23 — Phase 09 Plan 02 complete (VercelProvider extracted + Phase3ShipExecutor refactored to DeployProvider)
 progress:
   total_phases: 13
   completed_phases: 9
-  total_plans: 22
-  completed_plans: 22
+  total_plans: 24
+  completed_plans: 23
   percent: 95
 ---
 
@@ -57,6 +57,8 @@ Carried from v1.0 + v2.0 research:
 - [Phase 09-deploy-abstraction]: GCPProvider extracts Service URL from stderr (not stdout) — gcloud run deploy writes URL to stderr
 - [Phase 09-deploy-abstraction]: deploy_target unconditionally forwarded in pipeline_kwargs (not conditional on truthiness like company_name) — always has a string value
 - [Phase Phase 09-deploy-abstraction Plan 02]: VercelProvider.deploy() orchestrates provision+preview+promote atomically; phase_3_executor is now subprocess-free and deploy-target-agnostic
+- [Phase 10-local-dev-server]: start_new_session=True on Popen enables os.killpg for full npm/node/next process tree termination
+- [Phase 10-local-dev-server]: _PROC_MAP separate from frozen DevServerInfo registry — mutable Popen cannot live in frozen dataclass
 
 ### Pending Todos
 
@@ -72,6 +74,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-23T13:06:02.544Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-local-dev-server/10-CONTEXT.md
+Last session: 2026-03-23T13:26:45.532Z
+Stopped at: Completed 10-local-dev-server 10-01-PLAN.md
+Resume file: None
