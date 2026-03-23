@@ -348,3 +348,258 @@ def test_init_exports_get_provider():
     from tools.deploy_providers import get_provider
 
     assert callable(get_provider)
+
+
+# ---------------------------------------------------------------------------
+# GCPProvider
+# ---------------------------------------------------------------------------
+
+
+class TestGCPProvider:
+    """GCPProvider: auth preflight + Cloud Run deploy + URL extraction."""
+
+    # ------------------------------------------------------------------
+    # Preflight checks
+    # ------------------------------------------------------------------
+
+    def test_gcp_preflight_no_gcloud(self):
+        """When gcloud --version raises FileNotFoundError, deploy() returns failure with 'gcloud CLI not found'."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        with patch("subprocess.run", side_effect=FileNotFoundError):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {})
+
+        assert result.success is False
+        assert result.provider == "gcp"
+        assert "gcloud CLI not found" in result.metadata.get("error", "")
+
+    def test_gcp_preflight_auth_failure(self):
+        """When gcloud auth print-access-token exits non-zero, deploy() returns failure with 'gcloud auth login'."""
+        import subprocess
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        gcloud_version_ok = MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+        auth_fail = MagicMock(returncode=1, stdout="", stderr="ERROR: (gcloud) no access token")
+
+        def mock_run(cmd, **kwargs):
+            if "--version" in cmd:
+                return gcloud_version_ok
+            if "print-access-token" in cmd:
+                return auth_fail
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {})
+
+        assert result.success is False
+        assert "gcloud auth login" in result.metadata.get("error", "")
+
+    def test_gcp_preflight_no_project(self):
+        """When gcloud config get-value project returns '(unset)', deploy() returns failure with 'gcloud config set project'."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        gcloud_version_ok = MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+        auth_ok = MagicMock(returncode=0, stdout="ya29.token")
+        no_project = MagicMock(returncode=0, stdout="(unset)")
+
+        def mock_run(cmd, **kwargs):
+            if "--version" in cmd:
+                return gcloud_version_ok
+            if "print-access-token" in cmd:
+                return auth_ok
+            if "get-value" in cmd and "project" in cmd:
+                return no_project
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {})
+
+        assert result.success is False
+        assert "gcloud config set project" in result.metadata.get("error", "")
+
+    # ------------------------------------------------------------------
+    # Deploy success
+    # ------------------------------------------------------------------
+
+    def test_gcp_deploy_success(self):
+        """When all checks pass and stderr contains Service URL, deploy() returns success."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        auth_ok = MagicMock(returncode=0, stdout="ya29.token")
+        project_ok = MagicMock(returncode=0, stdout="my-project-123")
+        region_ok = MagicMock(returncode=0, stdout="us-central1")
+        deploy_ok = MagicMock(
+            returncode=0,
+            stdout="",
+            stderr="Service URL: https://my-app-abc123-uc.a.run.app",
+        )
+
+        def mock_run(cmd, **kwargs):
+            if "--version" in cmd:
+                return MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+            if "print-access-token" in cmd:
+                return auth_ok
+            if "get-value" in cmd and "project" in cmd:
+                return project_ok
+            if "get-value" in cmd and "run/region" in " ".join(cmd):
+                return region_ok
+            if "run" in cmd and "deploy" in cmd:
+                return deploy_ok
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {"app_name": "my-app", "nextjs_dir": "/tmp/test"})
+
+        assert result.success is True
+        assert result.url == "https://my-app-abc123-uc.a.run.app"
+        assert result.provider == "gcp"
+
+    # ------------------------------------------------------------------
+    # Error conditions
+    # ------------------------------------------------------------------
+
+    def test_gcp_deploy_timeout(self):
+        """When gcloud run deploy raises TimeoutExpired, deploy() returns failure with timeout error."""
+        import subprocess
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        def mock_run(cmd, **kwargs):
+            if "--version" in cmd:
+                return MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+            if "print-access-token" in cmd:
+                return MagicMock(returncode=0, stdout="ya29.token")
+            if "get-value" in cmd and "project" in cmd:
+                return MagicMock(returncode=0, stdout="my-project-123")
+            if "get-value" in cmd and "run/region" in " ".join(cmd):
+                return MagicMock(returncode=0, stdout="us-central1")
+            if "deploy" in cmd:
+                raise subprocess.TimeoutExpired(cmd, 600)
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {"nextjs_dir": "/tmp/test"})
+
+        assert result.success is False
+        assert "timed out" in result.metadata.get("error", "").lower() or "timeout" in result.metadata.get("error", "").lower()
+
+    def test_gcp_deploy_no_url_in_output(self):
+        """When gcloud succeeds but stderr has no Service URL pattern, deploy() returns failure."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        def mock_run(cmd, **kwargs):
+            if "--version" in cmd:
+                return MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+            if "print-access-token" in cmd:
+                return MagicMock(returncode=0, stdout="ya29.token")
+            if "get-value" in cmd and "project" in cmd:
+                return MagicMock(returncode=0, stdout="my-project-123")
+            if "get-value" in cmd and "run/region" in " ".join(cmd):
+                return MagicMock(returncode=0, stdout="us-central1")
+            if "deploy" in cmd:
+                return MagicMock(returncode=0, stdout="", stderr="Deploying service... done")
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            result = provider.deploy(Path("/tmp/test"), {"nextjs_dir": "/tmp/test"})
+
+        assert result.success is False
+        assert result.url is None
+
+    # ------------------------------------------------------------------
+    # URL extraction
+    # ------------------------------------------------------------------
+
+    def test_gcp_url_extraction_regex(self):
+        """_GCP_URL_RE matches 'Service URL: https://...' in various stderr formats."""
+        from tools.deploy_providers.gcp_provider import _GCP_URL_RE
+
+        # Standard format
+        m = _GCP_URL_RE.search("Service URL: https://my-service-abc123-uc.a.run.app")
+        assert m is not None
+        assert m.group(1) == "https://my-service-abc123-uc.a.run.app"
+
+        # With surrounding text
+        m2 = _GCP_URL_RE.search(
+            "Deploying container to Cloud Run service [my-service] ...\n"
+            "Service URL: https://my-service-xyz-ew.a.run.app\n"
+            "Done."
+        )
+        assert m2 is not None
+        assert m2.group(1) == "https://my-service-xyz-ew.a.run.app"
+
+        # No match
+        m3 = _GCP_URL_RE.search("Deploying... done.")
+        assert m3 is None
+
+    # ------------------------------------------------------------------
+    # verify() delegation
+    # ------------------------------------------------------------------
+
+    def test_gcp_verify_delegates(self):
+        """GCPProvider.verify() calls run_deployment_gate() and returns .passed."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+
+        fake_gate_result = GateResult(
+            gate_type="deployment",
+            phase_id="3",
+            passed=True,
+            status="PASS",
+            severity="INFO",
+            confidence=1.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=[],
+        )
+
+        with patch(
+            "tools.deploy_providers.gcp_provider.run_deployment_gate",
+            return_value=fake_gate_result,
+        ) as mock_gate:
+            provider = GCPProvider()
+            result = provider.verify("https://my-service-abc123-uc.a.run.app")
+
+        mock_gate.assert_called_once_with("https://my-service-abc123-uc.a.run.app")
+        assert result is True
+
+    # ------------------------------------------------------------------
+    # Region default
+    # ------------------------------------------------------------------
+
+    def test_gcp_region_default(self):
+        """When gcloud config get-value run/region returns empty, deploy cmd includes --region us-central1."""
+        from tools.deploy_providers.gcp_provider import GCPProvider
+
+        captured_cmds: list = []
+
+        def mock_run(cmd, **kwargs):
+            captured_cmds.append(cmd)
+            if "--version" in cmd:
+                return MagicMock(returncode=0, stdout="Google Cloud SDK 456.0.0")
+            if "print-access-token" in cmd:
+                return MagicMock(returncode=0, stdout="ya29.token")
+            if "get-value" in cmd and "project" in cmd and "run/region" not in " ".join(cmd):
+                return MagicMock(returncode=0, stdout="my-project-123")
+            if "get-value" in cmd and "run/region" in " ".join(cmd):
+                # Empty region → default to us-central1
+                return MagicMock(returncode=0, stdout="")
+            if "deploy" in cmd:
+                return MagicMock(returncode=0, stdout="", stderr="Service URL: https://my-app-abc123-uc.a.run.app")
+            return MagicMock(returncode=0, stdout="")
+
+        with patch("subprocess.run", side_effect=mock_run):
+            provider = GCPProvider()
+            provider.deploy(Path("/tmp/test"), {"nextjs_dir": "/tmp/test"})
+
+        # Find the deploy command
+        deploy_cmd = next((c for c in captured_cmds if "deploy" in c), None)
+        assert deploy_cmd is not None
+        assert "--region" in deploy_cmd
+        region_idx = deploy_cmd.index("--region")
+        assert deploy_cmd[region_idx + 1] == "us-central1"
