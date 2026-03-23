@@ -205,14 +205,18 @@ class GCPProvider(DeployProvider):
         url = _extract_gcp_url(deploy_result.stderr)
 
         if deploy_result.returncode != 0 or url is None:
-            error_detail = deploy_result.stderr or deploy_result.stdout or "gcloud deploy failed"
+            error_detail = deploy_result.stderr or deploy_result.stdout or ""
+            logger.error(
+                "gcloud run deploy failed (exit %d): %s",
+                deploy_result.returncode,
+                error_detail[:500],
+            )
             return DeployResult(
                 success=False,
                 url=None,
                 provider="gcp",
                 metadata={
-                    "error": error_detail,
-                    "returncode": deploy_result.returncode,
+                    "error": f"gcloud run deploy failed (exit code {deploy_result.returncode})",
                 },
             )
 

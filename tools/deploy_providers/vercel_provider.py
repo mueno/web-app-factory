@@ -166,8 +166,8 @@ class VercelProvider(DeployProvider):
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel link exited with code {proc.returncode}"
-            return f"Vercel provisioning failed: {error_msg}"
+            logger.error("vercel link failed (exit %d): %s", proc.returncode, stderr[:500])
+            return f"Vercel provisioning failed (exit code {proc.returncode})"
 
         return None
 
@@ -203,17 +203,15 @@ class VercelProvider(DeployProvider):
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel exited with code {proc.returncode}"
-            return None, f"Vercel preview deploy failed: {error_msg}"
+            logger.error("vercel deploy failed (exit %d): %s", proc.returncode, stderr[:500])
+            return None, f"Vercel preview deploy failed (exit code {proc.returncode})"
 
         # Extract preview URL from stdout using regex
         stdout = proc.stdout or ""
         match = _VERCEL_URL_RE.search(stdout)
         if not match:
-            return None, (
-                "Could not capture Vercel preview URL from CLI output. "
-                f"stdout was: {stdout[:200]!r}"
-            )
+            logger.error("Could not capture Vercel preview URL. stdout: %s", stdout[:500])
+            return None, "Could not capture Vercel preview URL from CLI output"
 
         preview_url = match.group(0)
 
@@ -263,7 +261,7 @@ class VercelProvider(DeployProvider):
 
         if proc.returncode != 0:
             stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel promote exited with code {proc.returncode}"
-            return f"Production promotion failed: {error_msg}"
+            logger.error("vercel promote failed (exit %d): %s", proc.returncode, stderr[:500])
+            return f"Production promotion failed (exit code {proc.returncode})"
 
         return None

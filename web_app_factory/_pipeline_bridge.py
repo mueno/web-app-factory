@@ -31,12 +31,15 @@ Internal:
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # ── sys.path adjustment so 'tools' is importable when running from any cwd ──
 _PROJECT_ROOT = Path(__file__).parent.parent
@@ -46,12 +49,16 @@ if str(_PROJECT_ROOT) not in sys.path:
 # ── Module-level executor (3 workers per research recommendation) ────────────
 _EXECUTOR = ThreadPoolExecutor(max_workers=3, thread_name_prefix="waf-pipeline")
 
-# ── Active runs registry ─────────────────────────────────────────────────────
+# ── Active runs registry (bounded — completed futures are auto-removed) ──────
 _ACTIVE_RUNS: dict[str, asyncio.Future] = {}
+_MAX_ACTIVE_RUNS = 100  # safety cap to prevent unbounded memory growth
 
 
 # ── Default contract path (used by bridge when no contract is provided) ──────
 _DEFAULT_CONTRACT_PATH = _PROJECT_ROOT / "contracts" / "pipeline-contract.web.v1.yaml"
+
+# ── Allowed contract directory (P1 security fix — path traversal prevention) ─
+_CONTRACTS_DIR = (_PROJECT_ROOT / "contracts").resolve()
 
 
 def _generate_run_id(idea: str) -> str:
@@ -88,7 +95,16 @@ def _run_pipeline_sync(**kwargs: Any) -> dict[str, Any]:
     contract = kwargs.pop("contract", None)
     if contract is None:
         contract_path = kwargs.get("contract_path", str(_DEFAULT_CONTRACT_PATH))
-        with open(contract_path) as fh:
+        # P1 security: validate contract_path is under contracts/ directory
+        resolved = Path(contract_path).resolve()
+        try:
+            resolved.relative_to(_CONTRACTS_DIR)
+        except ValueError:
+            raise ValueError(
+                f"contract_path must be under {_CONTRACTS_DIR}, "
+                f"got {resolved}"
+            )
+        with open(resolved, encoding="utf-8") as fh:
             contract = yaml.safe_load(fh)
 
     return run_pipeline(contract, **kwargs)
@@ -142,6 +158,16 @@ async def start_pipeline_async(
         pipeline_kwargs["contact_email"] = contact_email
     pipeline_kwargs["deploy_target"] = deploy_target
 
+    # Safety cap: reject if too many concurrent/completed runs are tracked
+    if len(_ACTIVE_RUNS) >= _MAX_ACTIVE_RUNS:
+        # Evict completed futures before rejecting
+        _evict_completed_runs()
+    if len(_ACTIVE_RUNS) >= _MAX_ACTIVE_RUNS:
+        raise RuntimeError(
+            f"Too many active pipeline runs ({_MAX_ACTIVE_RUNS}). "
+            "Wait for existing runs to complete."
+        )
+
     # Step 3: Submit to thread pool — returns immediately.
     loop = asyncio.get_event_loop()
     future: asyncio.Future = loop.run_in_executor(
@@ -149,7 +175,21 @@ async def start_pipeline_async(
         lambda: _run_pipeline_sync(**pipeline_kwargs),
     )
 
-    # Step 4: Track the future so callers can check/await it.
+    # Step 4: Track the future and register cleanup callback.
     _ACTIVE_RUNS[run_id] = future
+    future.add_done_callback(lambda _f, _rid=run_id: _on_run_complete(_rid))
 
     return run_id
+
+
+def _on_run_complete(run_id: str) -> None:
+    """Callback invoked when a pipeline future completes. Removes from registry."""
+    _ACTIVE_RUNS.pop(run_id, None)
+    logger.debug("Pipeline run %s completed and removed from active registry", run_id)
+
+
+def _evict_completed_runs() -> None:
+    """Remove any completed futures from _ACTIVE_RUNS."""
+    completed = [rid for rid, fut in _ACTIVE_RUNS.items() if fut.done()]
+    for rid in completed:
+        _ACTIVE_RUNS.pop(rid, None)
