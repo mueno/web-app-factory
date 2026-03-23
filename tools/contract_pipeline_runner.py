@@ -17,7 +17,10 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
+
+ProgressCallback = Callable[[str, str, str, dict], None]
+# Signature: (event_type, phase_id, message, detail_dict)
 
 import yaml
 
@@ -308,6 +311,24 @@ def _run_gate_checks(
     return len(issues) == 0, issues
 
 
+def _emit_progress(
+    on_progress: Optional[ProgressCallback],
+    event_type: str,
+    phase_id: str,
+    message: str,
+    detail: dict = None,
+) -> None:
+    """Safely invoke progress callback if provided.
+
+    Never raises — callback errors must never break the pipeline.
+    """
+    if on_progress is not None:
+        try:
+            on_progress(event_type, phase_id, message, detail or {})
+        except Exception:
+            pass
+
+
 def run_pipeline(
     contract: dict[str, Any],
     project_dir: str,
@@ -320,6 +341,7 @@ def run_pipeline(
     company_name: Optional[str] = None,
     contact_email: Optional[str] = None,
     deploy_target: str = "vercel",
+    on_progress: Optional[ProgressCallback] = None,
 ) -> dict[str, Any]:
     """Execute the pipeline from contract definition.
 
@@ -338,6 +360,10 @@ def run_pipeline(
         deploy_target: Deployment target ("vercel", "gcp", "aws", "local").
             Default "vercel" for backward compatibility.
             Passed to Phase 3 executor via PhaseContext.extra.
+        on_progress: Optional callback for real-time progress events.
+            Signature: (event_type, phase_id, message, detail_dict).
+            When None (default), zero overhead. Callback errors are swallowed
+            so they never break the pipeline.
 
     Returns:
         Summary dict with keys: status, run_id, phases_executed, phases_skipped,
@@ -411,6 +437,8 @@ def run_pipeline(
         # Record phase start
         phase_start(run_id, phase_id, project_dir)
         monitor.on_tool_use("mcp__factory__phase_reporter", {"phase": phase_id, "status": "start"})
+        phase_label = f"Phase {phase_id}"
+        _emit_progress(on_progress, "phase_start", phase_id, f"Starting {phase_label}", {})
 
         # Look up executor
         executor = get_executor(phase_id)
@@ -460,6 +488,13 @@ def run_pipeline(
 
         # Phase succeeded: track completion via GovernanceMonitor
         monitor.on_tool_use("mcp__factory__phase_reporter", {"phase": phase_id, "status": "complete"})
+        _emit_progress(
+            on_progress,
+            "phase_execute_done",
+            phase_id,
+            f"{phase_label} execution complete",
+            {"sub_steps": [s.sub_step_id for s in result.sub_steps if s.success]},
+        )
 
         # Phase succeeded: generate quality self-assessment (CONT-04)
         try:
@@ -474,8 +509,22 @@ def run_pipeline(
         if not skip_gates:
             contract_phase = _get_contract_phase(contract, phase_id)
             if contract_phase is not None:
+                _emit_progress(
+                    on_progress,
+                    "gate_start",
+                    phase_id,
+                    f"Running gates for {phase_label}",
+                    {"gate_types": [g.get("type") for g in contract_phase.get("gates", [])]},
+                )
                 gate_passed, gate_issues = _run_gate_checks(
                     contract_phase, project_dir, nextjs_dir=nextjs_dir
+                )
+                _emit_progress(
+                    on_progress,
+                    "gate_result",
+                    phase_id,
+                    f"Gates {'passed' if gate_passed else 'failed'} for {phase_label}",
+                    {"passed": gate_passed},
                 )
                 if not gate_passed:
                     gate_error = f"Gate failure for phase {phase_id}: {'; '.join(gate_issues)}"
@@ -499,6 +548,7 @@ def run_pipeline(
             project_dir,
             artifacts=[a for a in result.artifacts],
         )
+        _emit_progress(on_progress, "phase_complete", phase_id, f"{phase_label} complete", {})
         print(f"[pipeline] Phase {phase_id} complete.", file=sys.stderr)
 
     # All phases done
