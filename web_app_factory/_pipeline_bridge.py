@@ -140,6 +140,7 @@ async def start_pipeline_async(
         pipeline_kwargs["company_name"] = company_name
     if contact_email:
         pipeline_kwargs["contact_email"] = contact_email
+    pipeline_kwargs["deploy_target"] = deploy_target
 
     # Step 3: Submit to thread pool — returns immediately.
     loop = asyncio.get_event_loop()

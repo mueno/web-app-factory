@@ -116,3 +116,73 @@ class TestActiveRunsTracking:
                 assert run_id in _pipeline_bridge._ACTIVE_RUNS, (
                     f"run_id '{run_id}' not found in _ACTIVE_RUNS after start_pipeline_async"
                 )
+
+
+class TestDeployTargetForwarding:
+    """deploy_target flows from start_pipeline_async() into pipeline_kwargs."""
+
+    def test_deploy_target_forwarded(self):
+        """When deploy_target='gcp' is passed, pipeline_kwargs contains deploy_target='gcp'."""
+        captured_kwargs: list = []
+
+        def capture_kwargs(**kwargs):
+            captured_kwargs.append(kwargs)
+            return {"status": "completed"}
+
+        with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_kwargs):
+            from web_app_factory import _pipeline_bridge
+            import importlib
+            importlib.reload(_pipeline_bridge)
+
+            with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_kwargs):
+                called_event = threading.Event()
+
+                def capture_and_signal(**kwargs):
+                    captured_kwargs.append(kwargs)
+                    called_event.set()
+                    return {"status": "completed"}
+
+                with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
+                    asyncio.run(
+                        _pipeline_bridge.start_pipeline_async(
+                            "gcp test app",
+                            "./output/GCPApp",
+                            deploy_target="gcp",
+                        )
+                    )
+                    called_event.wait(timeout=3.0)
+
+        assert len(captured_kwargs) >= 1, "Pipeline was never called"
+        kwargs = captured_kwargs[-1]
+        assert "deploy_target" in kwargs, f"deploy_target not in kwargs: {kwargs.keys()}"
+        assert kwargs["deploy_target"] == "gcp", f"Expected 'gcp', got {kwargs['deploy_target']!r}"
+
+    def test_deploy_target_default(self):
+        """When deploy_target is not specified, pipeline_kwargs contains deploy_target='vercel'."""
+        captured_kwargs: list = []
+        called_event = threading.Event()
+
+        def capture_and_signal(**kwargs):
+            captured_kwargs.append(kwargs)
+            called_event.set()
+            return {"status": "completed"}
+
+        with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
+            from web_app_factory import _pipeline_bridge
+            import importlib
+            importlib.reload(_pipeline_bridge)
+
+            with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
+                asyncio.run(
+                    _pipeline_bridge.start_pipeline_async(
+                        "default deploy app",
+                        "./output/DefaultApp",
+                        # deploy_target NOT specified — should default to 'vercel'
+                    )
+                )
+                called_event.wait(timeout=3.0)
+
+        assert len(captured_kwargs) >= 1, "Pipeline was never called"
+        kwargs = captured_kwargs[-1]
+        assert "deploy_target" in kwargs, f"deploy_target not in kwargs: {kwargs.keys()}"
+        assert kwargs["deploy_target"] == "vercel", f"Expected 'vercel', got {kwargs['deploy_target']!r}"
