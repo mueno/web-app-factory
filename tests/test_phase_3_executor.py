@@ -144,20 +144,19 @@ class TestPhase3ExecutorProperties:
 
 
 class TestProvisionSubStep:
-    """Tests for the provision sub-step (vercel link --yes)."""
+    """Tests for the provision sub-step (vercel link --yes via VercelProvider)."""
 
     def test_provision_success(self, tmp_path):
-        """vercel link returns 0 -> SubStepResult(success=True)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        """vercel link returns 0 -> VercelProvider._provision returns None (no error)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success()
-            result = executor._provision(ctx)
+            error = provider._provision(str(tmp_path))
 
-        assert result.success is True
-        assert result.sub_step_id == "provision"
+        assert error is None
         # Verify vercel link command was called
         args = mock_run.call_args[0][0]
         assert "vercel" in args
@@ -165,17 +164,17 @@ class TestProvisionSubStep:
         assert "--yes" in args
 
     def test_provision_failure(self, tmp_path):
-        """vercel link returns 1 -> SubStepResult(success=False)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        """vercel link returns 1 -> VercelProvider._provision returns error string."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_failure(returncode=1, stderr="Not authenticated")
-            result = executor._provision(ctx)
+            error = provider._provision(str(tmp_path))
 
-        assert result.success is False
-        assert result.error is not None
+        assert error is not None
+        assert isinstance(error, str)
 
     def test_provision_stops_pipeline_on_failure(self, tmp_path):
         """Provision failure stops execution (PhaseResult.success=False)."""
@@ -183,7 +182,8 @@ class TestProvisionSubStep:
         ctx = _make_context(tmp_path)
         executor = Phase3ShipExecutor()
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        # Mock vercel subprocess to fail at provision step
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_failure()
             result = executor.execute(ctx)
 
@@ -200,23 +200,23 @@ class TestProvisionSubStep:
 
 
 class TestDeployPreviewSubStep:
-    """Tests for the deploy_preview sub-step."""
+    """Tests for the deploy_preview sub-step (via VercelProvider._deploy_preview)."""
 
     def test_deploy_preview_captures_url(self, tmp_path):
         """stdout with Vercel URL -> URL parsed and deployment.json written."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        from tools.deploy_providers.vercel_provider import VercelProvider
+
+        provider = VercelProvider()
 
         preview_url = "https://myapp-abc123.vercel.app"
         stdout = f"Deployed to {preview_url}\n"
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success(stdout=stdout)
-            result = executor._deploy_preview(ctx)
+            url, error = provider._deploy_preview(str(tmp_path), tmp_path)
 
-        assert result.success is True
-        assert result.sub_step_id == "deploy_preview"
+        assert error is None
+        assert url == preview_url
 
         # deployment.json should be written
         deployment_json_path = tmp_path / "docs" / "pipeline" / "deployment.json"
@@ -229,9 +229,9 @@ class TestDeployPreviewSubStep:
 
     def test_deploy_preview_url_regex_multiline(self, tmp_path):
         """Multi-line stdout with extra text -> URL still captured."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        from tools.deploy_providers.vercel_provider import VercelProvider
+
+        provider = VercelProvider()
 
         preview_url = "https://myapp-xyz789.vercel.app"
         stdout = (
@@ -241,39 +241,42 @@ class TestDeployPreviewSubStep:
             "Done!\n"
         )
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success(stdout=stdout)
-            result = executor._deploy_preview(ctx)
+            url, error = provider._deploy_preview(str(tmp_path), tmp_path)
 
-        assert result.success is True
+        assert error is None
+        assert url == preview_url
         deployment_json_path = tmp_path / "docs" / "pipeline" / "deployment.json"
         data = json.loads(deployment_json_path.read_text())
         assert data["preview_url"] == preview_url
 
     def test_deploy_preview_url_not_found_fails(self, tmp_path):
-        """stdout without Vercel URL -> SubStepResult(success=False)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        """stdout without Vercel URL -> returns (None, error_string)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success(stdout="No URL here")
-            result = executor._deploy_preview(ctx)
+            url, error = provider._deploy_preview(str(tmp_path), tmp_path)
 
-        assert result.success is False
-        assert "URL" in result.error or "url" in result.error.lower()
+        assert url is None
+        assert error is not None
+        assert "URL" in error or "url" in error.lower()
 
     def test_deploy_preview_vercel_failure(self, tmp_path):
-        """vercel CLI returns non-zero -> SubStepResult(success=False)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
+        """vercel CLI returns non-zero -> returns (None, error_string)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_failure(returncode=1)
-            result = executor._deploy_preview(ctx)
+            url, error = provider._deploy_preview(str(tmp_path), tmp_path)
 
-        assert result.success is False
+        assert url is None
+        assert error is not None
 
 
 # ---------------------------------------------------------------------------
@@ -405,17 +408,25 @@ class TestGateLegalSubStep:
 class TestGateRetry:
     """Tests for _run_gate_with_retry (lighthouse and accessibility)."""
 
+    def _make_executor_with_provider(self, tmp_path):
+        """Create a Phase3ShipExecutor with a mocked provider set."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        from tools.deploy_providers.vercel_provider import VercelProvider
+        executor = Phase3ShipExecutor()
+        executor._preview_url = "https://test.vercel.app"
+        executor._provider = VercelProvider()
+        return executor
+
     def test_gate_retry_passes_on_first_try(self, tmp_path):
         """Gate passes first try -> success with no retry."""
         from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
         ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        executor = self._make_executor_with_provider(tmp_path)
 
         passing_result = _make_passing_gate_result("lighthouse")
 
         with patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
-             patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub:
+             patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub:
             result = executor._run_gate_with_retry(
                 gate_fn=lambda url: passing_result,
                 gate_name="gate_lighthouse",
@@ -431,10 +442,8 @@ class TestGateRetry:
 
     def test_gate_retry_on_failure_succeeds_third_attempt(self, tmp_path):
         """Gate fails twice, passes on 3rd -> overall success with retry notes."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
         ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        executor = self._make_executor_with_provider(tmp_path)
 
         failing_result = _make_failing_gate_result("lighthouse")
         passing_result = _make_passing_gate_result("lighthouse")
@@ -447,12 +456,10 @@ class TestGateRetry:
                 return failing_result
             return passing_result
 
-        preview_stdout = "https://myapp-new.vercel.app"
-
         with patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
-             patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub:
+             patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub:
             mock_agent.return_value = "Fixed issues"
-            mock_sub.return_value = _mock_subprocess_success(stdout=f"https://myapp-new.vercel.app")
+            mock_sub.return_value = _mock_subprocess_success(stdout="https://myapp-new.vercel.app")
             result = executor._run_gate_with_retry(
                 gate_fn=gate_fn,
                 gate_name="gate_lighthouse",
@@ -466,18 +473,15 @@ class TestGateRetry:
 
     def test_gate_retry_exhausted(self, tmp_path):
         """Gate fails 3 times -> SubStepResult(success=False)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
         ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        executor = self._make_executor_with_provider(tmp_path)
 
         failing_result = _make_failing_gate_result("lighthouse")
-        preview_stdout = "https://myapp-new.vercel.app"
 
         with patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
-             patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub:
+             patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub:
             mock_agent.return_value = "Fixed"
-            mock_sub.return_value = _mock_subprocess_success(stdout=f"{preview_stdout}")
+            mock_sub.return_value = _mock_subprocess_success(stdout="https://myapp-new.vercel.app")
             result = executor._run_gate_with_retry(
                 gate_fn=lambda url: failing_result,
                 gate_name="gate_lighthouse",
@@ -505,7 +509,7 @@ class TestGateRetry:
             return failing_result
 
         with patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
-             patch("tools.phase_executors.phase_3_executor.subprocess.run"):
+             patch("tools.deploy_providers.vercel_provider.subprocess.run"):
             result = executor._gate_security_headers(ctx)
 
         # security_headers uses run_security_headers_gate mock, called once
@@ -564,7 +568,7 @@ class TestMcpApprovalSubStep:
         # Mock all sub-steps up to mcp_approval to succeed
         passing_gate = _make_passing_gate_result()
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub, \
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub, \
              patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
              patch("tools.phase_executors.phase_3_executor.run_legal_gate") as mock_legal, \
              patch("tools.phase_executors.phase_3_executor.run_lighthouse_gate") as mock_lh, \
@@ -599,29 +603,20 @@ class TestMcpApprovalSubStep:
 
 
 class TestDeployProductionSubStep:
-    """Tests for the deploy_production sub-step."""
+    """Tests for the deploy_production sub-step (via VercelProvider._promote)."""
 
     def test_deploy_production_success(self, tmp_path):
-        """vercel promote returns 0 -> SubStepResult(success=True)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        """vercel promote returns 0 -> VercelProvider._promote returns None (no error)."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        # Create deployment.json
-        pipeline_dir = tmp_path / "docs" / "pipeline"
-        pipeline_dir.mkdir(parents=True, exist_ok=True)
-        (pipeline_dir / "deployment.json").write_text(
-            json.dumps({"preview_url": "https://test.vercel.app", "platform": "vercel"}),
-            encoding="utf-8",
-        )
+        provider = VercelProvider()
+        preview_url = "https://test.vercel.app"
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success()
-            result = executor._deploy_production(ctx)
+            error = provider._promote(preview_url, str(tmp_path))
 
-        assert result.success is True
-        assert result.sub_step_id == "deploy_production"
+        assert error is None
 
         # Verify vercel promote command was called
         args = mock_run.call_args[0][0]
@@ -629,17 +624,16 @@ class TestDeployProductionSubStep:
         assert "promote" in args
 
     def test_deploy_production_failure(self, tmp_path):
-        """vercel promote returns non-zero -> SubStepResult(success=False)."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path)
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        """vercel promote returns non-zero -> VercelProvider._promote returns error string."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_failure()
-            result = executor._deploy_production(ctx)
+            error = provider._promote("https://test.vercel.app", str(tmp_path))
 
-        assert result.success is False
+        assert error is not None
 
 
 # ---------------------------------------------------------------------------
@@ -667,7 +661,7 @@ class TestFullHappyPath:
         prd_dir.mkdir(parents=True, exist_ok=True)
         (prd_dir / "prd.md").write_text("# App PRD\n\n## Features\n\n- Feature\n", encoding="utf-8")
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub, \
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub, \
              patch("tools.phase_executors.phase_3_executor.run_deploy_agent") as mock_agent, \
              patch("tools.phase_executors.phase_3_executor.run_legal_gate") as mock_legal, \
              patch("tools.phase_executors.phase_3_executor.run_lighthouse_gate") as mock_lh, \
@@ -676,8 +670,8 @@ class TestFullHappyPath:
              patch("tools.phase_executors.phase_3_executor.run_link_integrity_gate") as mock_link, \
              patch("tools.phase_executors.phase_3_executor.run_mcp_approval_gate") as mock_mcp:
 
-            # Provision (vercel link)
-            # deploy_preview (vercel deploy) -> with URL
+            # Provision (vercel link) + deploy_preview (vercel deploy) -> with URL
+            # promote (vercel promote) — all use vercel_provider.subprocess.run
             mock_sub.return_value = _mock_subprocess_success(stdout=preview_url)
             mock_agent.return_value = "Completed"
             mock_legal.return_value = passing_gate
@@ -722,47 +716,47 @@ class TestFullHappyPath:
 
 
 class TestProvisionNextjsDir:
-    """Test 2: provision uses nextjs_dir from ctx.extra as cwd."""
+    """Test 2: provision uses nextjs_dir from ctx.extra as cwd (via VercelProvider)."""
 
     def test_provision_uses_nextjs_dir_as_cwd(self, tmp_path):
-        """_provision cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
-        executor = Phase3ShipExecutor()
+        """VercelProvider._provision cwd uses nextjs_dir, not project_dir."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success()
-            executor._provision(ctx)
+            provider._provision("/fake/nextjs")
 
-        # subprocess.run must have been called with cwd="/fake/nextjs" (not str(tmp_path))
+        # subprocess.run must have been called with cwd="/fake/nextjs"
         assert mock_run.called, "subprocess.run was not called"
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs.get("cwd") == "/fake/nextjs", (
             f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
-            "DEPL-01: _provision must use nextjs_dir (from ctx.extra) as cwd."
+            "DEPL-01: _provision must use nextjs_dir as cwd."
         )
 
 
 class TestDeployPreviewNextjsDir:
-    """Test 3: deploy_preview uses nextjs_dir from ctx.extra as cwd."""
+    """Test 3: deploy_preview uses nextjs_dir from ctx.extra as cwd (via VercelProvider)."""
 
     def test_deploy_preview_uses_nextjs_dir_as_cwd(self, tmp_path):
-        """_deploy_preview cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
-        executor = Phase3ShipExecutor()
+        """VercelProvider._deploy_preview cwd uses nextjs_dir, not project_dir."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success(
                 stdout="https://test-app.vercel.app"
             )
-            executor._deploy_preview(ctx)
+            provider._deploy_preview("/fake/nextjs", tmp_path)
 
         assert mock_run.called, "subprocess.run was not called"
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs.get("cwd") == "/fake/nextjs", (
             f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
-            "DEPL-01: _deploy_preview must use nextjs_dir (from ctx.extra) as cwd."
+            "DEPL-01: _deploy_preview must use nextjs_dir as cwd."
         )
 
 
@@ -825,14 +819,16 @@ class TestGateLegalNextjsDir:
 
 
 class TestGateRetryNextjsDir:
-    """Test 6: _run_gate_with_retry re-deploy subprocess uses nextjs_dir as cwd."""
+    """Test 6: _run_gate_with_retry re-deploy uses nextjs_dir as cwd (via VercelProvider)."""
 
     def test_retry_redeploy_uses_nextjs_dir_as_cwd(self, tmp_path):
-        """After gate failure, the re-deploy subprocess.run uses cwd=nextjs_dir."""
+        """After gate failure, the re-deploy via provider uses nextjs_dir as cwd."""
         from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+        from tools.deploy_providers.vercel_provider import VercelProvider
         ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
         executor = Phase3ShipExecutor()
         executor._preview_url = "https://test.vercel.app"
+        executor._provider = VercelProvider()
 
         # Gate fails first, passes second time (triggers 1 retry + redeploy)
         failing_result = _make_failing_gate_result("lighthouse")
@@ -846,7 +842,7 @@ class TestGateRetryNextjsDir:
             return passing_result
 
         with patch("tools.phase_executors.phase_3_executor.run_deploy_agent"), \
-             patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_sub:
+             patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_sub:
             mock_sub.return_value = _mock_subprocess_success(
                 stdout="https://myapp-new.vercel.app"
             )
@@ -872,24 +868,23 @@ class TestGateRetryNextjsDir:
 
 
 class TestDeployProductionNextjsDir:
-    """Test 7: _deploy_production uses nextjs_dir as cwd."""
+    """Test 7: _promote uses nextjs_dir as cwd (via VercelProvider)."""
 
     def test_deploy_production_uses_nextjs_dir_as_cwd(self, tmp_path):
-        """_deploy_production cwd kwarg uses nextjs_dir from ctx.extra, not ctx.project_dir."""
-        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
-        ctx = _make_context(tmp_path, extra={"nextjs_dir": "/fake/nextjs"})
-        executor = Phase3ShipExecutor()
-        executor._preview_url = "https://test.vercel.app"
+        """VercelProvider._promote cwd uses nextjs_dir, not project_dir."""
+        from tools.deploy_providers.vercel_provider import VercelProvider
 
-        with patch("tools.phase_executors.phase_3_executor.subprocess.run") as mock_run:
+        provider = VercelProvider()
+
+        with patch("tools.deploy_providers.vercel_provider.subprocess.run") as mock_run:
             mock_run.return_value = _mock_subprocess_success()
-            executor._deploy_production(ctx)
+            provider._promote("https://test.vercel.app", "/fake/nextjs")
 
         assert mock_run.called, "subprocess.run was not called"
         call_kwargs = mock_run.call_args[1]
         assert call_kwargs.get("cwd") == "/fake/nextjs", (
             f"Expected cwd='/fake/nextjs', got cwd={call_kwargs.get('cwd')!r}. "
-            "DEPL-01: _deploy_production must use nextjs_dir (from ctx.extra) as cwd."
+            "DEPL-01: _promote must use nextjs_dir as cwd."
         )
 
     # Quality self-assessment is now generated by contract_pipeline_runner (CONT-04).

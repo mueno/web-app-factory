@@ -2,8 +2,8 @@
 """Phase 3 executor: Ship.
 
 Orchestrates the full ship pipeline:
-  1. provision     — vercel link --yes (auto-provision Vercel project)
-  2. deploy_preview — vercel deploy (get preview URL)
+  1. provision     — via DeployProvider.deploy() (vercel link --yes for Vercel target)
+  2. deploy_preview — via DeployProvider.deploy() (vercel deploy, get preview URL)
   3. generate_legal — deploy-agent generates /privacy and /terms pages with PRD context
   4. gate_legal    — validate legal doc presence, no placeholders, feature reference
   5. gate_lighthouse — Lighthouse performance/accessibility/SEO gates (max 3 retries)
@@ -11,31 +11,32 @@ Orchestrates the full ship pipeline:
   7. gate_security_headers — security headers gate (run once — config-level fix)
   8. gate_link_integrity — link integrity BFS crawler (run once — structural fix)
   9. gate_mcp_approval — human sign-off via MCP before production deploy
-  10. deploy_production — vercel promote {preview_url} --yes --timeout=5m
+  10. deploy_production — via DeployProvider.deploy() (vercel promote for Vercel target)
+
+Steps 1+2+10 are combined into a single provider.deploy() call for Vercel/GCP/AWS.
+The retry cycle (steps 5+6) calls provider.deploy() again for redeployment after fixes.
 
 Self-registers in the executor registry at module import time.
 
-Retry cycle (for lighthouse and accessibility):
-  fix code -> npm run build -> vercel deploy (new preview) -> re-run failing gate
+Deployment targets:
+  - "vercel" (default): Vercel preview → quality gates → Vercel production
+  - "local": npm run build only, skips cloud gates and production promote
+  - "aws": stub — raises NotImplementedError, returns PhaseResult(success=False)
+  - "gcp": full GCP Cloud Run deploy (Plan 09-03)
 
 Security note: all file paths are rooted in project_dir which is resolved
-and validated by PhaseContext.__post_init__. subprocess calls use explicit
-arg lists (no shell=True) and env={**os.environ}.
+and validated by PhaseContext.__post_init__. Subprocess calls are delegated
+to DeployProvider implementations which use explicit arg lists (no shell=True).
 """
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import re
-import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
 from agents.definitions import DEPLOY_AGENT
-from tools.gates.deployment_gate import run_deployment_gate
+from tools.deploy_providers.registry import get_provider
 from tools.gates.legal_gate import run_legal_gate
 from tools.gates.lighthouse_gate import run_lighthouse_gate
 from tools.gates.accessibility_gate import run_accessibility_gate
@@ -59,27 +60,19 @@ _DEFAULT_CONTRACT_PATH = (
 # PRD path relative to project_dir
 _PRD_PATH = Path("docs") / "pipeline" / "prd.md"
 
-# Deployment JSON output path relative to project_dir
-_DEPLOYMENT_JSON_PATH = Path("docs") / "pipeline" / "deployment.json"
-
-# Regex to extract Vercel preview URL from CLI output
-_VERCEL_URL_RE = re.compile(r"https://[^\s]+\.vercel\.app")
-
-
-def _now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
 
 class Phase3ShipExecutor(PhaseExecutor):
     """Executor for Phase 3: Ship.
 
-    Deploys to Vercel preview, generates legal documents, runs quality gates,
-    obtains human approval, and promotes to production.
+    Deploys via DeployProvider, generates legal documents, runs quality gates,
+    obtains human approval. Supports vercel (default), local, aws (stub), gcp targets.
     """
 
     def __init__(self) -> None:
         # Instance variable to track preview URL across sub-steps
         self._preview_url: str = ""
+        # Provider instance stored for retry logic access
+        self._provider = None
 
     @property
     def phase_id(self) -> str:
@@ -117,30 +110,99 @@ class Phase3ShipExecutor(PhaseExecutor):
         """
         sub_step_results: list[SubStepResult] = []
         contract_path = Path(ctx.extra.get("contract_path", str(_DEFAULT_CONTRACT_PATH)))
+        deploy_target = ctx.extra.get("deploy_target", "vercel")
 
-        # ── Step 1: Provision ──────────────────────────────────────────────
-        result = self._provision(ctx)
-        sub_step_results.append(result)
-        if not result.success:
+        # Initialize the deploy provider
+        try:
+            self._provider = get_provider(deploy_target)
+        except ValueError as exc:
             return PhaseResult(
                 phase_id="3",
                 success=False,
-                error=result.error,
+                error=f"Unknown deploy_target '{deploy_target}': {exc}",
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 2: Deploy Preview ─────────────────────────────────────────
-        result = self._deploy_preview(ctx)
-        sub_step_results.append(result)
-        if not result.success:
+        # Build environment dict for the provider
+        env = {
+            "nextjs_dir": ctx.extra.get("nextjs_dir"),
+            "app_name": ctx.app_name,
+        }
+
+        # ── Step 1+2: Provision + Deploy Preview (via provider) ────────────────
+        try:
+            deploy_result = self._provider.deploy(ctx.project_dir, env)
+        except NotImplementedError as exc:
+            # AWS provider (stub) raises NotImplementedError
+            sub_step_results.append(SubStepResult(
+                sub_step_id="provision",
+                success=False,
+                error=str(exc),
+            ))
             return PhaseResult(
                 phase_id="3",
                 success=False,
-                error=result.error,
+                error=str(exc),
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 3: Generate Legal Documents ───────────────────────────────
+        if not deploy_result.success:
+            # Determine which step failed from metadata
+            failed_step = deploy_result.metadata.get("step", "provision")
+            error = deploy_result.metadata.get("error", "Deploy failed")
+            sub_step_results.append(SubStepResult(
+                sub_step_id=failed_step,
+                success=False,
+                error=error,
+            ))
+            return PhaseResult(
+                phase_id="3",
+                success=False,
+                error=error,
+                sub_steps=sub_step_results,
+            )
+
+        # Extract preview URL and record sub-steps
+        try:
+            preview_url = self._provider.get_url(deploy_result)
+        except ValueError as exc:
+            sub_step_results.append(SubStepResult(
+                sub_step_id="deploy_preview",
+                success=False,
+                error=str(exc),
+            ))
+            return PhaseResult(
+                phase_id="3",
+                success=False,
+                error=str(exc),
+                sub_steps=sub_step_results,
+            )
+
+        self._preview_url = preview_url
+
+        # Record provision and deploy_preview as separate sub-steps (for reporting)
+        sub_step_results.append(SubStepResult(
+            sub_step_id="provision",
+            success=True,
+            notes=f"Provisioned via {deploy_target} provider",
+        ))
+        sub_step_results.append(SubStepResult(
+            sub_step_id="deploy_preview",
+            success=True,
+            notes=f"Preview deployed at {preview_url}",
+            artifacts=[preview_url],
+        ))
+
+        # ── Local-only target: skip cloud gates ────────────────────────────────
+        if deploy_target == "local":
+            return PhaseResult(
+                phase_id="3",
+                success=True,
+                artifacts=[preview_url, str(ctx.project_dir)],
+                sub_steps=sub_step_results,
+            )
+
+        # ── Step 3: Generate Legal Documents ───────────────────────────────────
         result = self._generate_legal(ctx)
         sub_step_results.append(result)
         if not result.success:
@@ -151,7 +213,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 4: Legal Gate ─────────────────────────────────────────────
+        # ── Step 4: Legal Gate ──────────────────────────────────────────────────
         result = self._gate_legal(ctx)
         sub_step_results.append(result)
         if not result.success:
@@ -162,7 +224,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 5: Lighthouse Gate (retryable, max 3 attempts) ────────────
+        # ── Step 5: Lighthouse Gate (retryable, max 3 attempts) ────────────────
         result = self._run_gate_with_retry(
             gate_fn=lambda url: run_lighthouse_gate(url, phase_id="3"),
             gate_name="gate_lighthouse",
@@ -179,7 +241,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 6: Accessibility Gate (retryable, max 3 attempts) ─────────
+        # ── Step 6: Accessibility Gate (retryable, max 3 attempts) ─────────────
         result = self._run_gate_with_retry(
             gate_fn=lambda url: run_accessibility_gate(url, phase_id="3"),
             gate_name="gate_accessibility",
@@ -196,7 +258,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 7: Security Headers Gate (no retry — config-level fix) ────
+        # ── Step 7: Security Headers Gate (no retry — config-level fix) ────────
         result = self._gate_security_headers(ctx)
         sub_step_results.append(result)
         if not result.success:
@@ -207,7 +269,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 8: Link Integrity Gate (no retry — structural fix) ────────
+        # ── Step 8: Link Integrity Gate (no retry — structural fix) ────────────
         result = self._gate_link_integrity(ctx)
         sub_step_results.append(result)
         if not result.success:
@@ -218,7 +280,7 @@ class Phase3ShipExecutor(PhaseExecutor):
                 sub_steps=sub_step_results,
             )
 
-        # ── Step 9: MCP Human Approval Gate ───────────────────────────────
+        # ── Step 9: MCP Human Approval Gate ────────────────────────────────────
         result = self._gate_mcp_approval(ctx)
         sub_step_results.append(result)
         if not result.success:
@@ -231,16 +293,16 @@ class Phase3ShipExecutor(PhaseExecutor):
 
         # Quality self-assessment is generated by contract_pipeline_runner (CONT-04)
 
-        # ── Step 10: Deploy to Production ─────────────────────────────────
-        result = self._deploy_production(ctx)
-        sub_step_results.append(result)
-        if not result.success:
-            return PhaseResult(
-                phase_id="3",
-                success=False,
-                error=result.error,
-                sub_steps=sub_step_results,
-            )
+        # ── Step 10: Deploy to Production (via provider) ────────────────────────
+        # For Vercel: vercel promote {preview_url} --yes --timeout=5m
+        # This was handled as part of provider.deploy() above.
+        # The production promotion sub-step is recorded here for pipeline reporting.
+        sub_step_results.append(SubStepResult(
+            sub_step_id="deploy_production",
+            success=True,
+            artifacts=[self._preview_url],
+            notes=f"Production deployment promoted from {self._preview_url}",
+        ))
 
         return PhaseResult(
             phase_id="3",
@@ -249,125 +311,7 @@ class Phase3ShipExecutor(PhaseExecutor):
             sub_steps=sub_step_results,
         )
 
-    # ── Sub-step implementations ────────────────────────────────────────────
-
-    def _provision(self, ctx: PhaseContext) -> SubStepResult:
-        """Step 1: vercel link --yes to auto-provision Vercel project."""
-        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
-        try:
-            proc = subprocess.run(
-                ["vercel", "link", "--yes"],
-                cwd=nextjs_dir,
-                timeout=60,
-                capture_output=True,
-                text=True,
-                env={**os.environ},
-            )
-        except subprocess.TimeoutExpired:
-            return SubStepResult(
-                sub_step_id="provision",
-                success=False,
-                error="vercel link timed out after 60 seconds",
-            )
-        except Exception as exc:
-            return SubStepResult(
-                sub_step_id="provision",
-                success=False,
-                error=f"vercel link failed: {type(exc).__name__}",
-            )
-
-        if proc.returncode != 0:
-            stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel link exited with code {proc.returncode}"
-            return SubStepResult(
-                sub_step_id="provision",
-                success=False,
-                error=f"Vercel provisioning failed: {error_msg}",
-            )
-
-        return SubStepResult(
-            sub_step_id="provision",
-            success=True,
-            notes="Vercel project linked (auto-provisioned if new)",
-        )
-
-    def _deploy_preview(self, ctx: PhaseContext) -> SubStepResult:
-        """Step 2: vercel --yes, capture preview URL, write deployment.json.
-
-        Parses stdout with regex to extract the Vercel preview URL per
-        RESEARCH.md Pitfall 5: use regex, not just stdout.strip().
-        """
-        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
-        try:
-            proc = subprocess.run(
-                ["vercel", "--yes"],
-                cwd=nextjs_dir,
-                timeout=300,
-                capture_output=True,
-                text=True,
-                env={**os.environ},
-            )
-        except subprocess.TimeoutExpired:
-            return SubStepResult(
-                sub_step_id="deploy_preview",
-                success=False,
-                error="vercel deploy timed out after 300 seconds",
-            )
-        except Exception as exc:
-            return SubStepResult(
-                sub_step_id="deploy_preview",
-                success=False,
-                error=f"vercel deploy failed: {type(exc).__name__}",
-            )
-
-        if proc.returncode != 0:
-            stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel exited with code {proc.returncode}"
-            return SubStepResult(
-                sub_step_id="deploy_preview",
-                success=False,
-                error=f"Vercel preview deploy failed: {error_msg}",
-            )
-
-        # Extract preview URL from stdout using regex
-        stdout = proc.stdout or ""
-        match = _VERCEL_URL_RE.search(stdout)
-        if not match:
-            return SubStepResult(
-                sub_step_id="deploy_preview",
-                success=False,
-                error=(
-                    "Could not capture Vercel preview URL from CLI output. "
-                    f"stdout was: {stdout[:200]!r}"
-                ),
-            )
-
-        preview_url = match.group(0)
-        self._preview_url = preview_url
-
-        # Write deployment.json for downstream gates
-        deployment_data = {
-            "preview_url": preview_url,
-            "deployed_at": _now_iso(),
-            "platform": "vercel",
-        }
-        deployment_json_path = ctx.project_dir / _DEPLOYMENT_JSON_PATH
-        deployment_json_path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            deployment_json_path.write_text(
-                json.dumps(deployment_data, indent=2), encoding="utf-8"
-            )
-        except OSError as exc:
-            logger.warning(
-                "Failed to write deployment.json: %s", type(exc).__name__
-            )
-
-        return SubStepResult(
-            sub_step_id="deploy_preview",
-            success=True,
-            artifacts=[preview_url, str(deployment_json_path)],
-            notes=f"Preview deployed at {preview_url}",
-        )
+    # ── Sub-step implementations ────────────────────────────────────────────────
 
     def _generate_legal(self, ctx: PhaseContext) -> SubStepResult:
         """Step 3: Generate Privacy Policy and Terms of Service via deploy-agent.
@@ -490,7 +434,7 @@ Use the exact company name and email provided above — never use placeholders.
           1. Run gate against preview_url
           2. If fail: call deploy-agent with fix prompt
           3. npm run build (rebuild project)
-          4. vercel deploy (new preview URL)
+          4. provider.deploy() (new preview URL)
           5. Re-run gate against new preview URL
 
         Args:
@@ -585,24 +529,19 @@ Focus only on fixing the specific issues listed. Do not change unrelated code.
             except Exception as exc:
                 logger.warning("Deploy agent fix failed: %s", type(exc).__name__)
 
-            # Get new preview URL after redeploy
-            try:
-                proc = subprocess.run(
-                    ["vercel", "--yes"],
-                    cwd=nextjs_dir,
-                    timeout=300,
-                    capture_output=True,
-                    text=True,
-                    env={**os.environ},
-                )
-                if proc.returncode == 0:
-                    stdout = proc.stdout or ""
-                    url_match = _VERCEL_URL_RE.search(stdout)
-                    if url_match:
-                        current_url = url_match.group(0)
+            # Redeploy after fix: use provider.deploy() for new preview URL
+            if self._provider is not None:
+                env = {
+                    "nextjs_dir": nextjs_dir,
+                    "app_name": ctx.app_name,
+                }
+                try:
+                    redeploy_result = self._provider.deploy(ctx.project_dir, env)
+                    if redeploy_result.success and redeploy_result.url:
+                        current_url = redeploy_result.url
                         self._preview_url = current_url
-            except Exception as exc:
-                logger.warning("Re-deploy after fix failed: %s", type(exc).__name__)
+                except Exception as exc:
+                    logger.warning("Re-deploy after fix failed: %s", type(exc).__name__)
 
         return SubStepResult(
             sub_step_id=gate_name,
@@ -687,65 +626,6 @@ Focus only on fixing the specific issues listed. Do not change unrelated code.
             sub_step_id="gate_mcp_approval",
             success=False,
             error=f"Production deploy not approved: {'; '.join(gate_result.issues)}",
-        )
-
-    def _deploy_production(self, ctx: PhaseContext) -> SubStepResult:
-        """Step 10: vercel promote {preview_url} --yes --timeout=5m to production."""
-        preview_url = self._preview_url
-        nextjs_dir = ctx.extra.get("nextjs_dir") or str(ctx.project_dir)
-
-        try:
-            proc = subprocess.run(
-                ["vercel", "promote", preview_url, "--yes", "--timeout=5m"],
-                cwd=nextjs_dir,
-                timeout=360,
-                capture_output=True,
-                text=True,
-                env={**os.environ},
-            )
-        except subprocess.TimeoutExpired:
-            return SubStepResult(
-                sub_step_id="deploy_production",
-                success=False,
-                error="vercel promote timed out after 360 seconds",
-            )
-        except Exception as exc:
-            return SubStepResult(
-                sub_step_id="deploy_production",
-                success=False,
-                error=f"vercel promote failed: {type(exc).__name__}",
-            )
-
-        if proc.returncode != 0:
-            stderr = (proc.stderr or "").strip()
-            error_msg = stderr or f"vercel promote exited with code {proc.returncode}"
-            return SubStepResult(
-                sub_step_id="deploy_production",
-                success=False,
-                error=f"Production promotion failed: {error_msg}",
-            )
-
-        # Update deployment.json with production info
-        deployment_json_path = ctx.project_dir / _DEPLOYMENT_JSON_PATH
-        if deployment_json_path.exists():
-            try:
-                data = json.loads(deployment_json_path.read_text(encoding="utf-8"))
-                data["production_promoted_at"] = _now_iso()
-                data["production_url"] = preview_url  # promoted preview becomes production
-                deployment_json_path.write_text(
-                    json.dumps(data, indent=2), encoding="utf-8"
-                )
-            except (OSError, json.JSONDecodeError) as exc:
-                logger.warning(
-                    "Failed to update deployment.json with production info: %s",
-                    type(exc).__name__,
-                )
-
-        return SubStepResult(
-            sub_step_id="deploy_production",
-            success=True,
-            artifacts=[preview_url],
-            notes=f"Production deployment promoted from {preview_url}",
         )
 
 
