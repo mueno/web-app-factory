@@ -165,7 +165,7 @@ Plans:
   4. `AWSProvider` raises `NotImplementedError` with actionable guidance pointing to v3.0 timeline and manual CDK instructions
   5. `LocalOnlyProvider` skips cloud deploy and returns a localhost URL that the Phase 3 executor accepts as a valid deployment result
   6. The deploy target is selectable via `waf_generate_app` parameter at generation time
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
 - [ ] 09-01-PLAN.md — DeployProvider ABC, DeployResult dataclass, provider registry, AWSProvider stub, LocalOnlyProvider
@@ -230,7 +230,7 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 6. Contract Alignment | v1.0 | 1/1 | Complete | 2026-03-21 |
 | 7. Ship Directory Fix | v1.0 | 1/1 | Complete | 2026-03-22 |
 | 8. MCP Infrastructure Foundation | v2.0 | 3/3 | Complete | 2026-03-23 |
-| 9. Deploy Abstraction | v2.0 | 0/3 | Planning complete | - |
+| 9. Deploy Abstraction | 1/3 | In Progress|  | - |
 | 10. Local Dev Server | v2.0 | 0/TBD | Not started | - |
 | 11. MCP Tool Layer | v2.0 | 0/TBD | Not started | - |
 | 12. Environment Detection + Distribution | v2.0 | 0/TBD | Not started | - |
