@@ -99,51 +99,51 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCPH-01 | TBD | Pending |
-| MCPH-02 | TBD | Pending |
-| MCPH-03 | TBD | Pending |
-| MCPH-04 | TBD | Pending |
-| SUPA-01 | TBD | Pending |
-| SUPA-02 | TBD | Pending |
-| SUPA-03 | TBD | Pending |
-| SUPA-04 | TBD | Pending |
-| SUPA-05 | TBD | Pending |
-| SUPA-06 | TBD | Pending |
-| BGEN-01 | TBD | Pending |
-| BGEN-02 | TBD | Pending |
-| BGEN-03 | TBD | Pending |
-| BGEN-04 | TBD | Pending |
-| BGEN-05 | TBD | Pending |
-| BGEN-06 | TBD | Pending |
-| BGEN-07 | TBD | Pending |
-| AUTH-01 | TBD | Pending |
-| AUTH-02 | TBD | Pending |
-| AUTH-03 | TBD | Pending |
-| AUTH-04 | TBD | Pending |
-| AUTH-05 | TBD | Pending |
-| AUTH-06 | TBD | Pending |
-| IOSB-01 | TBD | Pending |
-| IOSB-02 | TBD | Pending |
-| IOSB-03 | TBD | Pending |
-| IOSB-04 | TBD | Pending |
-| IOSB-05 | TBD | Pending |
-| IOSB-06 | TBD | Pending |
-| IOSB-07 | TBD | Pending |
-| OAPI-01 | TBD | Pending |
-| OAPI-02 | TBD | Pending |
-| OAPI-03 | TBD | Pending |
-| OAPI-04 | TBD | Pending |
-| OAPI-05 | TBD | Pending |
-| SECG-01 | TBD | Pending |
-| SECG-02 | TBD | Pending |
-| SECG-03 | TBD | Pending |
-| SECG-04 | TBD | Pending |
+| MCPH-01 | Phase 16 | Pending |
+| MCPH-02 | Phase 16 | Pending |
+| MCPH-03 | Phase 16 | Pending |
+| MCPH-04 | Phase 16 | Pending |
+| SUPA-01 | Phase 17 | Pending |
+| SUPA-02 | Phase 17 | Pending |
+| SUPA-03 | Phase 17 | Pending |
+| SUPA-04 | Phase 17 | Pending |
+| SUPA-05 | Phase 17 | Pending |
+| SUPA-06 | Phase 17 | Pending |
+| SECG-01 | Phase 17 | Pending |
+| SECG-02 | Phase 17 | Pending |
+| BGEN-01 | Phase 18 | Pending |
+| BGEN-02 | Phase 18 | Pending |
+| BGEN-03 | Phase 18 | Pending |
+| BGEN-04 | Phase 18 | Pending |
+| BGEN-05 | Phase 18 | Pending |
+| BGEN-06 | Phase 18 | Pending |
+| BGEN-07 | Phase 18 | Pending |
+| SECG-03 | Phase 18 | Pending |
+| AUTH-01 | Phase 19 | Pending |
+| AUTH-02 | Phase 19 | Pending |
+| AUTH-03 | Phase 19 | Pending |
+| AUTH-04 | Phase 19 | Pending |
+| AUTH-05 | Phase 19 | Pending |
+| AUTH-06 | Phase 19 | Pending |
+| IOSB-01 | Phase 20 | Pending |
+| IOSB-02 | Phase 20 | Pending |
+| IOSB-03 | Phase 20 | Pending |
+| IOSB-04 | Phase 20 | Pending |
+| IOSB-05 | Phase 20 | Pending |
+| IOSB-06 | Phase 20 | Pending |
+| IOSB-07 | Phase 20 | Pending |
+| OAPI-01 | Phase 21 | Pending |
+| OAPI-02 | Phase 21 | Pending |
+| OAPI-03 | Phase 21 | Pending |
+| OAPI-04 | Phase 21 | Pending |
+| OAPI-05 | Phase 21 | Pending |
+| SECG-04 | Phase 21 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 39 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 39
+- Mapped to phases: 39
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-24*
-*Last updated: 2026-03-24 after research synthesis*
+*Last updated: 2026-03-24 after roadmap creation — all 39 requirements mapped*
