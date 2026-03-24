@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: executing
-stopped_at: Phase 12 Plan 01 complete — _env_checker.py with 18 tests
-last_updated: "2026-03-24T06:00:26Z"
-last_activity: 2026-03-24 — Phase 12 Plan 01 complete (_env_checker TDD, 18 tests green)
+stopped_at: Completed 12-02-PLAN.md — waf_check_env MCP tool registered, 7 tools total, Phase 12 complete
+last_updated: "2026-03-24T06:05:20.084Z"
+last_activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total, Phase 12 done)
 progress:
   total_phases: 13
   completed_phases: 11
-  total_plans: 24
-  completed_plans: 25
+  total_plans: 28
+  completed_plans: 26
   percent: 96
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application
-**Current focus:** Phase 12 — Environment Detection + Distribution (next)
+**Current focus:** Phase 13 — Pipeline Quality (next)
 
 ## Current Position
 
-Phase: 12 of 13 in progress (Environment Detection + Distribution)
-Plan: 12-01 complete (1 of ~3 plans in Phase 12)
-Status: Phase 12 Plan 01 complete. Next: Plan 02 (waf_check_env MCP tool).
-Last activity: 2026-03-24 — Phase 12 Plan 01 complete (_env_checker.py TDD, 18 tests, no shell=True)
+Phase: 12 complete (2 of 2 plans done), Phase 13 next
+Plan: 12-02 complete (waf_check_env MCP tool)
+Status: Phase 12 complete. Next: Phase 13 (Pipeline Quality — depends only on Phase 8).
+Last activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total)
 
-Progress: [█████████░] 96% (v2.0 milestone — 11 of 13 phases complete)
+Progress: [█████████░] 96% (v2.0 milestone — 12 of 13 phases complete)
 
 ## Accumulated Context
 
@@ -63,6 +63,8 @@ Carried from v1.0 + v2.0 research:
 - [Phase 12-environment-detection-distribution Plan 01]: Patch target for 'from X import f' imports is the importing module (web_app_factory._env_checker.*), not the source module (pipeline_runtime.startup_preflight.*)
 - [Phase 12-environment-detection-distribution Plan 01]: Python status always 'present' in _env_checker — MCP server cannot be running without Python >= 3.10 (per RESEARCH.md Pitfall 6)
 - [Phase 12-environment-detection-distribution Plan 01]: node on linux has no _INSTALL_ARGS entry — too many distro variants; returns manual nodesource/nvm instructions instead
+- [Phase 12-environment-detection-distribution]: waf_check_env uses run_in_executor for check_env and install_tool — both may call subprocess and block 2-5s
+- [Phase 12-environment-detection-distribution]: execute_install=True without tool_to_install returns error string (guard against accidental installs)
 
 ### Pending Todos
 
@@ -78,6 +80,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:00:26Z
-Stopped at: Completed 12-01-PLAN.md — _env_checker.py with 18 tests (19 including subprocess audit)
+Last session: 2026-03-24T06:05:20.081Z
+Stopped at: Completed 12-02-PLAN.md — waf_check_env MCP tool registered, 7 tools total, Phase 12 complete
 Resume file: None
