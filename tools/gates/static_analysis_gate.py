@@ -26,7 +26,20 @@ _USE_CLIENT_RE = re.compile(r"""['"]use client['"]""")
 
 # GATE-06: Match NEXT_PUBLIC_ followed by variables ending in KEY, SECRET, or TOKEN
 # Pattern matches: NEXT_PUBLIC_*KEY, NEXT_PUBLIC_*SECRET, NEXT_PUBLIC_*TOKEN
+# Allowlist: NEXT_PUBLIC_SUPABASE_ANON_KEY is the intended public client key — safe to expose
 _NEXT_PUBLIC_SECRET_RE = re.compile(r"NEXT_PUBLIC_(?:\w+?_)?(?:.*KEY|.*SECRET|.*TOKEN)")
+_NEXT_PUBLIC_ANON_KEY_ALLOWLIST_RE = re.compile(r"NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+# SECG-01: Catch NEXT_PUBLIC_ prefix on any service_role-related variable.
+# Covers variants like NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SVC_ROLE,
+# NEXT_PUBLIC_SERVICE_ROLE, NEXT_PUBLIC_SERVICEACCOUNTROLE.
+# Two patterns are OR'd:
+#   1. NEXT_PUBLIC_*SERVICE*ROLE* — canonical service_role naming
+#   2. NEXT_PUBLIC_*SVC*ROLE* — abbreviated "svc" shorthand
+_NEXT_PUBLIC_SERVICE_ROLE_RE = re.compile(
+    r"NEXT_PUBLIC_(?:\w*SERVICE\w*ROLE\w*|\w*SVC\w*ROLE\w*)",
+    re.IGNORECASE,
+)
 
 # Files scanned for GATE-05 (exactly these two files — not error.tsx or nested routes)
 _USE_CLIENT_SCAN_FILES = {"layout.tsx", "page.tsx"}
@@ -124,6 +137,11 @@ def _check_next_public_secrets(project_dir: Path) -> list[str]:
     Scans:
     - All files under src/ with relevant extensions
     - Root .env and .env.local files
+
+    Allowlist: NEXT_PUBLIC_SUPABASE_ANON_KEY is the Supabase public client key and is
+    intentionally safe to expose to the browser — it is not flagged by this check.
+    NEXT_PUBLIC_*SERVICE*ROLE* patterns are handled separately by SECG-01.
+
     Returns list of issue strings with file path and line number.
     """
     issues: list[str] = []
@@ -139,10 +157,70 @@ def _check_next_public_secrets(project_dir: Path) -> list[str]:
         for lineno, line in enumerate(lines, start=1):
             match = _NEXT_PUBLIC_SECRET_RE.search(line)
             if match:
+                # Allowlist: NEXT_PUBLIC_SUPABASE_ANON_KEY is safe for client-side use
+                if _NEXT_PUBLIC_ANON_KEY_ALLOWLIST_RE.search(line):
+                    continue
                 rel_path = filepath.relative_to(project_dir)
                 matched_var = match.group(0)
                 issues.append(
                     f"{rel_path}:{lineno}: secret-pattern variable exposed: {matched_var}"
+                )
+
+    # Scan root .env files
+    for env_filename in _ROOT_ENV_FILES:
+        env_path = project_dir / env_filename
+        _scan_file(env_path)
+
+    # Scan all files under src/ recursively
+    src_dir = project_dir / "src"
+    if src_dir.exists():
+        for filepath in src_dir.rglob("*"):
+            if not filepath.is_file():
+                continue
+            if _should_skip(filepath):
+                continue
+            # Check extension — also match .env and .env.local by name
+            name = filepath.name
+            suffix = filepath.suffix
+            if suffix in _SECRET_SCAN_EXTENSIONS or name in (".env", ".env.local"):
+                _scan_file(filepath)
+
+    return issues
+
+
+def _check_service_role_exposure(project_dir: Path) -> list[str]:
+    """SECG-01: Detect NEXT_PUBLIC_ prefix on service_role-related variables.
+
+    Scans the same files as _check_next_public_secrets for NEXT_PUBLIC_*SERVICE*ROLE*
+    patterns. Any service_role variable exposed via NEXT_PUBLIC_ is a critical security
+    violation — the service_role key bypasses RLS and must never be sent to the browser.
+
+    Covers variants including:
+    - NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
+    - NEXT_PUBLIC_SVC_ROLE
+    - NEXT_PUBLIC_SERVICE_ROLE
+    - NEXT_PUBLIC_SERVICEACCOUNTROLE
+
+    Returns list of issue strings with file path, line number, and matched variable name.
+    """
+    issues: list[str] = []
+
+    def _scan_file(filepath: Path) -> None:
+        if not filepath.exists():
+            return
+        try:
+            lines = filepath.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            return
+
+        for lineno, line in enumerate(lines, start=1):
+            match = _NEXT_PUBLIC_SERVICE_ROLE_RE.search(line)
+            if match:
+                rel_path = filepath.relative_to(project_dir)
+                matched_var = match.group(0)
+                issues.append(
+                    f"{rel_path}:{lineno}: SECG-01: service_role key exposed via "
+                    f"NEXT_PUBLIC_ prefix: {matched_var}"
                 )
 
     # Scan root .env files
@@ -384,13 +462,14 @@ def _check_plaintext_storage(project_dir: Path) -> list[str]:
 def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResult:
     """Run static analysis gate checks on the generated project.
 
-    Performs six checks:
+    Performs seven checks:
     1. GATE-05: No 'use client' in layout.tsx or page.tsx
     2. GATE-06: No NEXT_PUBLIC_ secret-pattern environment variables exposed
     3. GATE-08: No plaintext password or PII fields in DB schemas
     4. BILD-06: error.tsx exists for route segments with async data fetching
     5. BILD-05: No hardcoded pixel widths that break responsive design
     6. FLOW-01: Form submission params match receiving page searchParams
+    7. SECG-01: No service_role key exposed via NEXT_PUBLIC_ prefix
 
     Args:
         project_dir: Absolute path to the generated Next.js project directory.
@@ -411,6 +490,7 @@ def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResu
     issues.extend(_check_error_boundaries(base))
     issues.extend(_check_responsive_patterns(base))
     issues.extend(_check_form_page_params(base))
+    issues.extend(_check_service_role_exposure(base))
 
     passed = len(issues) == 0
     status = "PASS" if passed else "BLOCKED"
