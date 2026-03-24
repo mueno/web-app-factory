@@ -8,17 +8,17 @@ An automated web application development pipeline that transforms a user's app i
 
 A single command takes a web app idea from concept to deployed, production-quality web application — with market validation, UX design, implementation, testing, legal compliance, and deployment handled automatically.
 
-## Current Milestone: v2.0 MCP Apps
+## Current State
 
-**Goal:** Make web-app-factory installable via `claude mcp add` with local-first development and multi-cloud deployment.
+v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 
-**Target features:**
-- MCP App packaging (`claude mcp add` installable)
-- MCP tools exposing full pipeline (generate, status, approve)
-- Dual mode: full-auto + interactive (phase-by-phase confirmation)
-- Environment detection and setup assistance
+**Shipped capabilities:**
+- MCP App packaging (`claude mcp add web-app-factory -- uvx web-app-factory`)
+- 7 MCP tools exposing full pipeline (generate, status, approve, list, env check, dev server start/stop)
+- Dual mode: full-auto + interactive (phase-by-phase gate confirmation)
+- Environment detection with platform-aware install guidance
 - Local dev server for preview before deploy
-- Multi-cloud deployment (Vercel, AWS, Google Cloud)
+- Multi-cloud deployment (Vercel, GCP Cloud Run, AWS stub, LocalOnly)
 
 ## Requirements
 
@@ -35,9 +35,18 @@ A single command takes a web app idea from concept to deployed, production-quali
 - ✓ CLI entry point — v1.0
 - ✓ FLOW-01 form-page parameter consistency gate — v1.0 post-fix
 
+- ✓ MCP App packaging (installable via `claude mcp add`) — v2.0
+- ✓ 7 MCP tools (generate, status, approve, list, check env, dev server start/stop) — v2.0
+- ✓ Dual mode: full-auto + interactive gate approval — v2.0
+- ✓ Environment detection and setup assistance — v2.0
+- ✓ Local dev server for preview — v2.0
+- ✓ Multi-cloud deploy abstraction (Vercel, GCP, AWS stub, LocalOnly) — v2.0
+- ✓ Phase 2b three-sub-step decomposition with checkpoint resume — v2.0
+- ✓ E2E Playwright form flow gate — v2.0
+
 ### Active
 
-(Defined in REQUIREMENTS.md after research)
+(Next milestone TBD — run `/gsd:new-milestone` to define)
 
 ### Out of Scope
 
@@ -50,10 +59,10 @@ A single command takes a web app idea from concept to deployed, production-quali
 ## Context
 
 - v1.0 shipped 2026-03-22: 7 phases, 16 plans, 447+ tests, 36/36 requirements
-- Post-v1.0: FLOW-01 gate added to catch form-page parameter mismatches
-- BACKLOG has 3 items: BL-001 (WBS decomposition), BL-002 (E2E Playwright gate), BL-003 (Phase 1b data flow schema)
-- MCP SDK and FastMCP are already dependencies; internal MCP server exists for approval gates
-- Anthropic MCP Apps ecosystem is evolving rapidly — research needed on latest specs
+- v2.0 shipped 2026-03-24: 8 phases, 16 plans, 88 commits, 27/27 requirements
+- Total: 15 phases, 31 plans shipped across 2 milestones
+- BL-003 (Phase 1b data flow schema in screen-spec.json) remains open for future milestone
+- Tech stack: Python 3.10+, FastMCP 3.x, Claude Agent SDK, Next.js (generated apps)
 
 ## Constraints
 
@@ -73,9 +82,9 @@ A single command takes a web app idea from concept to deployed, production-quali
 | Vercel as primary deploy target (v1) | Zero-config, preview deployments | ✓ Good — expanding to multi-cloud in v2 |
 | Coarse phase structure (5 phases) | Leaner than iOS pipeline | ✓ Good |
 | FLOW-01 form-page contract gate | Prevent cross-component parameter mismatches | ✓ Good — caught real bug |
-| MCP App distribution (v2) | Users install via `claude mcp add`, no manual setup | — Pending |
-| Local-first development (v2) | Preview before deploy, no cloud dependency for iteration | — Pending |
-| Multi-cloud deploy (v2) | User choice: Vercel, AWS, GCP | — Pending |
+| MCP App distribution (v2) | Users install via `claude mcp add`, no manual setup | ✓ Phase 8 |
+| Local-first development (v2) | Preview before deploy, no cloud dependency for iteration | ✓ Phase 10 |
+| Multi-cloud deploy (v2) | User choice: Vercel, AWS, GCP | ✓ Phase 9 |
 | FastMCP 3.x for public server (v2) | `from fastmcp import FastMCP` canonical import; `list_tools()` for introspection | ✓ Phase 8 |
 | waf_ prefix enforced in CI (v2) | Static assertion prevents tool name collisions between public/internal servers | ✓ Phase 8 |
 | ThreadPoolExecutor async bridge (v2) | run_id returned before executor submission to prevent queue-full blocking | ✓ Phase 8 |
@@ -85,4 +94,4 @@ A single command takes a web app idea from concept to deployed, production-quali
 | interactive_mode wired bridge→runner→gate (v2) | Closes BREAK-01 — mode='interactive' no longer silently dropped | ✓ Phase 14 |
 
 ---
-*Last updated: 2026-03-24 after Phase 14*
+*Last updated: 2026-03-24 after v2.0 milestone*
