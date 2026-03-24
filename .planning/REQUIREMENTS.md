@@ -27,9 +27,9 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 ### Environment Setup
 
-- [ ] **ENVS-01**: Auto-detect Node.js, npm, Python, Vercel CLI, gcloud CLI presence and version
-- [ ] **ENVS-02**: Provide install commands for each missing tool (platform-aware: macOS/Linux)
-- [ ] **ENVS-03**: Optionally execute install with user permission (not silently)
+- [x] **ENVS-01**: Auto-detect Node.js, npm, Python, Vercel CLI, gcloud CLI presence and version
+- [x] **ENVS-02**: Provide install commands for each missing tool (platform-aware: macOS/Linux)
+- [x] **ENVS-03**: Optionally execute install with user permission (not silently)
 
 ### Local Development
 
@@ -94,9 +94,9 @@ Deferred to future release.
 | TOOL-05 | Phase 12 | Pending |
 | TOOL-06 | Phase 10 | Complete |
 | TOOL-07 | Phase 10 | Complete |
-| ENVS-01 | Phase 12 | Pending |
-| ENVS-02 | Phase 12 | Pending |
-| ENVS-03 | Phase 12 | Pending |
+| ENVS-01 | Phase 12 | Complete |
+| ENVS-02 | Phase 12 | Complete |
+| ENVS-03 | Phase 12 | Complete |
 | LDEV-01 | Phase 10 | Complete |
 | LDEV-02 | Phase 10 | Complete |
 | LDEV-03 | Phase 10 | Complete |

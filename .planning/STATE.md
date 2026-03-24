@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: executing
-stopped_at: Phase 11 complete — VERIFICATION passed 11/11
-last_updated: "2026-03-24T10:00:00Z"
-last_activity: 2026-03-24 — Phase 11 gaps fixed (resume_run_id, auto-mode gate, output URL) and VERIFICATION passed
+stopped_at: Phase 12 Plan 01 complete — _env_checker.py with 18 tests
+last_updated: "2026-03-24T06:00:26Z"
+last_activity: 2026-03-24 — Phase 12 Plan 01 complete (_env_checker TDD, 18 tests green)
 progress:
   total_phases: 13
   completed_phases: 11
   total_plans: 24
-  completed_plans: 24
+  completed_plans: 25
   percent: 96
 ---
 
@@ -25,9 +25,10 @@ See: .planning/PROJECT.md (updated 2026-03-23)
 
 ## Current Position
 
-Phase: 11 of 13 complete (MCP Tool Layer)
-Status: Phase 11 verified and closed. Next: Phase 12 or Phase 13.
-Last activity: 2026-03-24 — Phase 11 VERIFICATION passed (11/11 truths, 3 gaps fixed)
+Phase: 12 of 13 in progress (Environment Detection + Distribution)
+Plan: 12-01 complete (1 of ~3 plans in Phase 12)
+Status: Phase 12 Plan 01 complete. Next: Plan 02 (waf_check_env MCP tool).
+Last activity: 2026-03-24 — Phase 12 Plan 01 complete (_env_checker.py TDD, 18 tests, no shell=True)
 
 Progress: [█████████░] 96% (v2.0 milestone — 11 of 13 phases complete)
 
@@ -59,6 +60,9 @@ Carried from v1.0 + v2.0 research:
 - [Phase 10-local-dev-server]: start_new_session=True on Popen enables os.killpg for full npm/node/next process tree termination
 - [Phase 10-local-dev-server]: _PROC_MAP separate from frozen DevServerInfo registry — mutable Popen cannot live in frozen dataclass
 - [Phase 10-local-dev-server]: [Phase 10-local-dev-server Plan 02]: waf_start_dev_server uses run_in_executor because start_dev_server blocks up to 30s; waf_stop_dev_server calls stop_dev_server directly (fast path)
+- [Phase 12-environment-detection-distribution Plan 01]: Patch target for 'from X import f' imports is the importing module (web_app_factory._env_checker.*), not the source module (pipeline_runtime.startup_preflight.*)
+- [Phase 12-environment-detection-distribution Plan 01]: Python status always 'present' in _env_checker — MCP server cannot be running without Python >= 3.10 (per RESEARCH.md Pitfall 6)
+- [Phase 12-environment-detection-distribution Plan 01]: node on linux has no _INSTALL_ARGS entry — too many distro variants; returns manual nodesource/nvm instructions instead
 
 ### Pending Todos
 
@@ -74,6 +78,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T10:00:00Z
-Stopped at: Phase 11 complete — VERIFICATION passed 11/11
+Last session: 2026-03-24T06:00:26Z
+Stopped at: Completed 12-01-PLAN.md — _env_checker.py with 18 tests (19 including subprocess audit)
 Resume file: None
