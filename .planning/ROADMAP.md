@@ -133,7 +133,7 @@ Plans:
 
 </details>
 
-### 🚧 v2.0 MCP Apps (In Progress)
+### v2.0 MCP Apps (In Progress)
 
 **Milestone Goal:** Make web-app-factory installable via `claude mcp add` with local-first development and multi-cloud deployment.
 
@@ -241,10 +241,11 @@ Plans:
   3. Calling `waf_approve_gate` with `action='approve'` unblocks the paused pipeline and execution continues to the next phase
   4. Calling `waf_approve_gate` with `action='reject'` stops the pipeline with a clear rejection status in `waf_get_status`
   5. In auto mode, `waf_approve_gate` returns an error explaining the mode mismatch (no silent failure)
-**Plans:** 0/0
+**Plans:** 2 plans
 
 Plans:
-- (pending)
+- [ ] 14-01-PLAN.md — Shared GATE_RESPONSES_DIR constant, mcp_approval_gate interactive polling, path consistency
+- [ ] 14-02-PLAN.md — Wire interactive_mode through bridge and runner, integration test for approve/reject flow
 
 #### Phase 15: Declare Playwright Dependency
 **Goal**: The E2E Playwright gate is functional on fresh installations via `uvx web-app-factory` by declaring playwright as a dependency
@@ -280,5 +281,5 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 11. MCP Tool Layer | v2.0 | 0/0 | Complete | 2026-03-24 |
 | 12. Environment Detection + Distribution | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
-| 14. Wire Interactive Gate Approval | v2.0 | 0/0 | Pending | - |
+| 14. Wire Interactive Gate Approval | v2.0 | 0/2 | Planned | - |
 | 15. Declare Playwright Dependency | v2.0 | 0/0 | Pending | - |
