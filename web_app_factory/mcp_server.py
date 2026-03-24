@@ -92,6 +92,7 @@ async def waf_generate_app(
         mode=mode,
         company_name=company_name,
         contact_email=contact_email,
+        resume_run_id=resume_run_id,
     )
 
     return format_plan_started(run_id, plan)
@@ -190,12 +191,13 @@ async def waf_approve_gate(
     from web_app_factory._progress_store import get_store  # noqa: PLC0415
 
     store = get_store()
-    plan = store.get_plan(run_id)
-    if plan and hasattr(plan, "deploy_target"):
-        # Check events for mode info
-        events = store.get_events(run_id)
-        # If pipeline was started in auto mode, gate approval is not applicable
-        # (auto mode auto-approves gates internally)
+    run_mode = store.get_mode(run_id)
+    if run_mode == "auto":
+        return (
+            f"Run `{run_id}` is in **auto** mode. "
+            "Gates are approved automatically — manual approval is not applicable.\n\n"
+            "To use manual gate approval, start the pipeline with `mode='interactive'`."
+        )
 
     # Write approval/rejection to the gate file the internal server polls
     gate_dir = _PROJECT_ROOT / "output" / ".gate-responses"
@@ -267,11 +269,17 @@ def _scan_disk_runs() -> list[dict]:
                     import json  # noqa: PLC0415
 
                     data = json.loads(state_file.read_text(encoding="utf-8"))
-                    runs.append({
+                    run_entry: dict = {
                         "run_id": data.get("run_id", run_dir.name),
                         "status": data.get("status", "unknown"),
                         "started_at": data.get("started_at"),
-                    })
+                    }
+                    # Extract output URL from deployment.json if available
+                    deploy_file = project_dir / "docs" / "pipeline" / "deployment.json"
+                    if deploy_file.exists():
+                        deploy_data = json.loads(deploy_file.read_text(encoding="utf-8"))
+                        run_entry["url"] = deploy_data.get("url") or deploy_data.get("deploy_url")
+                    runs.append(run_entry)
                 except Exception:
                     pass
 

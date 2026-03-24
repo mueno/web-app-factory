@@ -32,6 +32,7 @@ class ProgressStore:
         self._runs: dict[str, deque[ProgressEvent]] = {}
         self._plans: dict[str, Any] = {}  # run_id -> ExecutionPlan or dict
         self._run_status: dict[str, str] = {}  # run_id -> "running"|"completed"|"failed"
+        self._run_modes: dict[str, str] = {}  # run_id -> "auto"|"interactive"|"dry_run"
 
     def emit(self, event: ProgressEvent) -> None:
         """Thread-safe: append event to run's deque."""
@@ -56,12 +57,18 @@ class ProgressStore:
                 return list(events)[since:]
             return list(events)[since:]
 
-    def set_plan(self, run_id: str, plan: Any) -> None:
-        """Store the execution plan for a run."""
+    def set_plan(self, run_id: str, plan: Any, *, mode: str = "auto") -> None:
+        """Store the execution plan and mode for a run."""
         with self._lock:
             self._plans[run_id] = plan
+            self._run_modes[run_id] = mode
             if run_id not in self._run_status:
                 self._run_status[run_id] = "running"
+
+    def get_mode(self, run_id: str) -> str | None:
+        """Return the execution mode for a run, or None if unknown."""
+        with self._lock:
+            return self._run_modes.get(run_id)
 
     def get_plan(self, run_id: str) -> Any:
         """Retrieve stored execution plan."""

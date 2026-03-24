@@ -17,10 +17,10 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 ### MCP Tools
 
-- [ ] **TOOL-01**: `waf_generate_app` accepts idea, mode (auto/interactive), and deploy target; starts pipeline in background
-- [ ] **TOOL-02**: `waf_get_status` returns current phase, progress percentage, and recent activity for a run
-- [ ] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
-- [ ] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
+- [x] **TOOL-01**: `waf_generate_app` accepts idea, mode (auto/interactive), and deploy target; starts pipeline in background
+- [x] **TOOL-02**: `waf_get_status` returns current phase, progress percentage, and recent activity for a run
+- [x] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
+- [x] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
 - [ ] **TOOL-05**: `waf_check_env` detects Node.js, Python, CLI tools and reports missing/outdated with install instructions
 - [x] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
 - [x] **TOOL-07**: `waf_stop_dev_server` stops a running dev server by run ID, with orphan cleanup
@@ -87,10 +87,10 @@ Deferred to future release.
 | MCPI-03 | Phase 8 | Complete |
 | MCPI-04 | Phase 8 | Complete |
 | MCPI-05 | Phase 8 | Complete |
-| TOOL-01 | Phase 11 | Pending |
-| TOOL-02 | Phase 11 | Pending |
-| TOOL-03 | Phase 11 | Pending |
-| TOOL-04 | Phase 11 | Pending |
+| TOOL-01 | Phase 11 | Complete |
+| TOOL-02 | Phase 11 | Complete |
+| TOOL-03 | Phase 11 | Complete |
+| TOOL-04 | Phase 11 | Complete |
 | TOOL-05 | Phase 12 | Pending |
 | TOOL-06 | Phase 10 | Complete |
 | TOOL-07 | Phase 10 | Complete |

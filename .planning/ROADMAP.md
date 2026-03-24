@@ -168,9 +168,9 @@ Plans:
 **Plans:** 3/3 plans complete
 
 Plans:
-- [ ] 09-01-PLAN.md — DeployProvider ABC, DeployResult dataclass, provider registry, AWSProvider stub, LocalOnlyProvider
-- [ ] 09-02-PLAN.md — VercelProvider extraction from phase_3_executor.py, executor refactor to use provider interface
-- [ ] 09-03-PLAN.md — GCPProvider (Cloud Run), deploy_target wiring through pipeline bridge and runner
+- [x] 09-01-PLAN.md — DeployProvider ABC, DeployResult dataclass, provider registry, AWSProvider stub, LocalOnlyProvider
+- [x] 09-02-PLAN.md — VercelProvider extraction from phase_3_executor.py, executor refactor to use provider interface
+- [x] 09-03-PLAN.md — GCPProvider (Cloud Run), deploy_target wiring through pipeline bridge and runner
 
 #### Phase 10: Local Dev Server
 **Goal**: Users can preview generated apps locally before any cloud deployment, with clean process lifecycle management
@@ -184,8 +184,8 @@ Plans:
 **Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 10-01-PLAN.md — Dev server lifecycle module (TDD): DevServerRegistry, start/stop logic, readiness detection, process group cleanup
-- [ ] 10-02-PLAN.md — MCP tool registration: waf_start_dev_server and waf_stop_dev_server in mcp_server.py
+- [x] 10-01-PLAN.md — Dev server lifecycle module (TDD): DevServerRegistry, start/stop logic, readiness detection, process group cleanup
+- [x] 10-02-PLAN.md — MCP tool registration: waf_start_dev_server and waf_stop_dev_server in mcp_server.py
 
 #### Phase 11: MCP Tool Layer
 **Goal**: The full pipeline is accessible through four conversational MCP tools that expose generation, status, approval, and run history
@@ -196,7 +196,10 @@ Plans:
   2. `waf_get_status` returns current phase name, progress percentage, and the 5 most recent activity log entries for any run ID — reads `state.json` directly with no caching layer
   3. `waf_approve_gate` in interactive mode unblocks a waiting pipeline gate and resumes execution; in auto mode it returns a clear error explaining the mode mismatch
   4. `waf_list_runs` returns all runs from the `output/` directory with status, start time, and output URL — runs that are in progress show live phase information
-**Plans**: TBD
+**Plans:** 0/0 (implemented across Phases 8-10; gap fixes applied 2026-03-24)
+
+Plans:
+- No dedicated plans — TOOL-01 through TOOL-04 were implemented as part of Phases 8 (mcp_server.py, pipeline bridge), 9 (deploy_target wiring), and 10 (dev server tools). Gap fixes (resume_run_id wiring, auto-mode gate rejection, output URL in list_runs) applied 2026-03-24.
 
 #### Phase 12: Environment Detection and Distribution
 **Goal**: Users can verify their environment is ready before generating, and the package is installable from PyPI via a single command
@@ -234,8 +237,8 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 6. Contract Alignment | v1.0 | 1/1 | Complete | 2026-03-21 |
 | 7. Ship Directory Fix | v1.0 | 1/1 | Complete | 2026-03-22 |
 | 8. MCP Infrastructure Foundation | v2.0 | 3/3 | Complete | 2026-03-23 |
-| 9. Deploy Abstraction | 3/3 | Complete   | 2026-03-23 | - |
-| 10. Local Dev Server | 2/2 | Complete    | 2026-03-23 | - |
-| 11. MCP Tool Layer | v2.0 | 0/TBD | Not started | - |
+| 9. Deploy Abstraction | v2.0 | 3/3 | Complete | 2026-03-23 |
+| 10. Local Dev Server | v2.0 | 2/2 | Complete | 2026-03-23 |
+| 11. MCP Tool Layer | v2.0 | 0/0 | Complete | 2026-03-24 |
 | 12. Environment Detection + Distribution | v2.0 | 0/TBD | Not started | - |
 | 13. Pipeline Quality | v2.0 | 0/TBD | Not started | - |

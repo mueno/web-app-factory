@@ -127,6 +127,7 @@ async def start_pipeline_async(
     contract_path: str | None = None,
     company_name: str | None = None,
     contact_email: str | None = None,
+    resume_run_id: str | None = None,
 ) -> tuple[str, Any]:
     """Start the pipeline in a background thread and return (run_id, plan).
 
@@ -150,7 +151,8 @@ async def start_pipeline_async(
     from web_app_factory._progress_store import ProgressEvent, get_store  # noqa: PLC0415
 
     # Step 1: Generate run_id BEFORE submitting to executor (Pitfall 5).
-    run_id = _generate_run_id(idea)
+    # If resuming, reuse the existing run_id instead of generating a new one.
+    run_id = resume_run_id if resume_run_id else _generate_run_id(idea)
 
     # Step 2: Load contract and generate execution plan.
     contract = _load_contract(contract_path)
@@ -158,7 +160,7 @@ async def start_pipeline_async(
 
     # Step 3: Store plan in progress store for waf_get_status.
     store = get_store()
-    store.set_plan(run_id, plan)
+    store.set_plan(run_id, plan, mode=mode)
 
     # Step 4: Create progress callback bound to this run.
     def _on_progress(event_type: str, phase_id: str, message: str, detail: dict) -> None:
