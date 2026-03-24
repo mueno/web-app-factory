@@ -9,9 +9,9 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 ### MCP Infrastructure
 
-- [ ] **MCPH-01**: Tool logic extracted to `_tool_impls.py` — both stdio and HTTP servers share identical business logic
+- [x] **MCPH-01**: Tool logic extracted to `_tool_impls.py` — both stdio and HTTP servers share identical business logic
 - [ ] **MCPH-02**: HTTP transport entry point (`openai_mcp_server.py`) serves all 7 existing `waf_*` tools over HTTPS
-- [ ] **MCPH-03**: All 7 existing tools annotated with `readOnlyHint`, `destructiveHint`, `openWorldHint` per OpenAI Apps SDK spec
+- [x] **MCPH-03**: All 7 existing tools annotated with `readOnlyHint`, `destructiveHint`, `openWorldHint` per OpenAI Apps SDK spec
 - [ ] **MCPH-04**: `waf_` prefix CI assertion extended to cover both stdio and HTTP server tool registrations
 
 ### Supabase Provisioning
@@ -99,9 +99,9 @@ Deferred to future release.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MCPH-01 | Phase 16 | Pending |
+| MCPH-01 | Phase 16 | Complete |
 | MCPH-02 | Phase 16 | Pending |
-| MCPH-03 | Phase 16 | Pending |
+| MCPH-03 | Phase 16 | Complete |
 | MCPH-04 | Phase 16 | Pending |
 | SUPA-01 | Phase 17 | Pending |
 | SUPA-02 | Phase 17 | Pending |

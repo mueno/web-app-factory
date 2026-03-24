@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: planning
-stopped_at: Phase 16 context gathered
-last_updated: "2026-03-24T13:17:24.846Z"
+stopped_at: Completed 16-01-PLAN.md
+last_updated: "2026-03-24T13:41:07.747Z"
 last_activity: 2026-03-24 — Roadmap created for v3.0 Full Stack (6 phases, 39/39 requirements mapped)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -54,6 +54,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - OpenAI Apps full support — MCP is shared protocol; dual distribution to Claude + ChatGPT maximizes reach
 - allnew-baas integration — Consolidate backend infrastructure under WAF; avoid per-app BaaS proliferation
 - SECG requirements distributed to phases where concern is introduced (not a separate security phase)
+- [Phase 16-mcp-infrastructure-hardening]: Impl layer pattern: _tool_impls.py holds all tool business logic; transports are thin wrappers delegating via return await impl_*()
+- [Phase 16-mcp-infrastructure-hardening]: Tool safety classification: waf_get_status=readOnly, waf_stop_dev_server=destructive, waf_generate_app=openWorld; all others readOnly=false/destructive=false/openWorld=false
 
 ### Pending Todos
 
@@ -76,6 +78,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:17:24.842Z
-Stopped at: Phase 16 context gathered
+Last session: 2026-03-24T13:41:07.744Z
+Stopped at: Completed 16-01-PLAN.md
 Resume with: `/gsd:plan-phase 16`
