@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application — now with full-stack backend, database, authentication, iOS backend support, and ChatGPT distribution
-**Current focus:** Phase 16 — MCP Infrastructure Hardening (ready to plan)
+**Current focus:** Phase 17 — Supabase Provisioning
 
 ## Current Position
 
-Phase: 16 (not started — ready for /gsd:plan-phase 16)
-Plan: —
-Status: Roadmap complete, awaiting phase planning
-Last activity: 2026-03-24 — Roadmap created for v3.0 Full Stack (6 phases, 39/39 requirements mapped)
+Phase: 17 — Supabase Provisioning
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-03-24 — Phase 16 complete (2/2 plans, MCPH-01–04 satisfied)
 
-Progress: [░░░░░░░░░░] 0% (v3.0 milestone — 0/6 phases complete)
+Progress: [██░░░░░░░░] 17% (v3.0 milestone — 1/6 phases complete)
 
 ## Phase Summary
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
-| 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | Not started |
+| 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | ✓ Complete (2026-03-24) |
 | 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | Not started |
 | 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | Not started |
 | 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | Not started |
@@ -57,6 +57,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 16-mcp-infrastructure-hardening]: Impl layer pattern: _tool_impls.py holds all tool business logic; transports are thin wrappers delegating via return await impl_*()
 - [Phase 16-mcp-infrastructure-hardening]: Tool safety classification: waf_get_status=readOnly, waf_stop_dev_server=destructive, waf_generate_app=openWorld; all others readOnly=false/destructive=false/openWorld=false
 - [Phase 16]: HTTP server (openai_mcp_server.py) uses separate FastMCP instance; never cross-imports with stdio server; both import _tool_impls.py only
+- [Phase 16]: Dual transport architecture confirmed — stdio + HTTP servers share _tool_impls.py, CI locks tool-name parity
 
 ### Pending Todos
 
@@ -79,6 +80,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:46:36.205Z
-Stopped at: Completed 16-02-PLAN.md
-Resume with: `/gsd:plan-phase 16`
+Last session: 2026-03-24
+Stopped at: Phase 16 complete, ready to plan Phase 17
+Resume file: None

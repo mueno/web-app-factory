@@ -121,6 +121,8 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 | Vercel + Supabase for backend (v3) | Supabase iOS SDK available, Vercel already primary deploy target, auth + DB + realtime in one platform | — Pending |
 | OpenAI Apps full support (v3) | MCP is shared protocol; dual distribution to Claude + ChatGPT maximizes reach | — Pending |
 | allnew-baas integration (v3) | Consolidate backend infrastructure under WAF; avoid per-app BaaS proliferation | — Pending |
+| Impl layer pattern (v3) | _tool_impls.py holds all tool business logic; transports are thin wrappers delegating via `return await impl_*()` | ✓ Phase 16 |
+| Dual transport architecture (v3) | stdio + HTTP servers as separate FastMCP instances, never cross-import, both import _tool_impls.py only | ✓ Phase 16 |
 
 ---
-*Last updated: 2026-03-24 after v3.0 milestone start*
+*Last updated: 2026-03-24 after Phase 16*
