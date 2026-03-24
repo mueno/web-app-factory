@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: active
-stopped_at: Completed 14-01-PLAN.md — GATE_RESPONSES_DIR shared constant and interactive gate polling
-last_updated: "2026-03-24T07:00:00.000Z"
-last_activity: 2026-03-24 — Phase 14 Plan 01 complete (GATE_RESPONSES_DIR, _poll_mcp_gate_file, BREAK-02 closed)
+stopped_at: Completed 14-02-PLAN.md — interactive_mode wiring through bridge and runner
+last_updated: "2026-03-24T08:50:00.000Z"
+last_activity: 2026-03-24 — Phase 14 Plan 02 complete (interactive_mode wiring, gate_waiting event, E2E integration tests)
 progress:
   total_phases: 15
   completed_phases: 13
   total_plans: 30
-  completed_plans: 29
-  percent: 97
+  completed_plans: 30
+  percent: 99
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application
-**Current focus:** Phase 14 — Interactive Gate Approval Wiring
+**Current focus:** Phase 14 complete — Phase 15 next
 
 ## Current Position
 
-Phase: 14 active (1 of 2 plans done), Plan 02 next
-Plan: 14-01 complete (GATE_RESPONSES_DIR + _poll_mcp_gate_file)
-Status: Phase 14 Plan 01 complete. Next: Phase 14 Plan 02 (pipeline bridge + runner wiring).
-Last activity: 2026-03-24 — Phase 14 Plan 01 complete (GATE_RESPONSES_DIR, _poll_mcp_gate_file, BREAK-02 closed)
+Phase: 14 complete (2 of 2 plans done)
+Plan: 14-02 complete (interactive_mode wiring + gate_waiting event + E2E tests)
+Status: Phase 14 complete. BREAK-01 and BREAK-02 closed. Next: Phase 15.
+Last activity: 2026-03-24 — Phase 14 Plan 02 complete (interactive_mode wiring, gate_waiting event, E2E integration tests)
 
 Progress: [█████████░] 97% (v2.0 milestone — 13 of 15 phases complete)
 
@@ -72,6 +72,9 @@ Carried from v1.0 + v2.0 research:
 - [Phase 14-wire-interactive-gate-approval Plan 01]: _poll_mcp_gate_file timeout=0 means poll indefinitely, matching legacy approve_gate behavior
 - [Phase 14-wire-interactive-gate-approval Plan 01]: Gate file consumed (deleted) after read via unlink(missing_ok=True) to prevent double-processing
 - [Phase 14-wire-interactive-gate-approval Plan 01]: interactive/run_id params are keyword-only with defaults — all existing callers remain unchanged
+- [Phase 14-wire-interactive-gate-approval Plan 02]: interactive_mode forwarded unconditionally in pipeline_kwargs (not conditional like company_name) — always has a bool value
+- [Phase 14-wire-interactive-gate-approval Plan 02]: gate_waiting emitted before poll loop so waf_get_status shows paused state immediately
+- [Phase 14-wire-interactive-gate-approval Plan 02]: _setup() pattern for test isolation: import run_pipeline THEN _clear_registry() — necessary because module-level executor imports fire on first import
 
 ### Pending Todos
 
