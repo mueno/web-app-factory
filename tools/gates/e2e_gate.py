@@ -154,7 +154,7 @@ def run_e2e_gate(
             severity="BLOCK",
             confidence=0.0,
             checked_at=checked_at,
-            issues=["playwright is required but not installed — run: pip install playwright && playwright install chromium"],
+            issues=["playwright browser binaries not found — run: playwright install chromium"],
         )
 
     # Load screen-spec.json
