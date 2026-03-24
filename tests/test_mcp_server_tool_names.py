@@ -1,14 +1,17 @@
 """CI assertion tests for MCP tool namespace conventions.
 
 Phase 8, Plan 01 — MCP Infrastructure Foundation
+Updated Phase 16, Plan 02 — HTTP transport coverage added
 
-These tests enforce three invariants that must hold for the lifetime
-of the project:
+These tests enforce invariants that must hold for the lifetime of the project:
 
-1. All public tools (web_app_factory.mcp_server) use the ``waf_`` prefix.
+1. All public stdio tools (web_app_factory.mcp_server) use the ``waf_`` prefix.
 2. No tool name collision exists between the internal and public servers.
 3. Internal tools (tools.factory_mcp_server) do NOT use the ``waf_`` prefix
    (that namespace is reserved exclusively for the public API).
+4. All HTTP server tools (web_app_factory.openai_mcp_server) use the ``waf_`` prefix.
+5. No tool name collision between the HTTP and internal servers.
+6. HTTP and stdio servers expose the exact same set of tools.
 
 With zero tools registered in Phase 8 the first and third tests pass
 vacuously; the assertions become meaningful as tools are added in
@@ -60,7 +63,7 @@ class TestToolNameConventions:
 
     @pytest.fixture(scope="class")
     def public_mcp(self):
-        """Load the public MCP server instance."""
+        """Load the public stdio MCP server instance."""
         from web_app_factory.mcp_server import mcp as _pub
         return _pub
 
@@ -70,8 +73,14 @@ class TestToolNameConventions:
         from tools.factory_mcp_server import mcp as _int
         return _int
 
+    @pytest.fixture(scope="class")
+    def http_mcp(self):
+        """Load the HTTP MCP server instance."""
+        from web_app_factory.openai_mcp_server import mcp as _http
+        return _http
+
     def test_public_tools_have_waf_prefix(self, public_mcp):
-        """Every tool registered on the public server must use the waf_ prefix.
+        """Every tool registered on the public stdio server must use the waf_ prefix.
 
         In Phase 8 there are zero tools — the test passes vacuously and acts as
         a sentinel: any future tool registered without waf_ will fail CI here.
@@ -104,4 +113,31 @@ class TestToolNameConventions:
         assert not violations, (
             f"Internal MCP tools using reserved 'waf_' prefix: {violations!r}. "
             "The waf_ namespace is reserved for the public web_app_factory MCP server."
+        )
+
+    def test_http_tools_have_waf_prefix(self, http_mcp):
+        """Every tool on the HTTP server must use the waf_ prefix."""
+        tool_names = _get_tool_names(http_mcp)
+        violations = {name for name in tool_names if not name.startswith("waf_")}
+        assert not violations, (
+            f"HTTP MCP tools without 'waf_' prefix: {violations!r}. "
+            "All public tools MUST use the waf_ namespace."
+        )
+
+    def test_no_tool_name_collision_http_internal(self, http_mcp, internal_mcp):
+        """No tool name must appear in both the HTTP and internal servers."""
+        http_names = _get_tool_names(http_mcp)
+        internal_names = _get_tool_names(internal_mcp)
+        collision = http_names & internal_names
+        assert not collision, (
+            f"Tool name collision between HTTP and internal servers: {collision!r}."
+        )
+
+    def test_http_stdio_tool_parity(self, public_mcp, http_mcp):
+        """HTTP and stdio servers must expose the exact same set of tools."""
+        stdio_names = _get_tool_names(public_mcp)
+        http_names = _get_tool_names(http_mcp)
+        assert stdio_names == http_names, (
+            f"Tool set mismatch. stdio-only: {stdio_names - http_names}, "
+            f"http-only: {http_names - stdio_names}"
         )
