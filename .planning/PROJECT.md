@@ -80,6 +80,9 @@ A single command takes a web app idea from concept to deployed, production-quali
 | waf_ prefix enforced in CI (v2) | Static assertion prevents tool name collisions between public/internal servers | ✓ Phase 8 |
 | ThreadPoolExecutor async bridge (v2) | run_id returned before executor submission to prevent queue-full blocking | ✓ Phase 8 |
 | keyring + env-var fallback (v2) | Credential values never logged; graceful degradation in headless/CI | ✓ Phase 8 |
+| GATE_RESPONSES_DIR shared constant (v2) | Single source of truth for gate-response path; closes BREAK-02 writer/reader mismatch | ✓ Phase 14 |
+| Interactive gate polling via file (v2) | _poll_mcp_gate_file blocks worker thread until gate file appears; gate file consumed after read | ✓ Phase 14 |
+| interactive_mode wired bridge→runner→gate (v2) | Closes BREAK-01 — mode='interactive' no longer silently dropped | ✓ Phase 14 |
 
 ---
-*Last updated: 2026-03-23 after Phase 8*
+*Last updated: 2026-03-24 after Phase 14*
