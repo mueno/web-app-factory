@@ -576,3 +576,182 @@ class TestPlaintextStorageCheck:
 
         gate08_password = [i for i in result.issues if "GATE-08" in i and "password" in i.lower()]
         assert len(gate08_password) == 0
+
+
+class TestServiceRoleLeakDetection:
+    """Tests for SECG-01: service_role key exposure via NEXT_PUBLIC_ prefix detection."""
+
+    def test_blocks_next_public_supabase_service_role_key_in_ts(self, tmp_path):
+        """NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY in a .ts file is blocked (SECG-01)."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/supabase.ts",
+            "const client = createClient(\n"
+            "  process.env.NEXT_PUBLIC_SUPABASE_URL,\n"
+            "  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY\n"
+            ")\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY" in issue for issue in result.issues)
+
+    def test_blocks_next_public_svc_role_variant(self, tmp_path):
+        """NEXT_PUBLIC_SVC_ROLE variant is also blocked (SECG-01 catches non-KEY variants)."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/config.ts",
+            "const role = process.env.NEXT_PUBLIC_SVC_ROLE\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+
+    def test_blocks_next_public_service_role_in_env_file(self, tmp_path):
+        """NEXT_PUBLIC_SERVICE_ROLE in .env file is blocked (SECG-01)."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            ".env",
+            "NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co\n"
+            "NEXT_PUBLIC_SERVICE_ROLE=supersecret\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+
+    def test_passes_server_only_service_role_key(self, tmp_path):
+        """SUPABASE_SERVICE_ROLE_KEY without NEXT_PUBLIC_ prefix passes (server-only is correct)."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/supabase-server.ts",
+            "// Server-only client\n"
+            "const client = createServerClient(\n"
+            "  process.env.NEXT_PUBLIC_SUPABASE_URL,\n"
+            "  process.env.SUPABASE_SERVICE_ROLE_KEY\n"
+            ")\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
+        assert result.issues == []
+
+    def test_passes_next_public_supabase_anon_key(self, tmp_path):
+        """NEXT_PUBLIC_SUPABASE_ANON_KEY passes — anon key is safe for client-side."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/supabase-browser.ts",
+            "const client = createBrowserClient(\n"
+            "  process.env.NEXT_PUBLIC_SUPABASE_URL,\n"
+            "  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY\n"
+            ")\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
+        assert result.issues == []
+
+    def test_secg01_issue_includes_file_path(self, tmp_path):
+        """SECG-01 issue message includes the file path for traceability."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/bad-client.ts",
+            "const x = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("bad-client.ts" in issue for issue in result.issues)
+
+    def test_secg01_issue_includes_line_number(self, tmp_path):
+        """SECG-01 issue message includes the line number."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/config.ts",
+            "// config\n"
+            "const key = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        # Issue should mention line 2
+        assert any("2" in issue for issue in result.issues)
+
+    def test_blocks_next_public_serviceaccountrole_variant(self, tmp_path):
+        """NEXT_PUBLIC_SERVICEACCOUNTROLE (no underscore) is also blocked."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/config.ts",
+            "const role = process.env.NEXT_PUBLIC_SERVICEACCOUNTROLE\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+
+    def test_existing_gate05_still_works_with_secg01(self, tmp_path):
+        """Existing GATE-05 check still fires correctly after SECG-01 extension."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/app/layout.tsx",
+            '"use client"\nexport default function Layout() {}',
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("layout.tsx" in issue for issue in result.issues)
+
+    def test_existing_gate06_still_works_with_secg01(self, tmp_path):
+        """Existing GATE-06 check still fires correctly after SECG-01 extension."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/config.ts",
+            "const key = process.env.NEXT_PUBLIC_STRIPE_SECRET\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("NEXT_PUBLIC_STRIPE_SECRET" in issue for issue in result.issues)
+
+    def test_skips_node_modules_for_secg01(self, tmp_path):
+        """SECG-01 scan skips node_modules directories."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "node_modules/some-pkg/config.ts",
+            "const x = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is True
+        assert result.issues == []
