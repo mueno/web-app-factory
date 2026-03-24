@@ -89,7 +89,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--deploy-target",
         dest="deploy_target",
-        choices=["vercel", "github-pages"],
+        choices=["vercel", "gcp", "aws", "local"],
         default="vercel",
         help="Deployment target (default: vercel)",
     )
@@ -232,6 +232,7 @@ def main(argv: list[str] | None = None) -> int:
         contract_path=contract_path,
         company_name=args.company_name,
         contact_email=args.contact_email,
+        deploy_target=args.deploy_target,
     )
 
     if args.output_json:
