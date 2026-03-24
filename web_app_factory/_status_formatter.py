@@ -137,8 +137,8 @@ def format_runs_table(runs: list[dict[str, Any]]) -> str:
     lines = [
         "## Pipeline Runs",
         "",
-        "| Run ID | Status | Started |",
-        "|--------|--------|---------|",
+        "| Run ID | Status | Started | URL |",
+        "|--------|--------|---------|-----|",
     ]
 
     for run in runs:
@@ -148,7 +148,8 @@ def format_runs_table(runs: list[dict[str, Any]]) -> str:
         started = run.get("started_at", "—")
         if isinstance(started, str) and len(started) > 19:
             started = started[:19].replace("T", " ")
-        lines.append(f"| `{run_id}` | {symbol} {status.title()} | {started} |")
+        url = run.get("url") or "—"
+        lines.append(f"| `{run_id}` | {symbol} {status.title()} | {started} | {url} |")
 
     return "\n".join(lines)
 

@@ -73,6 +73,19 @@ class TestWafGenerateApp:
         mock_bridge.assert_called_once()
         assert mock_bridge.call_args.kwargs.get("deploy_target") == "gcp"
 
+    def test_passes_resume_run_id(self):
+        test_plan = _make_test_plan()
+        with patch(
+            "web_app_factory._pipeline_bridge.start_pipeline_async",
+            new_callable=AsyncMock,
+            return_value=("existing-run-id", test_plan),
+        ) as mock_bridge:
+            from web_app_factory.mcp_server import waf_generate_app
+            asyncio.run(waf_generate_app("test app", resume_run_id="existing-run-id"))
+
+        mock_bridge.assert_called_once()
+        assert mock_bridge.call_args.kwargs.get("resume_run_id") == "existing-run-id"
+
 
 class TestWafGetStatus:
     """TOOL-02: waf_get_status returns current pipeline progress."""
@@ -122,6 +135,28 @@ class TestWafApproveGate:
         result = asyncio.run(waf_approve_gate("run-123", "maybe"))
         assert "Invalid decision" in result
 
+    def test_auto_mode_returns_error(self, _fresh_store):
+        """TOOL-03: auto mode runs should reject manual gate approval."""
+        store = _fresh_store
+        plan = _make_test_plan("run-auto")
+        store.set_plan("run-auto", plan, mode="auto")
+
+        from web_app_factory.mcp_server import waf_approve_gate
+        result = asyncio.run(waf_approve_gate("run-auto", "approve"))
+        assert "auto" in result.lower()
+        assert "interactive" in result.lower()
+
+    def test_interactive_mode_allows_approval(self, _fresh_store, tmp_path):
+        """TOOL-03: interactive mode runs should allow manual gate approval."""
+        store = _fresh_store
+        plan = _make_test_plan("run-int")
+        store.set_plan("run-int", plan, mode="interactive")
+
+        with patch("web_app_factory.mcp_server._PROJECT_ROOT", tmp_path):
+            from web_app_factory.mcp_server import waf_approve_gate
+            result = asyncio.run(waf_approve_gate("run-int", "approve"))
+        assert "approved" in result.lower()
+
 
 class TestWafListRuns:
     """TOOL-04: waf_list_runs lists all pipeline runs."""
@@ -148,3 +183,20 @@ class TestWafListRuns:
 
         assert "run-abc" in result
         assert "Pipeline Runs" in result
+
+    def test_shows_output_url_from_disk(self):
+        """TOOL-04: completed runs should include output URL."""
+        disk_runs = [
+            {
+                "run_id": "run-deployed",
+                "status": "completed",
+                "started_at": "2026-03-23T10:00:00Z",
+                "url": "https://my-app.vercel.app",
+            },
+        ]
+        with patch("web_app_factory.mcp_server._scan_disk_runs", return_value=disk_runs):
+            from web_app_factory.mcp_server import waf_list_runs
+            result = asyncio.run(waf_list_runs())
+
+        assert "https://my-app.vercel.app" in result
+        assert "run-deployed" in result

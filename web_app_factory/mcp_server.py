@@ -59,6 +59,7 @@ async def waf_generate_app(
     deploy_target: str = "vercel",
     company_name: str | None = None,
     contact_email: str | None = None,
+    resume_run_id: str | None = None,
 ) -> str:
     """Generate a full-stack Next.js web application from an idea description.
 
@@ -67,10 +68,12 @@ async def waf_generate_app(
 
     Args:
         idea: Description of the web app to build (e.g., "A recipe sharing app").
-        mode: Execution mode — "auto" (default) or "dry_run" (validate only).
+        mode: Execution mode — "auto" (default), "interactive" (pause at gates),
+              or "dry_run" (validate only).
         deploy_target: Where to deploy — "vercel" (default), "gcp", "aws", "local".
         company_name: Company name for legal document generation (optional).
         contact_email: Contact email for legal documents (optional).
+        resume_run_id: If set, resume this previous run instead of starting fresh.
 
     Returns:
         Execution plan as formatted markdown with run_id for status polling.
@@ -89,6 +92,7 @@ async def waf_generate_app(
         mode=mode,
         company_name=company_name,
         contact_email=contact_email,
+        resume_run_id=resume_run_id,
     )
 
     return format_plan_started(run_id, plan)
@@ -183,6 +187,18 @@ async def waf_approve_gate(
     if decision not in ("approve", "reject"):
         return f"Invalid decision: {decision!r}. Must be 'approve' or 'reject'."
 
+    # Check if the run is in auto mode — gate approval is only for interactive mode
+    from web_app_factory._progress_store import get_store  # noqa: PLC0415
+
+    store = get_store()
+    run_mode = store.get_mode(run_id)
+    if run_mode == "auto":
+        return (
+            f"Run `{run_id}` is in **auto** mode. "
+            "Gates are approved automatically — manual approval is not applicable.\n\n"
+            "To use manual gate approval, start the pipeline with `mode='interactive'`."
+        )
+
     # Write approval/rejection to the gate file the internal server polls
     gate_dir = _PROJECT_ROOT / "output" / ".gate-responses"
     gate_dir.mkdir(parents=True, exist_ok=True)
@@ -200,8 +216,8 @@ async def waf_approve_gate(
     )
 
     if decision == "approve":
-        return f"Gate approved for run `{run_id}`. Pipeline will continue."
-    return f"Gate rejected for run `{run_id}`. Feedback: {feedback or '(none)'}"
+        return f"✓ Gate approved for run `{run_id}`. Pipeline will continue."
+    return f"✗ Gate rejected for run `{run_id}`. Feedback: {feedback or '(none)'}"
 
 
 # ── TOOL-04: waf_list_runs ───────────────────────────────────────────────────
@@ -253,11 +269,17 @@ def _scan_disk_runs() -> list[dict]:
                     import json  # noqa: PLC0415
 
                     data = json.loads(state_file.read_text(encoding="utf-8"))
-                    runs.append({
+                    run_entry: dict = {
                         "run_id": data.get("run_id", run_dir.name),
                         "status": data.get("status", "unknown"),
                         "started_at": data.get("started_at"),
-                    })
+                    }
+                    # Extract output URL from deployment.json if available
+                    deploy_file = project_dir / "docs" / "pipeline" / "deployment.json"
+                    if deploy_file.exists():
+                        deploy_data = json.loads(deploy_file.read_text(encoding="utf-8"))
+                        run_entry["url"] = deploy_data.get("url") or deploy_data.get("deploy_url")
+                    runs.append(run_entry)
                 except Exception:
                     pass
 
