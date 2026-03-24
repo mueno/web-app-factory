@@ -190,3 +190,59 @@ class TestDeployTargetForwarding:
         kwargs = captured_kwargs[-1]
         assert "deploy_target" in kwargs, f"deploy_target not in kwargs: {kwargs.keys()}"
         assert kwargs["deploy_target"] == "vercel", f"Expected 'vercel', got {kwargs['deploy_target']!r}"
+
+
+# ---------------------------------------------------------------------------
+# Task 1 (Phase 14-02): interactive_mode forwarding tests
+# ---------------------------------------------------------------------------
+
+
+class TestInteractiveModeForwarded:
+    """interactive_mode flows from start_pipeline_async(mode=) into pipeline_kwargs."""
+
+    def _capture_kwargs(self, mode: str) -> dict:
+        """Helper: call start_pipeline_async with given mode, capture pipeline_kwargs."""
+        captured_kwargs: list = []
+        called_event = threading.Event()
+
+        def capture_and_signal(**kwargs):
+            captured_kwargs.append(kwargs)
+            called_event.set()
+            return {"status": "completed"}
+
+        from web_app_factory import _pipeline_bridge
+        import importlib
+        importlib.reload(_pipeline_bridge)
+
+        with patch("web_app_factory._pipeline_bridge._run_pipeline_sync", side_effect=capture_and_signal):
+            asyncio.run(
+                _pipeline_bridge.start_pipeline_async(
+                    "interactive test app",
+                    "./output/InteractiveApp",
+                    mode=mode,
+                )
+            )
+            called_event.wait(timeout=3.0)
+
+        assert len(captured_kwargs) >= 1, "Pipeline was never called"
+        return captured_kwargs[-1]
+
+    def test_interactive_mode_forwards_interactive_mode_true(self):
+        """start_pipeline_async(mode='interactive') passes interactive_mode=True to run_pipeline."""
+        kwargs = self._capture_kwargs("interactive")
+        assert "interactive_mode" in kwargs, (
+            f"interactive_mode not in pipeline_kwargs when mode='interactive'. "
+            f"Keys: {list(kwargs.keys())}"
+        )
+        assert kwargs["interactive_mode"] is True, (
+            f"Expected interactive_mode=True, got {kwargs['interactive_mode']!r}"
+        )
+
+    def test_auto_mode_forwards_interactive_mode_false(self):
+        """start_pipeline_async(mode='auto') passes interactive_mode=False to run_pipeline."""
+        kwargs = self._capture_kwargs("auto")
+        # interactive_mode may be absent (defaults to False) or explicitly False — both are correct
+        interactive = kwargs.get("interactive_mode", False)
+        assert interactive is False, (
+            f"Expected interactive_mode=False for mode='auto', got {interactive!r}"
+        )
