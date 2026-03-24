@@ -230,10 +230,40 @@ Plans:
 - [ ] 13-01-PLAN.md — Phase 2b three-sub-step decomposition with checkpoint resume
 - [ ] 13-02-PLAN.md — E2E Playwright form flow gate with contract and runner wiring
 
+#### Phase 14: Wire Interactive Gate Approval
+**Goal**: The interactive pipeline mode works end-to-end — `mode='interactive'` pauses the pipeline at gates, and `waf_approve_gate` decisions are consumed by the waiting pipeline
+**Depends on**: Phase 11
+**Requirements**: TOOL-03
+**Gap Closure**: Closes TOOL-03, BREAK-01, BREAK-02, Flow B from v2.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. `_pipeline_bridge.py` forwards `mode='interactive'` to `run_pipeline()` and the pipeline pauses at gate checkpoints when interactive mode is active
+  2. `waf_approve_gate` write path and `mcp_approval_gate` poll path use the same file location — gate decisions written by the MCP tool are consumed by the waiting pipeline
+  3. Calling `waf_approve_gate` with `action='approve'` unblocks the paused pipeline and execution continues to the next phase
+  4. Calling `waf_approve_gate` with `action='reject'` stops the pipeline with a clear rejection status in `waf_get_status`
+  5. In auto mode, `waf_approve_gate` returns an error explaining the mode mismatch (no silent failure)
+**Plans:** 0/0
+
+Plans:
+- (pending)
+
+#### Phase 15: Declare Playwright Dependency
+**Goal**: The E2E Playwright gate is functional on fresh installations via `uvx web-app-factory` by declaring playwright as a dependency
+**Depends on**: Phase 13
+**Requirements**: QUAL-02
+**Gap Closure**: Closes QUAL-02, GAP-01 from v2.0 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. `playwright` is declared in `pyproject.toml` as an optional dependency (e.g., `[project.optional-dependencies] e2e`) or dev dependency group
+  2. `uvx web-app-factory` installs playwright as part of the default dependency set, or the E2E gate install instructions are documented
+  3. The E2E gate imports playwright successfully and executes the form flow test (not returning BLOCKED due to missing import)
+**Plans:** 0/0
+
+Plans:
+- (pending)
+
 ## Progress
 
 **Execution Order:**
-v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 → 12 (Phase 13 can run after 8, independent of 9-12).
+v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 → 12 (Phase 13 can run after 8, independent of 9-12). Gap closure: 14 (after 11), 15 (after 13).
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -248,5 +278,7 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 9. Deploy Abstraction | v2.0 | 3/3 | Complete | 2026-03-23 |
 | 10. Local Dev Server | v2.0 | 2/2 | Complete | 2026-03-23 |
 | 11. MCP Tool Layer | v2.0 | 0/0 | Complete | 2026-03-24 |
-| 12. Environment Detection + Distribution | 2/2 | Complete    | 2026-03-24 | - |
-| 13. Pipeline Quality | 2/2 | Complete    | 2026-03-24 | - |
+| 12. Environment Detection + Distribution | v2.0 | 2/2 | Complete | 2026-03-24 |
+| 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
+| 14. Wire Interactive Gate Approval | v2.0 | 0/0 | Pending | - |
+| 15. Declare Playwright Dependency | v2.0 | 0/0 | Pending | - |

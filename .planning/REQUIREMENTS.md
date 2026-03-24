@@ -19,7 +19,7 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 - [x] **TOOL-01**: `waf_generate_app` accepts idea, mode (auto/interactive), and deploy target; starts pipeline in background
 - [x] **TOOL-02**: `waf_get_status` returns current phase, progress percentage, and recent activity for a run
-- [x] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
+- [ ] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
 - [x] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
 - [x] **TOOL-05**: `waf_check_env` detects Node.js, Python, CLI tools and reports missing/outdated with install instructions
 - [x] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
@@ -50,7 +50,7 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 ### Pipeline Quality (Backlog)
 
 - [x] **QUAL-01**: Phase 2b executes in incremental sub-steps (shared components → pages → integration) with checkpoint per step (BL-001)
-- [x] **QUAL-02**: E2E Playwright gate validates form submission → result page flows after build (BL-002)
+- [ ] **QUAL-02**: E2E Playwright gate validates form submission → result page flows after build (BL-002)
 
 ## v3.0 Requirements
 
@@ -89,7 +89,7 @@ Deferred to future release.
 | MCPI-05 | Phase 8 | Complete |
 | TOOL-01 | Phase 11 | Complete |
 | TOOL-02 | Phase 11 | Complete |
-| TOOL-03 | Phase 11 | Complete |
+| TOOL-03 | Phase 14 | Pending |
 | TOOL-04 | Phase 11 | Complete |
 | TOOL-05 | Phase 12 | Complete |
 | TOOL-06 | Phase 10 | Complete |
@@ -108,13 +108,15 @@ Deferred to future release.
 | DEPL-05 | Phase 9 | Complete |
 | DEPL-06 | Phase 9 | Complete |
 | QUAL-01 | Phase 13 | Complete |
-| QUAL-02 | Phase 13 | Complete |
+| QUAL-02 | Phase 15 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 27 total
 - Mapped to phases: 27
+- Complete: 25
+- Pending (gap closure): 2 (TOOL-03 → Phase 14, QUAL-02 → Phase 15)
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-03-23*
-*Last updated: 2026-03-23 — traceability validated against ROADMAP.md v2.0 phases 8-13*
+*Last updated: 2026-03-24 — gap closure phases 14-15 added from milestone audit*
