@@ -3,6 +3,7 @@
 Performs regex-based file scanning for:
 - GATE-05: 'use client' misplacement in layout.tsx and page.tsx
 - GATE-06: NEXT_PUBLIC_ secret-pattern environment variable exposure
+- GATE-08: Plaintext sensitive data storage patterns (passwords, PII in DB schemas)
 - BILD-06: error.tsx existence for route segments with async data fetching
 - BILD-05: Mobile-first responsive Tailwind pattern usage
 - FLOW-01: Form/router.push parameter names match receiving page searchParams
@@ -43,6 +44,33 @@ _ASYNC_DATA_RE = re.compile(
 
 # BILD-05: Hardcoded pixel widths that break responsiveness
 _HARDCODED_WIDTH_RE = re.compile(r'(?:width:\s*["\']?\d{4,}px|w-\[\d{4,}px\])')
+
+# GATE-08: Plaintext sensitive data storage patterns
+# Detect DB schema fields that store sensitive data without encryption/hashing.
+# Targets: Prisma schema, SQL, TypeScript/JS ORM model definitions.
+_PLAINTEXT_PASSWORD_RE = re.compile(
+    r"(?:"
+    r"password\s+(?:String|TEXT|VARCHAR|text|string|char)"  # Prisma / SQL schema
+    r"|password\s*:\s*(?:string|text)"  # TS/JS object type
+    r"|(?:column|field)\s*\(\s*['\"]password['\"]"  # ORM decorator
+    r")",
+    re.IGNORECASE,
+)
+# Allowlist: these patterns indicate proper hashing/encryption
+_PASSWORD_SAFE_RE = re.compile(
+    r"(?:passwordHash|password_hash|hashedPassword|hashed_password|bcrypt|argon2|scrypt)",
+    re.IGNORECASE,
+)
+
+_PLAINTEXT_PII_SCHEMA_RE = re.compile(
+    r"(?:ssn|social_security|credit_card|card_number|cardNumber"
+    r"|national_id|my_number|マイナンバー)\s+(?:String|TEXT|VARCHAR|text|string|char)",
+    re.IGNORECASE,
+)
+
+# Files scanned for GATE-08
+_SCHEMA_SCAN_PATTERNS = ["*.prisma", "*.sql", "schema.*"]
+_SCHEMA_SCAN_EXTENSIONS = {".prisma", ".sql"}
 
 # FLOW-01: Extract URLSearchParams keys from form/component code
 _URL_SEARCH_PARAMS_RE = re.compile(
@@ -298,15 +326,71 @@ def _check_form_page_params(project_dir: Path) -> list[str]:
     return issues
 
 
+def _check_plaintext_storage(project_dir: Path) -> list[str]:
+    """GATE-08: Detect plaintext sensitive data patterns in DB schemas and models.
+
+    Scans Prisma schemas, SQL files, and TypeScript model definitions for:
+    - Password fields without Hash/hashed suffix (should use bcrypt/argon2)
+    - Raw PII fields (SSN, credit card, national ID) that should never be plaintext
+
+    Returns list of issue strings.
+    """
+    issues: list[str] = []
+
+    # Collect files to scan: schema files + all .ts/.tsx under src/lib and src/
+    files_to_scan: list[Path] = []
+
+    # Schema files at project root or in prisma/
+    for pattern in ("*.prisma", "prisma/*.prisma", "*.sql", "schema.*"):
+        files_to_scan.extend(project_dir.glob(pattern))
+
+    # TypeScript model/lib files that may define DB schemas
+    src_dir = project_dir / "src"
+    if src_dir.exists():
+        for ext in (".ts", ".tsx"):
+            for filepath in src_dir.rglob(f"*{ext}"):
+                if not _should_skip(filepath):
+                    files_to_scan.append(filepath)
+
+    for filepath in files_to_scan:
+        if not filepath.is_file():
+            continue
+        try:
+            content = filepath.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        rel_path = filepath.relative_to(project_dir)
+        lines = content.splitlines()
+
+        for lineno, line in enumerate(lines, start=1):
+            # Check plaintext password fields
+            if _PLAINTEXT_PASSWORD_RE.search(line) and not _PASSWORD_SAFE_RE.search(content):
+                issues.append(
+                    f"GATE-08: {rel_path}:{lineno}: plaintext password field detected. "
+                    f"Use passwordHash with bcrypt/argon2 — never store plaintext passwords."
+                )
+
+            # Check raw PII fields (SSN, credit card, etc.)
+            if _PLAINTEXT_PII_SCHEMA_RE.search(line):
+                issues.append(
+                    f"GATE-08: {rel_path}:{lineno}: sensitive PII field stored as plaintext. "
+                    f"Credit cards must use tokenization (Stripe); government IDs must be encrypted at rest."
+                )
+
+    return issues
+
+
 def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResult:
     """Run static analysis gate checks on the generated project.
 
-    Performs five checks:
+    Performs six checks:
     1. GATE-05: No 'use client' in layout.tsx or page.tsx
     2. GATE-06: No NEXT_PUBLIC_ secret-pattern environment variables exposed
-    3. BILD-06: error.tsx exists for route segments with async data fetching
-    4. BILD-05: No hardcoded pixel widths that break responsive design
-    5. FLOW-01: Form submission params match receiving page searchParams
+    3. GATE-08: No plaintext password or PII fields in DB schemas
+    4. BILD-06: error.tsx exists for route segments with async data fetching
+    5. BILD-05: No hardcoded pixel widths that break responsive design
+    6. FLOW-01: Form submission params match receiving page searchParams
 
     Args:
         project_dir: Absolute path to the generated Next.js project directory.
@@ -323,6 +407,7 @@ def run_static_analysis_gate(project_dir: str, phase_id: str = "2b") -> GateResu
     # Run all checks
     issues.extend(_check_use_client(base))
     issues.extend(_check_next_public_secrets(base))
+    issues.extend(_check_plaintext_storage(base))
     issues.extend(_check_error_boundaries(base))
     issues.extend(_check_responsive_patterns(base))
     issues.extend(_check_form_page_params(base))

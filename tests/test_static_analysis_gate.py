@@ -473,3 +473,106 @@ class TestFormPageParamsCheck:
 
         flow_issues = [i for i in result.issues if "FLOW-01" in i]
         assert len(flow_issues) == 0
+
+
+class TestPlaintextStorageCheck:
+    """Tests for the plaintext sensitive data storage check (GATE-08)."""
+
+    def test_detects_plaintext_password_in_prisma_schema(self, tmp_path):
+        """Prisma schema with 'password String' is flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "prisma/schema.prisma",
+            "model User {\n  id    Int    @id @default(autoincrement())\n"
+            "  email String\n  password String\n}\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("GATE-08" in i and "password" in i.lower() for i in result.issues)
+
+    def test_passes_when_password_hash_used(self, tmp_path):
+        """Prisma schema with 'passwordHash' passes — proper hashing indicated."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "prisma/schema.prisma",
+            "model User {\n  id           Int    @id @default(autoincrement())\n"
+            "  email        String\n  passwordHash String\n}\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        gate08_issues = [i for i in result.issues if "GATE-08" in i and "password" in i.lower()]
+        assert len(gate08_issues) == 0
+
+    def test_detects_plaintext_ssn_in_sql(self, tmp_path):
+        """SQL schema with 'ssn TEXT' column is flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "schema.sql",
+            "CREATE TABLE users (\n  id SERIAL PRIMARY KEY,\n"
+            "  name TEXT,\n  ssn TEXT\n);\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("GATE-08" in i and "PII" in i for i in result.issues)
+
+    def test_detects_credit_card_in_ts_model(self, tmp_path):
+        """TypeScript type with 'credit_card: string' is flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/types.ts",
+            "interface PaymentInfo {\n  userId: string;\n"
+            "  credit_card string;\n}\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        assert result.passed is False
+        assert any("GATE-08" in i for i in result.issues)
+
+    def test_passes_clean_schema(self, tmp_path):
+        """Schema with no sensitive fields passes cleanly."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "prisma/schema.prisma",
+            "model Post {\n  id      Int    @id @default(autoincrement())\n"
+            "  title   String\n  content String\n}\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        gate08_issues = [i for i in result.issues if "GATE-08" in i]
+        assert len(gate08_issues) == 0
+
+    def test_bcrypt_import_exempts_password_field(self, tmp_path):
+        """File with password field but bcrypt import is not flagged."""
+        from tools.gates.static_analysis_gate import run_static_analysis_gate
+
+        _write_file(
+            tmp_path,
+            "src/lib/auth.ts",
+            'import bcrypt from "bcryptjs";\n\n'
+            "interface CreateUser {\n  email: string;\n  password string;\n}\n\n"
+            "async function create(data: CreateUser) {\n"
+            "  const hash = await bcrypt.hash(data.password, 12);\n"
+            "}\n",
+        )
+
+        result = run_static_analysis_gate(str(tmp_path), phase_id="2b")
+
+        gate08_password = [i for i in result.issues if "GATE-08" in i and "password" in i.lower()]
+        assert len(gate08_password) == 0

@@ -83,6 +83,12 @@ machine-readable artifacts.
 - Define responsive breakpoints: mobile (< 768px), tablet (768–1024px), desktop (> 1024px)
 - List all routes with URL paths, dynamic segments, and data requirements
 - Include a data flow description showing data movement between components and APIs
+- Include a `## Data Security` section when the app collects user data. This section MUST specify:
+  - Which fields are PII and require encryption at rest
+  - Password storage strategy (hashing algorithm)
+  - Payment data handling (tokenization provider, no raw card storage)
+  - Data retention period and deletion policy
+  - Third-party services that receive user data
 
 ### screen-spec.json requirements
 - Every screen entry must include: `route` (URL path), `layout` (regions: header/sidebar/main/footer),
@@ -223,13 +229,46 @@ These rules ensure the generated app passes `tsc --noEmit` and `npm run build`:
 - Never install hallucinated or misspelled package names
 - Prefer well-known packages: `next`, `react`, `react-dom`, `@types/react`, `zod`, `swr`, etc.
 
+## Data Storage Security (MANDATORY)
+
+When the PRD specifies user data collection, authentication, or database usage,
+apply these rules to ALL generated code:
+
+1. **Passwords**: NEVER store plaintext. Use `bcrypt` (npm: `bcryptjs`) with
+   cost factor >= 10. The schema field must be named `passwordHash`, never `password`.
+   ```typescript
+   import bcrypt from "bcryptjs";
+   const hash = await bcrypt.hash(plaintext, 12);
+   ```
+
+2. **PII encryption at rest**: Fields containing email, phone, address, or
+   government IDs (SSN, マイナンバー etc.) must be encrypted before database
+   storage. Use `aes-256-gcm` via Node.js `crypto` module or a library like
+   `@47ng/cloak`. Store the IV alongside the ciphertext.
+
+3. **Credit card / payment data**: NEVER store raw card numbers. Delegate to
+   Stripe, PayPal, or another PCI-compliant tokenization provider. Store only
+   the token reference (e.g., `stripeCustomerId`, `paymentMethodId`).
+
+4. **Encryption key management**: Derive encryption keys from environment
+   variables (`DATABASE_ENCRYPTION_KEY`). Never hardcode keys in source.
+   Document the required env var in the project README.
+
+5. **Database schema naming**: Use `*Hash` suffix for hashed fields and
+   `*Encrypted` suffix for encrypted fields to make the protection visible
+   in the schema (e.g., `emailEncrypted`, `passwordHash`).
+
+6. **Prisma / ORM patterns**: If using Prisma, implement encryption in a
+   middleware or utility layer (`src/lib/crypto.ts`), not inline in each route.
+
 ## Code Generation Process
 
 1. Read the screen-spec.json and PRD to understand all routes and components
 2. Generate shared components first (`src/components/`)
 3. Generate pages in route order from screen-spec.json
 4. For each route with async data: generate loading.tsx, error.tsx (with "use client"), page.tsx
-5. Verify TypeScript types compile before reporting completion
+5. If data storage is required, generate `src/lib/crypto.ts` with encrypt/decrypt helpers
+6. Verify TypeScript types compile before reporting completion
 
 ## Quality Standards
 
