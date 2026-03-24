@@ -16,11 +16,11 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 ### Supabase Provisioning
 
-- [ ] **SUPA-01**: `SupabaseProvisioner` creates a Supabase project via Management API and polls until `ACTIVE_HEALTHY`
-- [ ] **SUPA-02**: Generated migration SQL has RLS enabled on every table with `WITH CHECK (auth.uid() = user_id)` owner policy
-- [ ] **SUPA-03**: `supabase_gate.py` verifies: project created, credentials injected into Vercel env, RLS enabled on all tables
-- [ ] **SUPA-04**: `waf_check_env` extended to detect `SUPABASE_ACCESS_TOKEN` and `SUPABASE_ORG_ID` presence
-- [ ] **SUPA-05**: Supabase credentials (`SUPABASE_ACCESS_TOKEN`) stored and retrieved via OS keychain (same as v2.0 pattern)
+- [x] **SUPA-01**: `SupabaseProvisioner` creates a Supabase project via Management API and polls until `ACTIVE_HEALTHY`
+- [x] **SUPA-02**: Generated migration SQL has RLS enabled on every table with `WITH CHECK (auth.uid() = user_id)` owner policy
+- [x] **SUPA-03**: `supabase_gate.py` verifies: project created, credentials injected into Vercel env, RLS enabled on all tables
+- [x] **SUPA-04**: `waf_check_env` extended to detect `SUPABASE_ACCESS_TOKEN` and `SUPABASE_ORG_ID` presence
+- [x] **SUPA-05**: Supabase credentials (`SUPABASE_ACCESS_TOKEN`) stored and retrieved via OS keychain (same as v2.0 pattern)
 - [x] **SUPA-06**: Dual Supabase client pattern generated: `supabase-browser.ts` (anon key) and `supabase-server.ts` (service_role, server-only)
 
 ### Backend API Generation
@@ -63,7 +63,7 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 ### Security Gates (Generated Code)
 
 - [x] **SECG-01**: Env exposure gate extended to scan for `NEXT_PUBLIC_*SERVICE*ROLE*` patterns (Supabase service_role leak)
-- [ ] **SECG-02**: RLS gate scans every migration file — rejects if any `CREATE TABLE` lacks immediate `ENABLE ROW LEVEL SECURITY`
+- [x] **SECG-02**: RLS gate scans every migration file — rejects if any `CREATE TABLE` lacks immediate `ENABLE ROW LEVEL SECURITY`
 - [ ] **SECG-03**: Backend route gate scans for string concatenation in query chains (SQL injection prevention)
 - [ ] **SECG-04**: Cross-user write test generated for every RLS-protected table (policy violation assertion)
 
@@ -103,14 +103,14 @@ Deferred to future release.
 | MCPH-02 | Phase 16 | Complete |
 | MCPH-03 | Phase 16 | Complete |
 | MCPH-04 | Phase 16 | Complete |
-| SUPA-01 | Phase 17 | Pending |
-| SUPA-02 | Phase 17 | Pending |
-| SUPA-03 | Phase 17 | Pending |
-| SUPA-04 | Phase 17 | Pending |
-| SUPA-05 | Phase 17 | Pending |
+| SUPA-01 | Phase 17 | Complete |
+| SUPA-02 | Phase 17 | Complete |
+| SUPA-03 | Phase 17 | Complete |
+| SUPA-04 | Phase 17 | Complete |
+| SUPA-05 | Phase 17 | Complete |
 | SUPA-06 | Phase 17 | Complete |
 | SECG-01 | Phase 17 | Complete |
-| SECG-02 | Phase 17 | Pending |
+| SECG-02 | Phase 17 | Complete |
 | BGEN-01 | Phase 18 | Pending |
 | BGEN-02 | Phase 18 | Pending |
 | BGEN-03 | Phase 18 | Pending |

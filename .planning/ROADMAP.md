@@ -78,7 +78,7 @@ Plans:
   3. waf_check_env reports missing SUPABASE_ACCESS_TOKEN and SUPABASE_ORG_ID with actionable remediation steps
   4. Supabase credentials are read from OS keychain — the value is never logged or written to any file
   5. Generated apps have supabase-browser.ts (anon key only) and supabase-server.ts (service_role, server-only) as separate files — NEXT_PUBLIC_*SERVICE*ROLE* patterns cause the env-exposure gate to fail
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 Plans:
 - [ ] 17-01-PLAN.md — Refactor _keychain.py to banto-first credential management and extend waf_check_env
 - [ ] 17-02-PLAN.md — Create dual Supabase client TypeScript templates and SECG-01 service_role gate
@@ -154,7 +154,7 @@ Plans:
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
 | 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
-| 17. Supabase Provisioning | 2/4 | In Progress|  | - |
+| 17. Supabase Provisioning | 3/4 | In Progress|  | - |
 | 18. Backend API Generation | v3.0 | 0/? | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
-status: planning
-stopped_at: Completed 17-supabase-provisioning 17-01-PLAN.md
-last_updated: "2026-03-24T22:33:58.365Z"
-last_activity: 2026-03-24 — Phase 17 Plan 01 complete (SUPA-04, SUPA-05 satisfied)
+status: executing
+stopped_at: Completed 17-supabase-provisioning 17-03-PLAN.md
+last_updated: "2026-03-24T22:43:32.272Z"
+last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 5
   percent: 17
 ---
 
@@ -26,18 +26,18 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 17 — Supabase Provisioning
-Plan: 1 of 4 complete
+Plan: 3 of 4 complete
 Status: In progress
-Last activity: 2026-03-24 — Phase 17 Plan 01 complete (SUPA-04, SUPA-05 satisfied)
+Last activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 
-Progress: [██░░░░░░░░] 17% (v3.0 milestone — 1/6 phases complete)
+Progress: [██████████] 97% (v3.0 milestone — plan 3/4 of phase 17)
 
 ## Phase Summary
 
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | ✓ Complete (2026-03-24) |
-| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | In progress (1/4 plans) |
+| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | In progress (3/4 plans) |
 | 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | Not started |
 | 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | Not started |
 | 20 | iOS Backend Generation | IOSB-01 to IOSB-07 (7) | Not started |
@@ -63,6 +63,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 17-supabase-provisioning]: banto as priority-1 credential backend: banto unifies all credential management across Supabase, Vercel, and Anthropic keys
 - [Phase 17-supabase-provisioning]: SecureVault=None stub when banto absent: enables patch() in tests without create=True workaround
 - [Phase 17-supabase-provisioning]: check_env('supabase') as distinct deploy_target: keeps Supabase and Vercel credential checks orthogonal
+- [Phase 17-supabase-provisioning]: httpx.AsyncClient for provisioner, httpx.Client for gate — provisioner is called from async context; gate runner is synchronous
+- [Phase 17-supabase-provisioning]: Advisory vs blocking separation: network errors become advisories; missing RLS on tables and missing Vercel env vars are always blocking
 
 ### Pending Todos
 
@@ -85,6 +87,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:33:58.363Z
-Stopped at: Completed 17-supabase-provisioning 17-01-PLAN.md
+Last session: 2026-03-24T22:43:32.269Z
+Stopped at: Completed 17-supabase-provisioning 17-03-PLAN.md
 Resume file: None
