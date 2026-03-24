@@ -5,7 +5,7 @@ milestone_name: Full Stack
 status: planning
 stopped_at: Completed 17-supabase-provisioning 17-01-PLAN.md
 last_updated: "2026-03-24T22:33:58.365Z"
-last_activity: 2026-03-24 — Phase 16 complete (2/2 plans, MCPH-01–04 satisfied)
+last_activity: 2026-03-24 — Phase 17 Plan 01 complete (SUPA-04, SUPA-05 satisfied)
 progress:
   total_phases: 6
   completed_phases: 1
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-03-24)
 ## Current Position
 
 Phase: 17 — Supabase Provisioning
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-24 — Phase 16 complete (2/2 plans, MCPH-01–04 satisfied)
+Plan: 1 of 4 complete
+Status: In progress
+Last activity: 2026-03-24 — Phase 17 Plan 01 complete (SUPA-04, SUPA-05 satisfied)
 
 Progress: [██░░░░░░░░] 17% (v3.0 milestone — 1/6 phases complete)
 
@@ -37,7 +37,7 @@ Progress: [██░░░░░░░░] 17% (v3.0 milestone — 1/6 phases co
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | ✓ Complete (2026-03-24) |
-| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | Not started |
+| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | In progress (1/4 plans) |
 | 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | Not started |
 | 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | Not started |
 | 20 | iOS Backend Generation | IOSB-01 to IOSB-07 (7) | Not started |
