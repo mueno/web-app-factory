@@ -1,624 +1,680 @@
-# Architecture Patterns: MCP App Integration
+# Architecture Research: v3.0 Feature Integration
 
-**Domain:** MCP App packaging + local dev server + multi-cloud deploy for web-app-factory v2.0
-**Researched:** 2026-03-23
-**Confidence:** HIGH (MCP packaging, FastMCP tasks), MEDIUM (deploy abstraction, local server lifecycle)
-
----
-
-## Context: What v1.0 Already Has
-
-The existing pipeline has three layers worth understanding before adding v2.0 concerns:
-
-```
-factory.py (CLI) → contract_pipeline_runner → phase executors (1a/1b/2a/2b/3)
-                                          ↑
-             pipeline_state (state.json, activity-log.jsonl)
-             factory_mcp_server (approve_gate, phase_reporter)  ← internal use only
-             pipeline_runtime (startup_preflight, governance_monitor, error_router)
-```
-
-The existing `factory_mcp_server.py` (FastMCP, stdio) is an **internal process** — it handles human approval gates and phase progress logging. It is started as a subprocess by the pipeline and is NOT the user-facing MCP App. This distinction is critical for v2.0 design.
+**Domain:** Backend generation, Supabase provisioning, iOS backend templates, OpenAI Apps SDK integration into existing MCP pipeline
+**Researched:** 2026-03-24
+**Confidence:** HIGH (existing codebase analysis, OpenAI Apps SDK docs), MEDIUM (Supabase Management API flow, iOS template patterns), LOW (ChatGPT App Store submission specifics)
 
 ---
 
-## Recommended Architecture for v2.0
-
-### Overview
-
-v2.0 adds a new user-facing layer on top of the existing pipeline. The existing code does not change its internal contracts — the MCP App becomes a thin adapter that calls `run_pipeline()` and `load_contract()` the same way `factory.py` does today.
+## Context: Existing v2.0 Architecture (What Must Not Break)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│   USER-FACING MCP APP LAYER (NEW)                           │
-│                                                             │
-│   web_app_factory/mcp_app.py  ← FastMCP server             │
-│   ┌─────────────────────────────────────────────────────┐   │
-│   │  Tools (exposed to Claude):                         │   │
-│   │    generate_app(idea, deploy_target, mode)          │   │
-│   │    get_pipeline_status(run_id)                      │   │
-│   │    approve_phase(run_id, phase, decision)           │   │
-│   │    list_runs()                                      │   │
-│   │    get_preview_url(run_id)                          │   │
-│   │    start_local_server(run_id)                       │   │
-│   │    stop_local_server(run_id)                        │   │
-│   └─────────────────────────────────────────────────────┘   │
-└─────────────────────┬───────────────────────────────────────┘
-                      │  calls existing API
-┌─────────────────────▼───────────────────────────────────────┐
-│   EXISTING PIPELINE (UNCHANGED)                             │
-│                                                             │
-│   contract_pipeline_runner.run_pipeline()                   │
-│   factory.py (CLI remains functional)                       │
-│   pipeline_state, phase_executors, gates, agents            │
-│                                                             │
-│   Internal MCP: factory_mcp_server.py (approve + reporter)  │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-┌─────────────────────▼───────────────────────────────────────┐
-│   NEW SUPPORTING MODULES                                    │
-│                                                             │
-│   deploy/                                                   │
-│     deploy_provider.py    ← abstract base                   │
-│     vercel_provider.py    ← existing logic extracted here   │
-│     aws_provider.py       ← new                             │
-│     gcp_provider.py       ← new                             │
-│     provider_registry.py  ← maps name -> class              │
-│                                                             │
-│   local_server/                                             │
-│     server_manager.py     ← subprocess lifecycle            │
-│     port_allocator.py     ← find free port                  │
-└─────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│  User-Facing Layer (MCP App — stdio transport)             │
+│  web_app_factory/mcp_server.py (FastMCP 3.x)               │
+│  7 tools: waf_generate_app, waf_get_status, waf_approve_gate│
+│           waf_list_runs, waf_start_dev_server, waf_stop_dev │
+│           waf_check_env                                     │
+└────────────────────┬───────────────────────────────────────┘
+                     │ start_pipeline_async (ThreadPoolExecutor)
+┌────────────────────▼───────────────────────────────────────┐
+│  Bridge Layer                                               │
+│  web_app_factory/_pipeline_bridge.py                        │
+│  ThreadPoolExecutor (3 workers), run_id registry            │
+└────────────────────┬───────────────────────────────────────┘
+                     │ run_pipeline(idea, project_dir, **opts)
+┌────────────────────▼───────────────────────────────────────┐
+│  Pipeline Core                                              │
+│  tools/contract_pipeline_runner.py                          │
+│  PHASE_ORDER: 1a → 1b → 2a → 2b → 3                        │
+│  YAML contract: contracts/pipeline-contract.web.v1.yaml     │
+└──────┬─────────────────────────────────┬────────────────────┘
+       │ phase dispatch                  │ gate evaluation
+┌──────▼────────────────┐  ┌────────────▼───────────────────┐
+│  Phase Executors       │  │  Quality Gates (10)             │
+│  phase_1a_executor    │  │  build, static_analysis,        │
+│  phase_1b_executor    │  │  lighthouse, a11y, security,    │
+│  phase_2a_executor    │  │  link_integrity, legal,         │
+│  phase_2b_executor    │  │  deployment, mcp_approval,      │
+│  phase_3_executor     │  │  e2e (Playwright)               │
+└──────┬────────────────┘  └────────────────────────────────┘
+       │ agent calls
+┌──────▼────────────────────────────────────────────────────┐
+│  Agents (Claude Agent SDK)                                 │
+│  spec_agent, build_agent, deploy_agent                     │
+└───────────────────┬───────────────────────────────────────┘
+                    │
+┌───────────────────▼───────────────────────────────────────┐
+│  Deploy Providers (ABC pattern)                            │
+│  VercelProvider, GCPProvider, AWSProvider, LocalProvider   │
+└───────────────────────────────────────────────────────────┘
 ```
+
+**Key invariants that must be preserved:**
+- `waf_` tool prefix enforced by CI test (`tests/test_mcp_server_tool_names.py`)
+- `start_pipeline_async` returns `run_id` BEFORE thread submission (deadlock prevention)
+- `GATE_RESPONSES_DIR` shared constant between writer (mcp_server) and reader (mcp_approval_gate)
+- Pipeline contract YAML is the single source of phase definitions and gate conditions
+- `PhaseExecutor` ABC — all executors implement `execute(ctx: PhaseContext) -> PhaseResult`
+- `DeployProvider` ABC — all providers implement `deploy()`, `get_url()`, `verify()`
 
 ---
 
-## Integration Point 1: MCP App Packaging
+## New Features and Integration Analysis
 
-### How `claude mcp add` Works
+### Feature 1: Backend API Generation (REST endpoints)
 
-MCP servers for Claude Code are installed via:
-```bash
-# Python package via uvx (recommended for PyPI distribution)
-claude mcp add web-app-factory -- uvx web-app-factory
+**What it is:** The pipeline generates Vercel Functions (Node.js ES modules) as backend API alongside the Next.js frontend. The allnew-mobile-baas codebase is the reference implementation.
 
-# Or directly from local checkout (development)
-claude mcp add web-app-factory -- uv --directory /path/to/web-app-factory run web_app_factory/mcp_app.py
-
-# Or via npx for node-based servers (not applicable here)
+**allnew-baas code pattern:**
+```
+projects/allnew-baas/vercel/
+├── api/
+│   ├── health.js             # GET /api/health — liveness probe
+│   └── gemini/
+│       └── live-token.js     # POST /api/gemini/live-token — token issuance
+└── vercel.json               # Function config: maxDuration=10, Cache-Control headers
 ```
 
-The server runs as a **stdio process** (stdin/stdout JSON-RPC). This is the same transport the existing `factory_mcp_server.py` uses. Claude Code keeps it running for the session lifetime.
+Each function is a named ESM export `default async function handler(req, res)` — standard Vercel Functions pattern. The functions include: rate limiting (in-memory Map), CORS headers with allowlist, shared secret authentication, JSON error utilities.
 
-### pyproject.toml Entry Point (Required)
+**Integration point: Phase 1b (Spec and Design)**
+
+The spec agent system prompt must be updated to optionally produce a `backend-spec.json` alongside `screen-spec.json`. The backend spec defines:
+- API routes (path, method, auth requirements)
+- Request/response schemas per route
+- Auth provider (Supabase JWT, shared secret, API key)
+- Supabase tables required (names, columns, types)
+
+**Integration point: Phase 2b (Code Generation)**
+
+A new `phase_2b_backend_subagent` or sub-step within the existing Phase 2b executor generates API routes under `src/app/api/` (Next.js App Router route handlers) or a separate `api/` directory for standalone Vercel Functions. The build agent system prompt needs a backend generation section.
+
+**New component: `BackendSpecValidator` gate** — verifies generated API routes have type-safe request/response handlers, no raw secrets in code, CORS headers present.
+
+**Confidence:** HIGH — this follows the established allnew-baas pattern and fits cleanly into Phase 2b's sub-step decomposition.
+
+---
+
+### Feature 2: Supabase DB Provisioning
+
+**What it is:** The pipeline programmatically creates a Supabase project (PostgreSQL + Realtime + Auth) using the Supabase Management API, injects the connection credentials into the generated app's environment.
+
+**Supabase Management API flow:**
+
+```
+POST https://api.supabase.com/v1/projects
+Authorization: Bearer <SUPABASE_ACCESS_TOKEN>
+Body: { name, organization_id, db_pass, region, plan }
+
+Response: { id, ref, api_url, anon_key, service_role_key }
+```
+
+The `ref` value is the project identifier used to construct:
+- Project URL: `https://<ref>.supabase.co`
+- API URL: `https://<ref>.supabase.co/rest/v1`
+- Auth URL: `https://<ref>.supabase.co/auth/v1`
+- Realtime URL: `wss://<ref>.supabase.co/realtime/v1`
+
+After project creation, tables are provisioned via SQL through the Management API (`POST /v1/projects/{ref}/database/query`) or by generating a `supabase/migrations/` directory that Supabase CLI applies.
+
+**Integration point: New Phase 2a sub-step or new Phase "2c"**
+
+Option A (preferred): Add a sub-step to Phase 2a (`phase_2a_executor.py`) called `provision_supabase`. Phase 2a currently handles scaffolding. Adding Supabase provisioning here keeps the "scaffold + provision" concerns together before code generation in Phase 2b.
+
+Option B: New Phase 2c executor (`phase_2c_executor.py`) — only needed if Supabase provisioning becomes complex enough to warrant its own phase with separate gates. Prefer Option A initially.
+
+**New component: `SupabaseProvisioner`**
+
+```
+tools/
+└── supabase_provisioner.py   # Management API client: create_project(), run_migration(), get_credentials()
+```
+
+Responsibilities:
+- `create_project(name, org_id, region)` — calls Management API, returns `SupabaseCredentials`
+- `run_migration(ref, sql)` — executes DDL via Management API database query endpoint
+- `get_credentials(ref)` — fetches anon_key and service_role_key
+- `inject_env(project_dir, creds)` — writes `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+
+**Credential storage:**
+
+`SUPABASE_ACCESS_TOKEN` (user's personal access token) stored via the existing `_keychain.py` / env-var fallback pattern. Never logged. The `VERCEL_ENV_ALLOWLIST` in `vercel_provider.py` must be extended to include Supabase env vars.
+
+**New gate: `supabase_provisioning_gate`** — verifies project was created, `.env.local` exists, migration SQL ran successfully.
+
+**Confidence:** MEDIUM — Management API is documented but credential lifecycle (when to create vs reuse an existing project) needs design decisions.
+
+---
+
+### Feature 3: Supabase Auth Scaffolding
+
+**What it is:** The build agent generates Supabase Auth integration code: `@supabase/ssr` setup, OAuth callback route handler, middleware for session refresh, sign-in pages for Apple/Google/Email.
+
+**Pattern (from Supabase official docs):**
+```
+src/
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts    # createBrowserClient() — "use client" components
+│   │   └── server.ts    # createServerClient() — Server Components, Route Handlers
+├── app/
+│   ├── auth/
+│   │   ├── callback/
+│   │   │   └── route.ts   # GET /auth/callback — exchanges code for session
+│   │   ├── login/
+│   │   │   └── page.tsx   # Sign-in UI
+│   │   └── logout/
+│   │       └── route.ts   # POST /auth/logout
+│   └── middleware.ts       # Session refresh on every request
+```
+
+**Integration point: Build agent system prompt update**
+
+The BUILD_AGENT system prompt in `agents/definitions.py` needs a `## Supabase Auth (when auth is required)` section specifying:
+- Use `@supabase/ssr` not `@supabase/auth-helpers-nextjs` (deprecated)
+- `supabase.auth.getUser()` in server components for session validation (never `getSession()`)
+- OAuth providers configured via Supabase dashboard (Apple requires Service ID + key)
+- Callback route pattern and PKCE flow requirement
+
+**Integration point: Spec agent system prompt update**
+
+SPEC_AGENT already mentions `NextAuth.js or Clerk` as auth options in its stack context. This must be updated to include `Supabase Auth` as the preferred option when Supabase DB is also being used (avoid mixing auth providers).
+
+**No new executor needed** — auth scaffolding is part of Phase 2b code generation. The `backend-spec.json` produced in Phase 1b should include an `auth` field specifying which providers are required.
+
+**Confidence:** HIGH — Supabase + Next.js App Router auth is well-documented with SSR package.
+
+---
+
+### Feature 4: allnew-mobile-baas Integration
+
+**What it is:** The `projects/allnew-baas/vercel/` codebase becomes a template source for WAF-generated backends. When a user requests an iOS-compatible backend, WAF copies and adapts the allnew-baas API structure.
+
+**allnew-baas key patterns to extract:**
+- `setCorsHeaders()` with allowlist — iOS apps need explicit CORS origin allowlisting
+- `isRateLimited()` in-memory Map — basic rate limiting without Redis (acceptable for starter projects)
+- `resolveAppId()` from header or payload — mobile app identification pattern
+- `BAAS_CLIENT_SHARED_SECRET` authentication — pre-shared key suitable for iOS app → server
+- `vercel.json` function config — `maxDuration: 10`, `Cache-Control: no-store`
+
+**New component: Backend templates directory**
+
+```
+web_app_factory/
+└── templates/
+    └── backend/
+        ├── vercel-functions/
+        │   ├── api/
+        │   │   ├── health.js         # Liveness probe template
+        │   │   └── _shared/
+        │   │       ├── cors.js       # setCorsHeaders() helper
+        │   │       ├── rate-limit.js # isRateLimited() helper
+        │   │       └── auth.js       # resolveAppId(), isAllowedApp() helpers
+        │   └── vercel.json           # Function config template
+        └── supabase/
+            ├── schema.sql            # Base tables template
+            └── auth.sql              # Auth triggers template
+```
+
+**Integration point: Template-driven code generation**
+
+Phase 2b builds a prompt that references these templates. The build agent copies and customizes the templates based on `backend-spec.json`. This avoids the agent hallucinating API patterns from scratch.
+
+**Confidence:** MEDIUM — template extraction is straightforward. The question is whether to use file-based templates or embed them as strings in the agent system prompt. File-based templates are more maintainable.
+
+---
+
+### Feature 5: iOS Backend Generation
+
+**What it is:** When `waf_generate_app` receives `target: "ios-backend"` (or a similar parameter), the pipeline generates a REST API designed to serve iOS clients rather than a web frontend. The output is a deployable Vercel Functions project with no Next.js frontend.
+
+**Key differences from web app generation:**
+
+| Aspect | Web App | iOS Backend |
+|--------|---------|-------------|
+| Output | Next.js app + API routes | Vercel Functions only (no frontend) |
+| Auth | Supabase Auth (JWT, OAuth) | Supabase Auth + Apple Sign-In callback + APNS token |
+| CORS | Same-origin preferred | iOS app bundle ID origin |
+| Response format | HTML pages + JSON APIs | JSON-only APIs |
+| Dev server | `next dev` | `vercel dev` |
+
+**Integration point: New `waf_generate_app` parameter**
+
+Add `app_type: str = "web"` parameter to `waf_generate_app` MCP tool. Valid values: `"web"` (default), `"ios-backend"`, `"fullstack"` (web + backend). The `app_type` is passed through the bridge to `run_pipeline()` and then to the `PhaseContext`.
+
+**Integration point: New contract variant**
+
+A new `pipeline-contract.ios-backend.v1.yaml` with phases:
+- Phase 1a: iOS app validation (instead of web app validation)
+- Phase 1b: API spec (instead of screen spec — no UI)
+- Phase 2a: Scaffold Vercel Functions project (instead of Next.js scaffold)
+- Phase 2b: Generate API routes from spec
+- Phase 3: Deploy to Vercel (reuse existing VercelProvider)
+
+The existing `pipeline-contract.web.v1.yaml` is unchanged. The `_pipeline_bridge.py` selects the contract based on `app_type`.
+
+**New phase executors: iOS backend variants**
+
+Since the phase *IDs* remain the same (1a, 1b, 2a, 2b, 3), the executor registry needs a way to dispatch by both phase ID and contract type. Options:
+
+Option A: Separate executor registry per contract — `get_executor(phase_id, contract_type)`. Adds `contract_type` parameter to `PhaseContext`.
+
+Option B: Single executors with `app_type` branching — existing executors check `ctx.app_type` and call different sub-routines. Simpler but muddies separation.
+
+Recommendation: Option A — matches the existing pattern of "one executor per phase", extends cleanly, avoids `if app_type == "ios"` branching in every executor.
+
+**Confidence:** MEDIUM — contract-per-app-type is the right pattern but adds executor registry complexity.
+
+---
+
+### Feature 6: OpenAI Apps SDK Support (ChatGPT Distribution)
+
+**What it is:** The web-app-factory MCP server is additionally distributed as a ChatGPT App via the OpenAI Apps SDK. This requires a fundamentally different transport: HTTP/HTTPS instead of stdio.
+
+**Critical architecture difference:**
+
+| Aspect | Claude (current) | ChatGPT (new) |
+|--------|-----------------|----------------|
+| Transport | stdio (stdin/stdout) | Streamable HTTP (HTTPS POST to `/mcp`) |
+| Install method | `claude mcp add web-app-factory -- uvx web-app-factory` | ChatGPT connector: paste HTTPS URL |
+| Auth | None (process isolation) | Developer-implemented (API key, OAuth) |
+| UI components | N/A (text only) | HTML widgets in ChatGPT iframe (`mcp-app` MIME type) |
+| Tool returns | `content` only | `structuredContent` (model), `content` (text), `_meta` (UI widget) |
+| Hosting | Local process via uvx | Remote HTTPS server (Vercel, Fly.io, etc.) |
+
+**New component: `openai_mcp_server.py`**
+
+A second FastMCP server instance running in HTTP mode, exposing the same logical tools as `mcp_server.py` but with:
+1. HTTP transport: `mcp.run(transport="http", host="0.0.0.0", port=8000)`
+2. Auth middleware: verify `X-API-Key` header or OAuth token before dispatching
+3. `structuredContent` in tool returns (for ChatGPT model narration)
+4. Registered HTML resource for ChatGPT UI widget (optional, but enables richer UX)
+
+```python
+# web_app_factory/openai_mcp_server.py
+from fastmcp import FastMCP
+
+mcp_chatgpt = FastMCP(
+    "web-app-factory-chatgpt",
+    instructions="...",
+)
+
+# Same tools, different return format
+@mcp_chatgpt.tool()
+async def waf_generate_app(...) -> dict:
+    result = await _run_generate(...)  # shared impl
+    return {
+        "structuredContent": {"run_id": result.run_id, "status": "started"},
+        "content": [{"type": "text", "text": result.plan_markdown}],
+    }
+```
+
+**Shared implementation pattern:**
+
+Both `mcp_server.py` (stdio) and `openai_mcp_server.py` (HTTP) import from a shared `web_app_factory/_tool_impls.py` module that contains the actual logic. The server files are thin adapters with transport-specific return formatting.
+
+```
+web_app_factory/
+├── mcp_server.py           # Claude: stdio transport, content-only returns
+├── openai_mcp_server.py    # ChatGPT: HTTP transport, structuredContent returns
+├── _tool_impls.py          # NEW: shared business logic for all tools
+├── _pipeline_bridge.py     # Unchanged: async bridge to pipeline
+└── ...
+```
+
+**New pyproject.toml entry point:**
 
 ```toml
 [project.scripts]
-web-app-factory = "web_app_factory.mcp_app:main"
+web-app-factory-mcp = "web_app_factory.mcp_server:main"          # Claude (existing)
+web-app-factory-openai = "web_app_factory.openai_mcp_server:main" # ChatGPT (new)
 ```
 
-Where `main()` calls `mcp.run(transport="stdio")`. This is the executable that `uvx web-app-factory` runs after PyPI install.
+**ChatGPT App Store submission requirements:**
 
-The package name on PyPI must match: `web-app-factory` (kebab case). The Python module uses underscore: `web_app_factory`.
+- HTTPS endpoint (deploy `openai_mcp_server.py` to Vercel/Fly.io/etc.)
+- Organization verification in OpenAI Platform Dashboard (Owner role required)
+- App metadata: name, logo, description, company, privacy policy URL
+- MCP server tool annotations: `readOnly`, `destructive`, `openWorld` flags per tool
+- Test prompts with expected responses (reviewed by OpenAI manually)
+- Active MCP server during review (cannot be localhost)
 
-### MCP App Source Layout Change
+**Key insight:** The OpenAI Apps SDK mandates HTTP transport with a public HTTPS URL. The Claude distribution uses local stdio. These are two separate server entry points, not one server with dual transport. They share implementation via `_tool_impls.py` but are deployed differently.
 
-The current project has no top-level Python package (code is in `tools/`, `pipeline_runtime/`, `agents/`, `config/`). For `uvx web-app-factory` to work, there needs to be an importable package. Two options:
+**Confidence:** HIGH — OpenAI Apps SDK docs are clear on transport, auth, and submission. FastMCP 3.x supports both transports with separate `run()` calls.
 
-**Option A: Add `web_app_factory/` package (recommended)**
+---
+
+## System Overview: v3.0 Target Architecture
+
 ```
-web_app_factory/
-  __init__.py
-  mcp_app.py          ← new user-facing MCP server
-  _pipeline_bridge.py ← thin wrapper calling run_pipeline()
-```
-The existing `tools/`, `pipeline_runtime/`, etc. stay as-is. `mcp_app.py` imports from them.
-
-**Option B: Make the project root itself the package**
-Not recommended — breaks existing relative imports in `tools/`.
-
-**Verdict: Option A.** Add `web_app_factory/` as the new public API surface. Internal modules untouched.
-
-### .mcp.json for Project-scoped Installation
-
-For teams sharing the repo, add `.mcp.json` at project root:
-```json
-{
-  "mcpServers": {
-    "web-app-factory": {
-      "command": "uv",
-      "args": ["--directory", ".", "run", "web_app_factory/mcp_app.py"],
-      "env": {
-        "ANTHROPIC_API_KEY": "${ANTHROPIC_API_KEY}"
-      }
-    }
-  }
-}
+┌──────────────────────────────────────────────────────────────────┐
+│  Distribution Layer                                               │
+│  ┌──────────────────────────┐  ┌──────────────────────────────┐  │
+│  │  Claude (stdio)          │  │  ChatGPT (HTTPS)             │  │
+│  │  mcp_server.py           │  │  openai_mcp_server.py        │  │
+│  │  `claude mcp add ...`    │  │  Deployed to Vercel/Fly.io   │  │
+│  │  Local process (uvx)     │  │  ChatGPT App Store           │  │
+│  └──────────┬───────────────┘  └──────────────┬───────────────┘  │
+│             └──────────────┬──────────────────┘                  │
+│                   ┌────────▼────────┐                            │
+│                   │  _tool_impls.py │  (NEW — shared logic)      │
+│                   └────────┬────────┘                            │
+└────────────────────────────┼────────────────────────────────────┘
+                             │
+┌────────────────────────────▼────────────────────────────────────┐
+│  Bridge + Pipeline Core (UNCHANGED)                              │
+│  _pipeline_bridge.py → contract_pipeline_runner → phases 1a→3   │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │ PhaseContext.app_type dispatch
+            ┌──────────┴──────────────────────┐
+            ▼                                 ▼
+┌─────────────────────────┐    ┌──────────────────────────────┐
+│  Web Contract            │    │  iOS Backend Contract        │
+│  pipeline-contract.web   │    │  pipeline-contract.ios-      │
+│  .v1.yaml                │    │  backend.v1.yaml (NEW)       │
+│  Phases 1a→1b→2a→2b→3   │    │  Phases 1a→1b→2a→2b→3       │
+│  (web executors)         │    │  (ios-backend executors)     │
+└──────────┬──────────────┘    └──────────────────────────────┘
+           │
+     ┌─────▼──────────────────────────────────────────────────┐
+     │  Phase 2a: Scaffold + Supabase Provision (MODIFIED)    │
+     │  + SupabaseProvisioner.create_project()                │
+     │  + SupabaseProvisioner.run_migration()                 │
+     │  + inject credentials to .env.local                   │
+     └─────┬──────────────────────────────────────────────────┘
+           │
+     ┌─────▼──────────────────────────────────────────────────┐
+     │  Phase 2b: Code Gen — web + backend (MODIFIED)         │
+     │  Sub-steps:                                            │
+     │    generate_shared_components (existing)               │
+     │    generate_pages (existing)                           │
+     │    generate_integration (existing)                     │
+     │    generate_api_routes (NEW — backend-spec.json)       │
+     │    validate_packages (existing)                        │
+     └─────┬──────────────────────────────────────────────────┘
+           │
+     ┌─────▼──────────────────────────────────────────────────┐
+     │  Deploy Providers (EXTENDED)                           │
+     │  VercelProvider: add SUPABASE_* to env allowlist       │
+     └────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Integration Point 2: MCP Tool → Pipeline Entry Point Mapping
-
-### Tool Design Principles
-
-The pipeline is inherently long-running (minutes to hours). MCP tools must either:
-1. Return immediately with a `run_id` and let the user poll via `get_pipeline_status`, or
-2. Use FastMCP's `task=True` background task decorator (FastMCP 3.x) with progress tracking.
-
-**Verdict: Use FastMCP background tasks for `generate_app`, immediate returns for status/control tools.**
-
-FastMCP 3.x `task=True` pattern:
-```python
-@mcp.tool(task=True)
-async def generate_app(idea: str, deploy_target: str = "vercel") -> str:
-    """Generate and deploy a web application from an idea."""
-    # runs in background, returns immediately to Claude with task_id
-    # progress updates via Progress dependency
-    ...
-```
-
-### Tool → Pipeline Mapping
-
-| MCP Tool | Calls Into | Notes |
-|----------|-----------|-------|
-| `generate_app(idea, deploy_target, mode)` | `run_pipeline()` | Background task. Returns run_id. |
-| `get_pipeline_status(run_id)` | `load_state()` | Reads state.json. Immediate. |
-| `approve_phase(run_id, decision)` | Writes approval response file | Same mechanism as current `approve_gate` |
-| `list_runs()` | Scans output/ dir for state.json files | Immediate. |
-| `get_preview_url(run_id)` | Reads `deployment.json` | Immediate. |
-| `start_local_server(run_id)` | `ServerManager.start()` | Immediate, returns port. |
-| `stop_local_server(run_id)` | `ServerManager.stop()` | Immediate. |
-| `check_environment()` | `run_startup_preflight()` | Environment check. Immediate. |
-
-### The `approve_phase` Tool: Replacing the File-Poll Gate
-
-Current architecture: `factory_mcp_server.py` exposes `approve_gate` as an MCP tool that the Claude **agent** running the pipeline calls. The agent polls a file.
-
-v2.0 architecture: The user-facing MCP App exposes `approve_phase` that the **user's Claude session** calls when they want to approve or reject. The internal agent still calls `approve_gate`. The MCP App bridges these:
-
-```
-User Claude ──[approve_phase(run_id, "yes")]──► MCP App
-                                                   │ writes response file
-                                              Internal agent polls file
-                                              Internal agent reads "yes"
-                                              Internal agent proceeds
-```
-
-This means the existing file-based polling in `approve_gate` is preserved. The MCP App just writes the response file in the correct format. No changes to `factory_mcp_server.py`.
-
-### Interactive (Phase-by-Phase) Mode
-
-The `mode` parameter on `generate_app` controls whether the pipeline auto-approves gates or waits:
-
-```python
-generate_app(idea="recipe app", mode="interactive")  # pauses at each gate
-generate_app(idea="recipe app", mode="auto")          # auto-approves (WEB_FACTORY_APPROVAL_TIMEOUT_SEC=0 → auto)
-```
-
-In `interactive` mode, the pipeline pauses at `approve_gate`. The MCP App can surface the pending approval as a notification to the user. The user calls `approve_phase` to unblock.
-
----
-
-## Integration Point 3: Deploy Provider Abstraction Layer
-
-### Problem
-
-Phase 3 executor (`phase_3_executor.py`) has Vercel tightly coupled throughout — `vercel link`, `vercel deploy`, `vercel promote`. To support AWS Amplify and GCP Cloud Run, this logic must be extracted behind an interface.
-
-### Abstraction Interface
-
-```python
-# deploy/deploy_provider.py
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-
-@dataclass
-class DeployResult:
-    success: bool
-    preview_url: str | None = None
-    production_url: str | None = None
-    error: str | None = None
-    raw_output: str = ""
-
-class DeployProvider(ABC):
-    """Abstract deploy provider. One implementation per cloud target."""
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Provider identifier: 'vercel', 'aws', 'gcp'"""
-        ...
-
-    @abstractmethod
-    def provision(self, project_dir: str, project_name: str) -> DeployResult:
-        """Link/initialize the project with the platform."""
-        ...
-
-    @abstractmethod
-    def deploy_preview(self, project_dir: str) -> DeployResult:
-        """Deploy to a preview/staging environment. Returns preview_url."""
-        ...
-
-    @abstractmethod
-    def deploy_production(self, project_dir: str, preview_url: str) -> DeployResult:
-        """Promote preview to production."""
-        ...
-
-    @abstractmethod
-    def is_authenticated(self) -> bool:
-        """Check if credentials are available for this provider."""
-        ...
-```
-
-### Provider Implementations
-
-**VercelProvider** (extracted from existing phase_3_executor.py):
-- `provision`: `vercel link --yes`
-- `deploy_preview`: `vercel deploy` → parse URL from stdout with `_VERCEL_URL_RE`
-- `deploy_production`: `vercel promote {preview_url} --yes --timeout=5m`
-
-**AWSProvider** (new):
-- Uses `amplify` CLI or `aws cloudfront` + S3
-- Next.js on AWS: AWS Amplify is the lowest-friction option for Next.js
-- `provision`: `amplify init && amplify add hosting`
-- `deploy_preview`: `amplify publish` with branch-based preview
-- Complexity: HIGH — Amplify requires AWS credentials, region, account ID
-
-**GCPProvider** (new):
-- Uses Cloud Run (containerized) or Firebase Hosting
-- For Next.js: Firebase Hosting + Cloud Functions or Cloud Run
-- `provision`: `firebase init hosting` or `gcloud run deploy`
-- Complexity: HIGH — requires Dockerfile for Cloud Run; Firebase is simpler but limited
-
-**Verdict for v2.0:** Vercel is fully implemented (extracted). AWS and GCP are stubbed with clear provider interface. The architecture is set, implementations are deferred.
-
-### Provider Registry
-
-```python
-# deploy/provider_registry.py
-_REGISTRY: dict[str, type[DeployProvider]] = {}
-
-def register_provider(cls: type[DeployProvider]) -> type[DeployProvider]:
-    _REGISTRY[cls().name] = cls
-    return cls
-
-def get_provider(name: str) -> DeployProvider:
-    cls = _REGISTRY.get(name)
-    if cls is None:
-        raise ValueError(f"Unknown deploy provider: {name!r}. Available: {list(_REGISTRY)}")
-    return cls()
-```
-
-### Phase 3 Executor Refactor
-
-The key change: `Phase3ShipExecutor` receives a `DeployProvider` instance (injected via `PhaseContext.extra["deploy_provider"]`) instead of calling `vercel` CLI directly.
-
-```python
-# In contract_pipeline_runner.py (or factory.py):
-from deploy.provider_registry import get_provider
-
-provider = get_provider(args.deploy_target)  # "vercel", "aws", "gcp"
-# inject into PhaseContext.extra
-ctx = PhaseContext(..., extra={"deploy_provider": provider})
-```
-
-This is a surgical change to Phase 3 only. Phases 1a, 1b, 2a, 2b are untouched.
-
----
-
-## Integration Point 4: Local Dev Server Lifecycle
-
-### Requirements
-
-- Start `npm run dev` in the generated project's Next.js directory
-- Detect when the server is ready (port listening, not just process started)
-- Return the URL to the user
-- Track running servers by `run_id`
-- Stop servers on request or session end
-
-### Implementation: ServerManager
-
-```python
-# local_server/server_manager.py
-
-import asyncio
-import subprocess
-import socket
-import time
-from pathlib import Path
-
-class LocalDevServer:
-    def __init__(self, run_id: str, project_dir: Path, port: int):
-        self.run_id = run_id
-        self.project_dir = project_dir
-        self.port = port
-        self.process: subprocess.Popen | None = None
-        self.url: str = f"http://localhost:{port}"
-
-    def start(self) -> None:
-        """Start npm run dev. Non-blocking."""
-        self.process = subprocess.Popen(
-            ["npm", "run", "dev", "--", "-p", str(self.port)],
-            cwd=str(self.project_dir),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-
-    def wait_ready(self, timeout: float = 60.0) -> bool:
-        """Poll until port is listening or timeout. Returns True if ready."""
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            try:
-                with socket.create_connection(("localhost", self.port), timeout=1.0):
-                    return True
-            except (ConnectionRefusedError, OSError):
-                time.sleep(1.0)
-        return False
-
-    def stop(self) -> None:
-        if self.process and self.process.poll() is None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-
-class ServerManager:
-    """Tracks active local dev servers by run_id."""
-
-    def __init__(self) -> None:
-        self._servers: dict[str, LocalDevServer] = {}
-
-    def start(self, run_id: str, project_dir: Path) -> tuple[bool, str]:
-        """Start dev server. Returns (success, url_or_error)."""
-        if run_id in self._servers:
-            s = self._servers[run_id]
-            if s.process and s.process.poll() is None:
-                return True, s.url  # already running
-
-        port = self._find_free_port()
-        server = LocalDevServer(run_id, project_dir, port)
-        server.start()
-        if server.wait_ready():
-            self._servers[run_id] = server
-            return True, server.url
-        server.stop()
-        return False, "Server did not start within timeout"
-
-    def stop(self, run_id: str) -> None:
-        server = self._servers.pop(run_id, None)
-        if server:
-            server.stop()
-
-    def stop_all(self) -> None:
-        for server in list(self._servers.values()):
-            server.stop()
-        self._servers.clear()
-
-    @staticmethod
-    def _find_free_port(start: int = 3000, end: int = 3100) -> int:
-        for port in range(start, end):
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind(("localhost", port))
-                    return port
-            except OSError:
-                continue
-        raise RuntimeError("No free port found in range 3000-3100")
-```
-
-**MCP App lifecycle:** `ServerManager` is a module-level singleton in `mcp_app.py`. On MCP server shutdown, `stop_all()` is called. This ensures no orphaned `npm run dev` processes.
-
----
-
-## Component Boundaries (New vs. Modified)
-
-### New Components
-
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| User-facing MCP server | `web_app_factory/mcp_app.py` | Exposes tools to Claude, background tasks |
-| Pipeline bridge | `web_app_factory/_pipeline_bridge.py` | Calls `run_pipeline()` in thread pool |
-| Deploy provider base | `deploy/deploy_provider.py` | Abstract interface |
-| Deploy provider registry | `deploy/provider_registry.py` | Maps name → class |
-| Vercel provider (extracted) | `deploy/vercel_provider.py` | Existing Vercel logic |
-| AWS provider (stub) | `deploy/aws_provider.py` | Stub + interface |
-| GCP provider (stub) | `deploy/gcp_provider.py` | Stub + interface |
-| Local server manager | `local_server/server_manager.py` | Subprocess lifecycle |
-| Port allocator | `local_server/port_allocator.py` | (inline in server_manager or separate) |
-
-### Modified Components
-
-| Component | Location | Change |
-|-----------|----------|--------|
-| Phase 3 executor | `tools/phase_executors/phase_3_executor.py` | Accept `DeployProvider` from `PhaseContext.extra`; call `provider.deploy_preview()` etc. instead of `vercel` directly |
-| `PhaseContext` | `tools/phase_executors/base.py` | `extra` dict already exists — no schema change needed |
-| `startup_preflight.py` | `pipeline_runtime/startup_preflight.py` | Make Vercel CLI check conditional on deploy_target=vercel |
-| `pyproject.toml` | root | Add `[project.scripts]` entry point for `web-app-factory` |
-| `config/settings.py` | root | Add env vars for deploy provider selection |
-
-### Unchanged Components
-
-Everything else: `factory_mcp_server.py`, `contract_pipeline_runner.py`, `pipeline_state.py`, all gate implementations (1–9), phase executors 1a/1b/2a/2b, `governance_monitor.py`, `error_router.py`, YAML contract.
+## Component Boundaries
+
+| Component | Status | Responsibility | Communicates With |
+|-----------|--------|----------------|-------------------|
+| `mcp_server.py` | EXISTING — no change to tools | Claude stdio entry point | `_tool_impls.py` (refactor target) |
+| `openai_mcp_server.py` | NEW | ChatGPT HTTP entry point | `_tool_impls.py` |
+| `_tool_impls.py` | NEW (refactor) | Shared tool business logic | `_pipeline_bridge.py`, `_dev_server.py`, `_env_checker.py` |
+| `_pipeline_bridge.py` | EXISTING — add `app_type` param | Async bridge, run_id registry | `contract_pipeline_runner` |
+| `SupabaseProvisioner` | NEW | Supabase Management API client | Phase 2a executor |
+| `supabase_gate.py` | NEW | Verify project created, creds injected | Phase 2a executor |
+| `templates/backend/` | NEW | Vercel Functions template files | Phase 2b build agent (prompt context) |
+| `pipeline-contract.ios-backend.v1.yaml` | NEW | iOS backend phase/gate definitions | `contract_pipeline_runner` |
+| Phase 2a executor | MODIFIED | Add Supabase provisioning sub-step | `SupabaseProvisioner` |
+| Phase 2b executor | MODIFIED | Add backend generation sub-step | build agent, `templates/backend/` |
+| Phase 1b executor | MODIFIED | Produce `backend-spec.json` when backend requested | spec agent |
+| `agents/definitions.py` | MODIFIED | Update BUILD_AGENT + SPEC_AGENT system prompts | Phase executors |
+| `config/settings.py` | MODIFIED | Add `SUPABASE_*` constants | `SupabaseProvisioner`, `vercel_provider.py` |
+| `vercel_provider.py` | MODIFIED | Extend env allowlist for Supabase vars | Phase 3 executor |
 
 ---
 
 ## Data Flow Changes
 
-### v1.0 Flow (unchanged internally)
+### New data flow: Backend-enabled app generation
 
 ```
-User → CLI (factory.py) → run_pipeline() → phases → state.json
+waf_generate_app(idea, app_type="fullstack")
+    ↓
+_tool_impls.generate_app_impl()
+    ↓
+_pipeline_bridge.start_pipeline_async(app_type="fullstack")
+    ↓
+contract_pipeline_runner selects pipeline-contract.web.v1.yaml
+    ↓
+Phase 1a: idea validation (unchanged)
+    ↓
+Phase 1b: spec + design
+    ↓ produces: prd.md, screen-spec.json, backend-spec.json (NEW)
+    ↓
+Phase 2a: scaffold + provision
+    ↓
+    ├─ Next.js scaffold (existing)
+    └─ SupabaseProvisioner.create_project() → .env.local (NEW)
+    ↓
+Phase 2b: code generation
+    ↓
+    ├─ generate_shared_components (existing)
+    ├─ generate_pages (existing)
+    ├─ generate_integration (existing)
+    └─ generate_api_routes from backend-spec.json (NEW)
+    ↓
+Phase 3: deploy
+    ↓
+    ├─ vercel deploy (existing — now with SUPABASE_* env vars injected)
+    ├─ legal gate (existing)
+    ├─ lighthouse gate (existing)
+    └─ mcp approval gate (existing)
 ```
 
-### v2.0 Additional Flow
+### New data flow: iOS backend generation
 
 ```
-User Claude session
-       │ calls MCP tool
-       ▼
-MCP App (web_app_factory/mcp_app.py)
-  generate_app(idea="...", deploy_target="vercel")
-       │ submits background task
-       ▼
-Thread pool / asyncio task
-  _pipeline_bridge.run_pipeline_async(idea, project_dir, deploy_provider)
-       │ calls
-       ▼
-  contract_pipeline_runner.run_pipeline(...)
-       │ phases 1a → 1b → 2a → 2b → 3
-       │ Phase 3 calls provider.deploy_preview()
-       │ deploy_provider = VercelProvider() (or AWSProvider etc.)
-       │ state changes written to state.json
-       ▼
-  returns {"status": "completed", "run_id": "..."}
-
-User Claude session
-  get_pipeline_status(run_id) → reads state.json → returns summary
-  get_preview_url(run_id) → reads deployment.json → returns URL
-  start_local_server(run_id) → ServerManager.start() → returns localhost:3000
+waf_generate_app(idea, app_type="ios-backend")
+    ↓
+_pipeline_bridge.start_pipeline_async(app_type="ios-backend")
+    ↓
+contract_pipeline_runner selects pipeline-contract.ios-backend.v1.yaml
+    ↓
+Phase 1a: iOS API validation (NEW contract, NEW executor)
+Phase 1b: API spec only — backend-spec.json, no screen-spec.json (NEW executor)
+Phase 2a: Vercel Functions scaffold + Supabase provision (NEW executor)
+Phase 2b: Generate API routes from backend-spec.json (NEW executor — no frontend gen)
+Phase 3: Deploy to Vercel (REUSE existing VercelProvider — no change needed)
 ```
 
-### State Files (Unchanged Locations)
+### New data flow: ChatGPT App Store
 
 ```
-output/{slug}/
-  docs/pipeline/
-    runs/{run_id}/
-      state.json          ← phase status (read by get_pipeline_status)
-      handoff.md          ← human-readable summary
-    activity-log.jsonl    ← events log
-    deployment.json       ← preview_url, production_url (read by get_preview_url)
-    startup-preflight.json
+openai_mcp_server.py running on HTTPS endpoint (Vercel/Fly.io)
+    ↓ POST /mcp
+ChatGPT sends tool call: waf_generate_app
+    ↓
+_tool_impls.generate_app_impl() — same as Claude path
+    ↓
+Returns structuredContent + content (ChatGPT-specific format)
+    ↓
+User receives: run_id + execution plan in ChatGPT conversation
+    ↓
+ChatGPT calls waf_get_status(run_id) to poll progress
 ```
 
 ---
 
-## Suggested Build Order (Dependency-Driven)
+## Build Order (Dependency-Ordered)
 
-**Phase A: Foundation (no deps)**
-1. Add `web_app_factory/` package with `__init__.py`
-2. Update `pyproject.toml` with entry point and package discovery
-3. Write `web_app_factory/mcp_app.py` skeleton with FastMCP, no tools yet
-4. Write `web_app_factory/_pipeline_bridge.py` wrapping `run_pipeline()` in asyncio
+The following order respects inter-component dependencies. Each phase can start only after its prerequisites are complete.
 
-**Phase B: Deploy Abstraction (deps: Phase A)**
-5. Create `deploy/deploy_provider.py` (abstract base + `DeployResult`)
-6. Create `deploy/provider_registry.py`
-7. Extract Vercel logic from `phase_3_executor.py` into `deploy/vercel_provider.py`
-8. Modify `phase_3_executor.py` to use `PhaseContext.extra["deploy_provider"]`
-9. Add AWS and GCP stubs
-10. Update `startup_preflight.py` to gate Vercel CLI check on `deploy_target`
+### Phase A: Foundation — Tool Impl Refactor (no new features, zero regressions)
 
-**Phase C: Local Server (deps: Phase A)**
-11. Write `local_server/server_manager.py`
-12. Write integration tests for start/stop/port-detection
+1. Extract `_tool_impls.py` from `mcp_server.py` — move all business logic out of the @mcp.tool() handlers into standalone async functions. `mcp_server.py` becomes a thin routing layer.
+2. Update tests to import from `_tool_impls.py` — no behavior changes.
+3. CI must stay green throughout.
 
-**Phase D: MCP Tools (deps: Phase A, B, C)**
-13. Add `generate_app` tool (background task, calls `_pipeline_bridge`)
-14. Add `get_pipeline_status`, `list_runs`, `get_preview_url` tools
-15. Add `approve_phase` tool (writes approval file)
-16. Add `start_local_server`, `stop_local_server` tools
-17. Add `check_environment` tool (calls `run_startup_preflight`)
+**Why first:** All other features depend on shared logic being in `_tool_impls.py`. OpenAI server cannot be built without it.
 
-**Phase E: Environment Detection + UX Polish**
-18. Add environment setup guidance in `check_environment` responses
-19. Add `.mcp.json` for project-scoped installation
-20. Update `README.md` with `claude mcp add` installation instruction
+### Phase B: OpenAI MCP Server (HTTP transport, no backend features yet)
 
-**Why this order:**
-- Deploy abstraction (Phase B) can be done independently of MCP packaging
-- Local server (Phase C) can be done independently of deploy abstraction
-- MCP tools (Phase D) depend on B and C being testable
-- Phases B and C can be done in parallel; Phase D requires both complete
+1. Build `openai_mcp_server.py` — wraps `_tool_impls.py` with HTTP transport and ChatGPT return format.
+2. Add `web-app-factory-openai` pyproject.toml entry point.
+3. Add auth middleware (API key verification).
+4. Write E2E test: start server in HTTP mode, send POST to `/mcp`, verify tool response.
+
+**Why second:** Validates the dual-server architecture before adding complexity. Can be tested locally with ngrok.
+
+### Phase C: Backend Spec in Phase 1b
+
+1. Update SPEC_AGENT system prompt to produce `backend-spec.json` when backend is requested.
+2. Update Phase 1b executor to optionally output `backend-spec.json`.
+3. Update Phase 1b gate in `pipeline-contract.web.v1.yaml` to conditionally require `backend-spec.json` when `app_type != "web"`.
+4. Update `screen-spec.json` schema to reference backend endpoints.
+
+**Why third:** `backend-spec.json` is consumed by both Phase 2a (Supabase provisioning) and Phase 2b (API route generation). Both depend on this output.
+
+### Phase D: Supabase Provisioner
+
+1. Build `tools/supabase_provisioner.py` — Management API client.
+2. Add `SUPABASE_ACCESS_TOKEN` to `_keychain.py` / `_env_checker.py`.
+3. Add `SUPABASE_*` constants to `config/settings.py`.
+4. Extend `VERCEL_ENV_ALLOWLIST` in `vercel_provider.py`.
+5. Build `tools/gates/supabase_gate.py`.
+6. Add Supabase provisioning sub-step to Phase 2a executor.
+
+**Why fourth:** Supabase credentials are needed by Phase 2b to generate correct API client code. Provisioning must run before code gen.
+
+### Phase E: Backend Code Generation (Phase 2b extension)
+
+1. Create `web_app_factory/templates/backend/` with extracted allnew-baas templates.
+2. Update BUILD_AGENT system prompt with backend generation section.
+3. Add `generate_api_routes` sub-step to Phase 2b executor.
+4. Add `BackendSpecValidator` gate or extend existing `build_gate.py`.
+
+**Why fifth:** Depends on Phase C (`backend-spec.json`) and Phase D (Supabase credentials in `.env.local`).
+
+### Phase F: iOS Backend Contract + Executors
+
+1. Create `pipeline-contract.ios-backend.v1.yaml`.
+2. Add `app_type` parameter to `PhaseContext` and `_pipeline_bridge.start_pipeline_async`.
+3. Add `app_type` to `waf_generate_app` tool in `_tool_impls.py`.
+4. Create iOS backend phase executors (1a, 1b, 2a, 2b — reuse Phase 3 unchanged).
+5. Update executor registry to dispatch by `(phase_id, contract_type)`.
+
+**Why last:** Depends on all backend infrastructure (Phases C, D, E) being proven in the web fullstack path first. iOS backend is a variant, not a different technology.
 
 ---
 
-## Key Architectural Decisions
+## Architectural Patterns
 
-### 1. User-facing MCP App is a Separate Module from Internal MCP Server
+### Pattern 1: Dual Transport, Shared Logic
 
-Do not extend `factory_mcp_server.py` with user-facing tools. That server is an internal agent tool (approve_gate, phase_reporter). The user-facing MCP App is a separate FastMCP instance in `web_app_factory/mcp_app.py`.
+**What:** Two FastMCP server entry points (stdio for Claude, HTTP for ChatGPT) that import shared tool implementation functions from `_tool_impls.py`.
 
-**Rationale:** Different trust boundaries, different transports (internal server may be started per-pipeline-run; user-facing server runs for entire session), different tool contracts.
+**When to use:** When the same pipeline must be distributed across two different AI platforms with incompatible transport protocols.
 
-### 2. `run_pipeline()` Called in Thread Pool (Not Direct Async)
+**Trade-offs:**
+- Pro: Zero duplication of business logic; fixing one fixes both
+- Pro: Independently deployable (Claude via uvx local, ChatGPT via HTTPS server)
+- Con: Two server processes to maintain and test
+- Con: HTTP server requires external hosting (Vercel/Fly.io) and HTTPS
 
-`run_pipeline()` is synchronous (blocking I/O via subprocess). Calling it directly in an async FastMCP tool would block the event loop. Wrap it:
-
+**Example:**
 ```python
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+# _tool_impls.py
+async def generate_app_impl(idea: str, mode: str, ...) -> AppGenResult: ...
 
-_executor = ThreadPoolExecutor(max_workers=2)
+# mcp_server.py (stdio — Claude)
+@mcp.tool()
+async def waf_generate_app(idea: str, ...) -> str:
+    result = await generate_app_impl(idea, ...)
+    return result.plan_markdown  # plain text for Claude
 
-async def _run_pipeline_async(idea: str, project_dir: str, **kwargs) -> dict:
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        _executor,
-        lambda: run_pipeline(contract=..., idea=idea, project_dir=project_dir, **kwargs)
-    )
+# openai_mcp_server.py (HTTP — ChatGPT)
+@mcp_chatgpt.tool()
+async def waf_generate_app(idea: str, ...) -> dict:
+    result = await generate_app_impl(idea, ...)
+    return {"structuredContent": {...}, "content": [...]}  # ChatGPT format
 ```
 
-**Do NOT make `run_pipeline()` itself async** — it uses `subprocess.run()` calls throughout which would need `asyncio.create_subprocess_exec()`. That's a large refactor across all phase executors.
+### Pattern 2: Contract-Per-App-Type
 
-### 3. Deploy Provider Injected via `PhaseContext.extra`
+**What:** Separate YAML contract files per app type (`web`, `ios-backend`), selected by `contract_pipeline_runner` based on `app_type` in `PhaseContext`.
 
-The `extra: dict` field on `PhaseContext` already exists and is free-form. Injecting `deploy_provider` there avoids adding a typed field that breaks the dataclass `frozen=True` pattern and avoids a schema migration for the contract YAML.
+**When to use:** When two app types share the same phase ID namespace but have different deliverables, gates, and executor behavior.
 
-### 4. Vercel CLI Check Made Conditional in Preflight
+**Trade-offs:**
+- Pro: Clear separation — iOS backend contract doesn't inherit web app gates
+- Pro: Existing web contract is untouched, no risk of regression
+- Con: Duplicate phase structure in YAML (can be mitigated with YAML anchors)
+- Con: Two sets of phase executors to maintain
 
-Currently, `startup_preflight.py` always checks for `vercel` CLI. With multi-cloud, the check should only fail if `deploy_target == "vercel"`. Pass `deploy_target` to `run_startup_preflight()`.
+### Pattern 3: Sub-Step Decomposition (Existing Pattern — Extended)
 
-### 5. MCP App Server is a Singleton Process, Not Per-Run
+**What:** Complex phases are broken into named sub-steps with checkpoint resume support. Phase 2b already uses this (5 sub-steps). Phase 2a extends this for Supabase provisioning.
 
-The FastMCP server in `mcp_app.py` starts once when Claude loads the MCP server and stays alive. Multiple `generate_app` calls create multiple pipeline runs (different `run_id`). The `ServerManager` must be thread-safe (or use asyncio locks) since background tasks can run concurrently.
+**When to use:** When a phase has multiple atomic operations that can fail independently, and partial progress should be resumable.
+
+**Trade-offs:**
+- Pro: Checkpoint resume prevents re-running expensive operations (API calls, deployments)
+- Pro: Each sub-step has a clear success/fail boundary
+- Con: Adds complexity to `PhaseResult` (resume_point field)
 
 ---
 
-## Pitfalls Specific to This Integration
+## Anti-Patterns to Avoid
 
-### Blocking `run_pipeline()` in Async Context
+### Anti-Pattern 1: Single Server, Dual Transport
 
-The biggest risk. `run_pipeline()` calls `subprocess.run()` (blocking) across all phase executors. If called directly in an async FastMCP tool without `run_in_executor`, it will block the entire MCP server event loop, preventing `get_pipeline_status` from responding while a pipeline runs.
+**What people do:** Try to run `mcp.run()` twice with different transports in the same FastMCP instance, or add an HTTP endpoint to the existing stdio server.
 
-**Prevention:** Always use `loop.run_in_executor()` for `run_pipeline()`.
+**Why it's wrong:** FastMCP 3.x does not support simultaneous stdio + HTTP from one instance. Each `run()` call is blocking. The Claude and ChatGPT distributions have fundamentally different deployment models — Claude runs locally via uvx, ChatGPT requires a public HTTPS server. Conflating them in one server creates a deployment impossibility.
 
-### MCP Server Lifetime vs. Pipeline Lifetime
+**Do this instead:** Two separate server files (`mcp_server.py` and `openai_mcp_server.py`), shared logic via `_tool_impls.py`.
 
-The FastMCP stdio server exits when Claude's session ends. If a pipeline is running and the session closes, the pipeline thread is orphaned. The `run_pipeline()` function writes state to disk, so the pipeline can be resumed via `--resume` in a new session, but in-progress state is not cleanly handed off.
+### Anti-Pattern 2: Supabase Credentials in Generated App Code
 
-**Prevention:** Write `run_id` to a well-known location (e.g., `~/.web-factory/active-runs.json`) so the next session can resume. Or accept the limitation and document it.
+**What people do:** Hardcode the Supabase `service_role_key` in generated API routes or commit `.env.local` to git.
 
-### Deploy Provider Stub APIs Break Phase 3 Tests
+**Why it's wrong:** `service_role_key` bypasses Row Level Security — it is a full-access database credential. Exposing it in client-side code or version control is a critical security vulnerability.
 
-Extracting Vercel logic into `VercelProvider` changes the surface that Phase 3 executor tests mock. All existing Phase 3 tests mock `subprocess.run` for `vercel` commands. After extraction, they need to mock `VercelProvider.deploy_preview()` instead.
+**Do this instead:** Inject credentials via `.env.local` (gitignored). `NEXT_PUBLIC_SUPABASE_ANON_KEY` is safe for browser use (RLS enforced). `SUPABASE_SERVICE_ROLE_KEY` goes only in server-side environment variables.
 
-**Prevention:** Add `deploy_provider` injection support to existing Phase 3 tests before refactoring the executor.
+### Anti-Pattern 3: Modifying the Existing Web Contract for iOS Backend
 
-### npm Run Dev Port Conflicts
+**What people do:** Add optional fields to `pipeline-contract.web.v1.yaml` to accommodate both web and iOS backend use cases.
 
-Port 3000 is the Next.js default and is often already in use. The `ServerManager._find_free_port()` must search starting from 3000. If the user has multiple runs active, each needs its own port.
+**Why it's wrong:** Optional fields in a fail-closed contract create ambiguity about what constitutes a passing gate. The web contract's gates reference `screen-spec.json` (which iOS backend doesn't produce). Mixing the two creates conditional gate logic that is hard to reason about and test.
 
-**Prevention:** `_find_free_port()` scans 3000-3100 using socket bind test (already in design above).
+**Do this instead:** Separate YAML contract per app type.
 
-### `uvx web-app-factory` Requires All Dependencies at PyPI Publish Time
+### Anti-Pattern 4: Inlining allnew-baas Code in Agent Prompts
 
-When users install via `uvx`, all dependencies (`fastmcp`, `mcp`, `claude-agent-sdk`, `pyyaml`, etc.) must be published in `pyproject.toml` `[project.dependencies]`. They already are. But the user also needs Node.js, npm, and optionally Vercel CLI installed separately — `uvx` cannot provide these.
+**What people do:** Copy the full `live-token.js` source into the BUILD_AGENT system prompt as a "template to follow".
 
-**Prevention:** `check_environment` MCP tool surfaces missing dependencies clearly with install instructions. `startup_preflight.py` already does this — surface its output in the MCP tool response.
+**Why it's wrong:** Agent system prompts with large code blocks increase token cost and reduce prompt effectiveness. The agent may copy the template verbatim rather than adapting it.
+
+**Do this instead:** File-based templates in `web_app_factory/templates/backend/`. The prompt references the template's *pattern* (authentication shape, error handling convention) rather than including the full source. The Phase 2b executor reads the template file and injects only the relevant pattern description into the agent's context.
+
+---
+
+## Integration Points: External Services
+
+| Service | Integration Pattern | New Component | Notes |
+|---------|---------------------|---------------|-------|
+| Supabase Management API | REST calls from `SupabaseProvisioner` | `tools/supabase_provisioner.py` | Personal access token or OAuth2; project creation is async (poll until active) |
+| Supabase Auth (generated app) | `@supabase/ssr` package in generated Next.js | Templates + BUILD_AGENT prompt | Apple Sign-In requires ASC Service ID; out of WAF scope |
+| OpenAI Apps SDK / ChatGPT | HTTP MCP server on public HTTPS | `openai_mcp_server.py` + deployment config | Must be always-on during ChatGPT review |
+| Vercel (extended) | Existing VercelProvider + env var injection | Extend `_VERCEL_ENV_ALLOWLIST` | No structural change to provider |
 
 ---
 
 ## Sources
 
-- [MCP Apps Blog Post](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/) — MCP Apps extension specification
-- [Anthropic Desktop Extensions](https://www.anthropic.com/engineering/desktop-extensions) — .mcpb packaging for Claude Desktop
-- [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp) — `claude mcp add` syntax, stdio/http/sse transports, uvx installation
-- [FastMCP Background Tasks](https://gofastmcp.com/servers/tasks) — task=True decorator, Progress dependency (HIGH confidence)
-- [FastMCP 3.0 Launch](https://www.jlowin.dev/blog/fastmcp-3-launch) — Component composition, authorization, OpenTelemetry
-- [MCP Official Build Guide](https://modelcontextprotocol.io/docs/develop/build-server) — Python package structure, uv/uvx patterns, Claude Desktop config
-- [OpenNext](https://opennext.js.org/) — Next.js multi-platform deployment adapters (AWS, Cloudflare, Netlify)
-- [Next.js Deployment Guide](https://nextjs.org/docs/pages/getting-started/deploying) — Platform deployment options (MEDIUM confidence, AWS/GCP specifics)
+- Existing codebase analysis: `web_app_factory/mcp_server.py`, `_pipeline_bridge.py`, `tools/contract_pipeline_runner.py`, `agents/definitions.py`, `tools/deploy_providers/base.py`, `tools/deploy_providers/vercel_provider.py`, `tools/phase_executors/phase_2b_executor.py`, `tools/phase_executors/phase_3_executor.py`
+- allnew-baas reference: `projects/allnew-baas/vercel/api/gemini/live-token.js`, `vercel.json`
+- [OpenAI Apps SDK: Build MCP Server](https://developers.openai.com/apps-sdk/build/mcp-server) — HTTP transport requirement, authentication pattern (MEDIUM confidence — docs current)
+- [OpenAI Apps SDK: MCP Apps in ChatGPT](https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt) — MCP Apps open standard for embedded UIs (MEDIUM confidence)
+- [OpenAI Apps SDK: Submit and Maintain Your App](https://developers.openai.com/apps-sdk/deploy/submission) — Submission requirements, review process (MEDIUM confidence — process may evolve)
+- [Supabase Management API: Create a Project](https://supabase.com/docs/reference/api/create-a-project) — Programmatic project provisioning (HIGH confidence — official docs)
+- [Supabase: Setting up Server-Side Auth for Next.js](https://supabase.com/docs/guides/auth/server-side/nextjs) — `@supabase/ssr` package, App Router pattern (HIGH confidence — official docs)
+- [FastMCP: Running Your Server](https://gofastmcp.com/deployment/running-server) — HTTP transport, `/mcp` endpoint path, single transport per run() (HIGH confidence — official FastMCP docs)
+- [Next.js: Building APIs](https://nextjs.org/blog/building-apis-with-nextjs) — Route Handler pattern for iOS-compatible REST APIs (HIGH confidence — official Next.js)
+
+---
+
+*Architecture research for: v3.0 full stack — backend generation, Supabase, iOS backend, OpenAI Apps SDK*
+*Researched: 2026-03-24*

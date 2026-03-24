@@ -1,8 +1,303 @@
 # Feature Landscape
 
 **Domain:** Automated web application generation pipeline (idea → deployed web app)
-**Researched:** 2026-03-23 (v2.0 milestone update; v1.0 section preserved below)
-**Overall confidence:** HIGH (MCP packaging), MEDIUM (multi-cloud deploy), HIGH (tool signatures)
+**Researched:** 2026-03-24 (v3.0 milestone update; v2.0 and v1.0 sections preserved below)
+**Overall confidence:** HIGH (Supabase Auth/DB), MEDIUM (Supabase Management API provisioning), HIGH (OpenAI Apps SDK/ChatGPT submission), HIGH (iOS backend pattern), MEDIUM (allnew-baas integration scope)
+
+---
+
+## v3.0 Milestone: Backend Generation + Supabase + iOS Backend + OpenAI Apps SDK
+
+This section covers only the NEW features for v3.0. The v2.0 pipeline (7 MCP tools, multi-cloud deploy, dual mode, local dev server) and v1.0 pipeline (5 phases, 10 gates, Vercel deploy) already ship and are documented in their sections below.
+
+### Context: What v3.0 Adds
+
+v3.0 promotes four areas from the v2.0 anti-features list or out-of-scope to active:
+
+1. **Backend API generation** — REST endpoints as Vercel Functions, generated from natural language
+2. **Supabase DB + Auth provisioning** — PostgreSQL database and authentication scaffolded and wired to generated app
+3. **iOS backend generation** — The same Vercel + Supabase backend surfaced as a server-side API for iOS Swift clients
+4. **OpenAI Apps SDK** — MCP-based distribution to ChatGPT App Store, with optional UI widget
+
+Each category has distinct table stakes, differentiators, anti-features, and dependencies.
+
+---
+
+## Category A: Backend API Generation
+
+### What Users Expect
+
+A "full-stack app" generator that only produces a frontend is broken. Users expect generated apps to have working API endpoints — not stubs. The baseline is: create a record, read records, update a record, delete a record. REST CRUD over the database is the minimum.
+
+### Table Stakes — Backend Generation
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| CRUD endpoint generation from schema | Any backend without CRUD is a toy | MEDIUM | Next.js Route Handlers in `app/api/[resource]/route.ts`; POST/GET/PUT/DELETE per resource |
+| TypeScript throughout | Next.js ecosystem expectation; type errors at deploy are unacceptable | LOW | `tsc --noEmit` gate already exists in pipeline; extend to cover API routes |
+| Input validation on API routes | Unvalidated endpoints crash on bad input; this is a security gate requirement | MEDIUM | Zod schema validation — already present in OpenAI Apps SDK deps (`zod`); same pattern for API routes |
+| Error response standardization | API consumers (web, iOS) need predictable error shapes | LOW | `{ error: string, code: string }` shape generated into all routes |
+| Environment variable injection at build | API routes need DB credentials; must not be hardcoded | LOW | Vercel env vars wired to `process.env.NEXT_PUBLIC_SUPABASE_URL` etc. |
+| Working build including API routes | Backend that builds but routes crash at runtime is unusable | LOW | `next build` gate already covers this; API routes are part of the build |
+| allnew-mobile-baas integration | The existing BaaS is the reference architecture for WAF backends | MEDIUM | `projects/allnew-baas/vercel/` pattern: `api/` directory with individual function files, health endpoint, typed response |
+
+### Differentiators — Backend Generation
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Schema inference from natural language idea | User says "I need a recipe app with ingredients and steps" → pipeline infers DB schema + API shape | HIGH | Agent prompt: extract entities from idea, generate Supabase migration SQL + API routes together |
+| Generated API documentation (OpenAPI spec) | Competing tools generate code but not docs; consumers (iOS clients, frontend) need an API contract | MEDIUM | Generate `openapi.json` as part of backend phase; serves as iOS client generation input |
+| Realtime subscription scaffold | Supabase Realtime is a differentiator over plain Postgres; generated apps should leverage it | MEDIUM | `supabase.channel()` subscription scaffold in frontend; Realtime enabled on provisioned tables |
+| Health endpoint always generated | `/api/health` returning `{ ok: true, timestamp: ... }` — matches allnew-baas pattern, useful for iOS apps and deployment verification | LOW | Modeled on `projects/allnew-baas/vercel/api/health.js`; required for deploy gate verification |
+| allnew-baas pattern fidelity | allnew-mobile-baas is proven in production; WAF backends should follow its structure exactly | LOW | Copy `api/health.js` pattern; use same package.json structure (ESM, Node 20+); add Supabase deps |
+
+### Anti-Features — Backend Generation
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Custom ORM generation | Prisma/Drizzle setup adds migrations, generated types, and config complexity; doubles phase scope | Use Supabase JS client directly (`supabase.from('table').select()`); it covers CRUD without ORM overhead |
+| Generic REST framework (Express, Fastify) | Requires separate server process; Vercel Functions are the correct deployment unit here | Next.js Route Handlers in `app/api/` — zero config, co-located with frontend |
+| Full OpenAPI-first generation | Generating spec first then code is a research project, not a factory pattern | Generate code first, infer spec from code as a secondary artifact |
+| GraphQL API | Adds SDL, resolver generation, introspection complexity; overkill for generated apps | REST CRUD is sufficient; users who want GraphQL can extend |
+| Database migration system | Supabase CLI migrations + local dev setup requires Docker; wrong tool for automated generation | Direct SQL via Supabase Management API for provisioning; migrations are a post-generation concern |
+
+---
+
+## Category B: Supabase DB + Auth Provisioning
+
+### What Users Expect
+
+When a generator says "with auth" users expect: sign up, sign in, and "this page requires login" to actually work on first run. Not scaffolded placeholders — working auth flows. Similarly, "with database" means data persists across page reloads.
+
+### Table Stakes — Supabase Provisioning
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| Supabase project provisioned automatically | If user must manually create project and copy keys, the "automated" claim is broken | HIGH | Supabase Management API: `POST /v1/projects`; requires user's `SUPABASE_ACCESS_TOKEN` (PAT); blocks on `ACTIVE_HEALTHY` status |
+| Environment variables wired to generated app | Keys in wrong places = runtime crash; must end up in `.env.local` AND Vercel project env | MEDIUM | After provisioning: write `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` to both local `.env.local` and Vercel via API |
+| Email/password auth working on first run | Login form that errors is worse than no login form | LOW | `@supabase/ssr` package + Next.js App Router pattern; official Vercel template exists (`vercel.com/templates/next.js/supabase`) |
+| Session persistence (cookie-based, not localStorage) | SSR-compatible sessions required for Next.js App Router | LOW | `@supabase/ssr` handles this; generateds apps use `createServerClient` and `createBrowserClient` |
+| Protected routes scaffold | "This page requires login" is the most common auth requirement | LOW | `middleware.ts` with `updateSession()` call; generated with auth-requiring pages wired |
+| RLS enabled on generated tables | 83% of exposed Supabase databases involve RLS misconfiguration (2026 data) | MEDIUM | Enable RLS via Management API on all generated tables; generate owner-scoped policies (`auth.uid() = user_id`) as default |
+
+### Differentiators — Supabase Provisioning
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Social auth (Apple + Google) scaffolded | Apple Sign-In is required for iOS apps that offer third-party login; Google OAuth is the most common web flow | HIGH | Apple: complex — requires Apple Developer account, `.p8` key, 6-month rotation reminder generated in README; Google: OAuth consent screen must be manually configured; scaffold the code but document the manual steps clearly |
+| Supabase Realtime enabled on key tables | Changes visible instantly across devices; differentiates from static CRUD apps | MEDIUM | `ALTER TABLE ... REPLICA IDENTITY FULL` + Realtime publication via SQL in provisioning script; frontend subscription scaffold |
+| Generated DB schema committed as migration | User can inspect and version-control what was created | LOW | Write provisioning SQL to `supabase/migrations/001_initial.sql`; serves as documentation |
+| Supabase Storage bucket provisioned for file uploads | File upload is a common requirement; bucket+policy setup is error-prone manually | MEDIUM | Create bucket via Management API; generate upload API route + frontend component |
+| `check_environment` extended for Supabase | Users without `SUPABASE_ACCESS_TOKEN` get actionable error with exact URL | LOW | Extend existing `check_environment` tool: add Supabase PAT check + `SUPABASE_ORG_ID` |
+
+### Anti-Features — Supabase Provisioning
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Local Supabase Docker setup | `supabase start` requires Docker, pulls ~1.5GB of images, takes minutes; wrong for automated generation | Provision against Supabase cloud (free tier available); document local Docker as optional advanced step |
+| Automatic Apple Sign-In provisioning | Apple requires `.p8` key from Apple Developer Portal, App ID configuration, and 6-month secret rotation; impossible to automate safely | Scaffold the code and auth config; generate a README section with exact manual steps; do NOT attempt automated provisioning |
+| Auto-rotation of Apple OAuth secret | Apple's 6-month key requirement creates a recurring maintenance task; auto-rotation without human oversight is risky | Generate a `SUPABASE_APPLE_SECRET_EXPIRES` reminder in pipeline output; document rotation in generated README |
+| Custom auth provider implementation | Rolling custom JWT/session management is a security risk | Supabase Auth handles all session management; custom auth is explicitly out of scope |
+| Supabase Edge Functions | Requires Deno runtime, different from Node.js Vercel Functions; adds a second execution environment | Stay in Vercel Functions (Node.js); use Supabase only for DB, Auth, Realtime, Storage — not compute |
+
+---
+
+## Category C: iOS Backend Generation
+
+### What Users Expect
+
+iOS developers using this factory to generate a backend expect: a URL their Swift app can call, JSON responses their Codable types can decode, and bearer token auth their URLSession can set. The backend should require no iOS-specific configuration — it should be a clean REST API.
+
+### Table Stakes — iOS Backend Generation
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| REST API callable from Swift URLSession | iOS clients use URLSession or Alamofire; the API must return JSON with predictable status codes | LOW | Vercel Functions already generate JSON; iOS compatibility is about response shape consistency |
+| Bearer token auth (Supabase JWT) | iOS apps receive JWT from Supabase Auth and include it as `Authorization: Bearer {token}` | LOW | Vercel Functions read `req.headers.authorization`; `createClient` with `global: { headers: { Authorization } }` pattern |
+| CORS configured correctly | iOS apps do NOT need CORS (native HTTP); but web + iOS sharing the same API need CORS for web | LOW | `Access-Control-Allow-Origin` header in all Route Handlers; iOS unaffected but web frontend works |
+| JSON response Codable-compatible | Swift Codable requires consistent key naming (camelCase or snake_case, not mixed) | LOW | Enforce camelCase responses throughout generated API; document in generated README |
+| Health endpoint at `/api/health` | iOS apps call health on startup to verify backend reachability | LOW | Already generated as table stakes in Category A; surfaced in iOS context as required |
+| allnew-mobile-baas as reference template | Proven pattern for iOS backends on Vercel | LOW | Extend `projects/allnew-baas/vercel/` pattern with Supabase + CRUD; same ESM Node.js structure |
+
+### Differentiators — iOS Backend Generation
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Generated Swift client code | Factory generates `APIClient.swift` with typed request/response functions matching the API | HIGH | Generate from OpenAPI spec (created in Category A); mirrors `apple/swift-openapi-generator` pattern but as a WAF deliverable; HIGH complexity — phase-gated |
+| Push notification endpoint scaffold | iOS apps commonly need push; including the scaffold from the start avoids painful retroactive integration | MEDIUM | APNs token generation via `/api/push/register`; store device tokens in Supabase; send via APNs HTTP/2 |
+| Supabase Realtime via Swift SDK | iOS apps benefit from realtime the same way web does | MEDIUM | `supabase-swift` package; generate `RealtimeManager.swift` subscribing to key tables; included in Swift client deliverable |
+| Generated API README for iOS consumers | Backend README documents every endpoint with Swift example for each | LOW | Part of backend phase deliverables; reinforces OpenAPI spec with human-readable Swift examples |
+
+### Anti-Features — iOS Backend Generation
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| iOS Swift code generation in WAF | iOS code generation is ios-app-factory's domain; WAF should not duplicate it | Generate server-side backend only; provide clear handoff (OpenAPI spec + REST docs) that ios-app-factory can consume |
+| App Store submission from WAF | Web apps deploy to web hosting; iOS apps go through ios-app-factory and App Store pipeline | WAF generates the backend server; ios-app-factory handles the Swift app and App Store |
+| WebSocket-based push (instead of APNs) | WebSockets require persistent connections; incompatible with Vercel's serverless Functions | APNs HTTP/2 for push; Supabase Realtime for data sync |
+| Vapor/Kitura Swift server | Adds a separate server runtime; incompatible with Vercel Functions execution model | Vercel Functions (Node.js) for the backend; Swift runs on the iOS side only |
+
+---
+
+## Category D: OpenAI Apps SDK Distribution
+
+### What Users Expect
+
+Developers building for ChatGPT expect: their MCP server to work, a UI widget to render inside ChatGPT, and a clear path to the ChatGPT App Store. The WAF's existing MCP tools should be distributable to ChatGPT without rewriting the server.
+
+### Context: MCP Apps Standard
+
+The OpenAI Apps SDK (released late 2025, production-ready 2026) extends standard MCP with:
+- UI widgets rendered in iframes inside ChatGPT
+- ChatGPT-specific capabilities via `window.openai` (checkout, file ops, follow-up messages)
+- A submission/review process for the ChatGPT App Directory
+
+The same MCP server can serve both Claude (via `claude mcp add`) and ChatGPT (via Apps SDK URL registration) — the protocol is shared. What differs is the optional UI widget layer.
+
+### Table Stakes — OpenAI Apps SDK
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| MCP server compatible with Apps SDK | WAF's existing MCP tools must work through `@modelcontextprotocol/sdk`; the Apps SDK builds on standard MCP | LOW | WAF already uses FastMCP (Python); Apps SDK requires an HTTP endpoint — need to expose WAF server via HTTP (SSE or streamable-HTTP transport) |
+| All 7 existing MCP tools usable from ChatGPT | Tool parity between Claude and ChatGPT — users expect same `generate_app`, `get_status` etc. | LOW | Standard MCP tool definitions are protocol-agnostic; same tool code works for both clients |
+| `readOnlyHint` / `destructiveHint` / `openWorldHint` annotations | ChatGPT App Store review requires correct tool annotations — rejection if missing | LOW | Add annotations to all 7 WAF tools; `generate_app` is `openWorldHint=true`, `get_status` is `readOnlyHint=true` |
+| Privacy policy URL in app manifest | ChatGPT submission requires privacy policy URL | LOW | WAF needs a publicly accessible privacy policy URL; use generated app's legal phase output pattern |
+| Test credentials for App Store review | Reviewers need sample credentials to test the app | MEDIUM | WAF uses `ANTHROPIC_API_KEY`; must document how reviewer obtains test key OR create review mode that doesn't require real API calls |
+
+### Differentiators — OpenAI Apps SDK
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| ChatGPT UI widget showing pipeline progress | Progress visible inline in ChatGPT conversation — richer than text-only status | HIGH | MCP Apps UI: HTML/JS widget in iframe; listens for `ui/notifications/tool-result` events from `get_status` tool; esbuild bundle embedded in server |
+| Widget shows generated app preview | After `generate_app` completes, widget renders an iframe of the deployed URL or a QR code | MEDIUM | Tool result includes `deploy_url`; widget renders live preview inside ChatGPT |
+| Dual distribution (Claude + ChatGPT) from one codebase | Maximize reach without maintaining two server implementations | MEDIUM | HTTP transport for both; FastMCP supports `--transport streamable-http`; same Python server code |
+| ChatGPT App Directory listing | Discovery via ChatGPT App Directory without any user setup | HIGH | OpenAI review process; reviewers need to be able to run WAF — which requires `ANTHROPIC_API_KEY`; this is a meaningful constraint to solve |
+
+### Anti-Features — OpenAI Apps SDK
+
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| ChatGPT-only features that don't work in Claude | `window.openai` APIs (instant checkout, file upload) are ChatGPT-specific; using them creates a split codebase | Implement core tools in standard MCP; use `window.openai` only for optional ChatGPT enhancements (not required for functionality) |
+| Hardcoded user API keys in App Store submission | App Store review requires WAF to work without user's real `ANTHROPIC_API_KEY` | Create a demo/sandbox mode for App Store review; or submit as "requires API key" category |
+| Instant Checkout for monetization | Physical goods only; digital products are prohibited in ChatGPT App Store | Not applicable to WAF — no commerce features |
+| UI widget duplicating all pipeline functionality | iframes inside ChatGPT should be supplemental, not the primary interface | Widget shows progress + result; all actions go through MCP tools (text conversation), not widget buttons |
+
+---
+
+## Feature Dependencies (v3.0)
+
+```
+[Category A: Backend Generation]
+    └──requires──> Supabase DB provisioned (Category B)
+    └──requires──> Vercel deployment (v2.0 — already shipped)
+    └──requires──> allnew-baas pattern (exists: projects/allnew-baas/vercel/)
+
+[Category B: Supabase Provisioning]
+    └──requires──> SUPABASE_ACCESS_TOKEN in user environment
+    └──requires──> check_environment tool (v2.0 — extend)
+    └──blocks──> [Category A] — DB must exist before API routes can reference it
+    └──blocks──> [Category C] — iOS backend auth requires Supabase Auth provisioned
+
+[Category C: iOS Backend Generation]
+    └──requires──> [Category A] — REST API generated first
+    └──requires──> [Category B] — Supabase Auth provisioned for JWT validation
+    └──enhances──> ios-app-factory handoff (OpenAPI spec as interface contract)
+
+[Category D: OpenAI Apps SDK]
+    └──requires──> HTTP transport on WAF MCP server (v3.0 NEW — WAF v2.0 is stdio only)
+    └──requires──> Correct tool annotations (readOnlyHint, destructiveHint, openWorldHint)
+    └──requires──> Privacy policy URL (generate from legal phase, v1.0 pattern)
+    └──enhances──> All existing MCP tools (no changes to tool logic required)
+    └──optional──> ChatGPT UI widget (iframe + esbuild bundle — independent of tool logic)
+```
+
+### Dependency Notes
+
+- **Supabase provisioning blocks backend generation:** The API routes cannot reference the DB until the project exists and credentials are known. Provisioning is phase-ordered before backend code generation.
+- **iOS backend requires Auth:** JWT validation in Vercel Functions requires Supabase Auth to be provisioned. iOS backend generation is a downstream phase.
+- **OpenAI Apps SDK is transport-layer:** Adding ChatGPT support requires WAF MCP server to support HTTP transport (currently stdio only). This is infrastructure work independent of tool content.
+- **allnew-baas is the reference, not a dependency:** The existing `projects/allnew-baas/vercel/` is studied as a pattern and template, not imported as a library. WAF generates new backends modeled on it.
+
+---
+
+## MVP Recommendation (v3.0)
+
+### Must Ship (Enables Core Value)
+
+1. **Supabase project provisioning** — `SUPABASE_ACCESS_TOKEN` env check + Management API `POST /v1/projects` + poll `ACTIVE_HEALTHY` + write credentials to `.env.local` and Vercel
+2. **Email/password auth scaffold** — `@supabase/ssr`, protected routes via `middleware.ts`, sign-in/sign-up pages
+3. **RLS enabled by default** — All generated tables get `auth.uid() = user_id` owner policy; document clearly
+4. **CRUD API route generation** — `app/api/[resource]/route.ts` for each entity inferred from idea; Zod validation; standardized error shape
+5. **Health endpoint** — `/api/health` always generated; matches allnew-baas pattern
+6. **Backend phase in pipeline** — New phase (between build and legal) generating API routes; quality gate checks `tsc --noEmit` on API routes
+7. **HTTP transport for MCP server** — WAF exposes HTTP endpoint; enables ChatGPT connection
+8. **Tool annotations** — Add `readOnlyHint` / `destructiveHint` / `openWorldHint` to all 7 existing tools
+9. **check_environment extended** — Supabase PAT + org ID checks with actionable error messages
+
+### Add After Core Works (High Value, Lower Risk)
+
+10. **Social auth scaffold (Google OAuth)** — Code scaffold + README manual steps; NOT automated provisioning
+11. **iOS backend flag** — `backend_mode: "ios"` parameter on `generate_app`; produces CORS headers + bearer token validation + camelCase responses + health endpoint
+12. **OpenAPI spec generation** — Auto-generated from API routes as secondary deliverable
+13. **ChatGPT UI widget (progress display)** — iframe widget showing pipeline status; esbuild bundle
+
+### Defer to v4.0
+
+- Apple Sign-In full integration — Apple Developer Portal automation is not feasible; scaffold only
+- Generated Swift client (`APIClient.swift`) — HIGH complexity; requires stable OpenAPI spec first
+- Push notification endpoint — APNs integration adds certificate management complexity
+- ChatGPT App Directory submission — Requires solving reviewer API key problem; non-trivial
+- Supabase Realtime full scaffold — Valuable but adds frontend complexity; validate DB/Auth first
+- Supabase Storage bucket — File upload is a common v2 feature request, not core v3.0
+
+---
+
+## Feature Prioritization Matrix (v3.0)
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Supabase DB provisioning | HIGH | HIGH | P1 |
+| Email/password auth | HIGH | MEDIUM | P1 |
+| CRUD API route generation | HIGH | MEDIUM | P1 |
+| RLS enabled by default | HIGH (security) | LOW | P1 |
+| Health endpoint | MEDIUM | LOW | P1 |
+| HTTP transport for MCP | HIGH (ChatGPT reach) | MEDIUM | P1 |
+| Tool annotations | MEDIUM (App Store) | LOW | P1 |
+| check_environment (Supabase) | MEDIUM | LOW | P1 |
+| Google OAuth scaffold | MEDIUM | LOW | P2 |
+| iOS backend mode | HIGH (iOS ecosystem) | LOW | P2 |
+| OpenAPI spec | MEDIUM | MEDIUM | P2 |
+| ChatGPT UI widget | MEDIUM | HIGH | P2 |
+| Apple Sign-In scaffold | MEDIUM | LOW (scaffold only) | P2 |
+| Swift client generation | HIGH (iOS DX) | HIGH | P3 |
+| Supabase Realtime scaffold | MEDIUM | MEDIUM | P3 |
+| ChatGPT App Store submission | HIGH (distribution) | HIGH (API key problem) | P3 |
+
+---
+
+## Sources (v3.0)
+
+- Supabase Auth Next.js quickstart: [https://supabase.com/docs/guides/auth/quickstarts/nextjs](https://supabase.com/docs/guides/auth/quickstarts/nextjs)
+- Supabase Login with Google: [https://supabase.com/docs/guides/auth/social-login/auth-google](https://supabase.com/docs/guides/auth/social-login/auth-google)
+- Supabase Login with Apple: [https://supabase.com/docs/guides/auth/social-login/auth-apple](https://supabase.com/docs/guides/auth/social-login/auth-apple)
+- Supabase for Platforms (Management API): [https://supabase.com/docs/guides/integrations/supabase-for-platforms](https://supabase.com/docs/guides/integrations/supabase-for-platforms)
+- Supabase Management API Reference: [https://supabase.com/docs/reference/api/management](https://supabase.com/docs/reference/api/management)
+- Supabase Row Level Security: [https://supabase.com/docs/guides/database/postgres/row-level-security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+- Supabase + Vercel Next.js template: [https://vercel.com/templates/next.js/supabase](https://vercel.com/templates/next.js/supabase)
+- Supabase Swift SDK: [https://github.com/supabase/supabase-swift](https://github.com/supabase/supabase-swift)
+- OpenAI Apps SDK overview: [https://developers.openai.com/apps-sdk](https://developers.openai.com/apps-sdk)
+- OpenAI Apps SDK quickstart: [https://developers.openai.com/apps-sdk/quickstart](https://developers.openai.com/apps-sdk/quickstart)
+- MCP Apps in ChatGPT: [https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt](https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt)
+- ChatGPT app submission guidelines: [https://developers.openai.com/apps-sdk/app-submission-guidelines](https://developers.openai.com/apps-sdk/app-submission-guidelines)
+- Build ChatGPT UI widget: [https://developers.openai.com/apps-sdk/build/chatgpt-ui](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- MCP Apps standard announcement: [https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/)
+- allnew-mobile-baas reference: `projects/allnew-baas/vercel/` (local — Vercel Functions pattern)
+- RLS misconfiguration risk: vibeappscanner.com/supabase-row-level-security (170+ Lovable apps exposed Jan 2025)
+
+---
+*Last updated: 2026-03-24 (v3.0 milestone additions)*
+
+---
 
 ---
 
@@ -359,7 +654,7 @@ MCP App packaging (mcpb + uv)
 
 ---
 
-## Sources
+## Sources (v2.0)
 
 - MCP Apps announcement: [https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/](https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/)
 - Desktop Extensions (.mcpb): [https://www.anthropic.com/engineering/desktop-extensions](https://www.anthropic.com/engineering/desktop-extensions)
@@ -503,4 +798,4 @@ Idea Input
 - [Top AI app builders 2026 — Lovable guide](https://lovable.dev/guides/top-ai-platforms-app-development-2026)
 
 ---
-*Last updated: 2026-03-23 (v2.0 milestone additions)*
+*Last updated: 2026-03-24 (v3.0 milestone additions)*

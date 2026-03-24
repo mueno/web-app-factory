@@ -1,514 +1,440 @@
 # Technology Stack
 
 **Project:** web-app-factory
-**Researched:** 2026-03-23
-**Scope of this update:** v2.0 additions only — MCP App distribution, local dev server, multi-cloud deployment, environment detection. Do not change the v1.0 stack already documented below.
+**Researched:** 2026-03-24
+**Scope of this update:** v3.0 additions only — Supabase (DB + Auth + Realtime), allnew-mobile-baas integration, iOS backend generation, OpenAI Apps SDK (ChatGPT distribution). Do not change the v1.0/v2.0 stack already documented below.
 
 ---
 
-## v2.0 Stack Additions (NEW — Research for This Milestone)
+## v3.0 Stack Additions (NEW — Research for This Milestone)
 
-### Distribution: MCP App Packaging
+### Backend Generation: Supabase DB + Auth + Realtime (Generated Apps)
 
-**Decision: `fastmcp install claude-code` command (not .mcpb)**
+**Decision: `@supabase/supabase-js` v2 + `@supabase/ssr` for Next.js generated apps**
 
-The MCP ecosystem has two distribution paths. The right one for this project is the `fastmcp` CLI installer.
+The generated apps use Supabase as their backend. The right packages depend on whether code runs in a browser (client component) or on the server (Route Handlers, Server Actions, middleware).
 
-| Path | Mechanism | Best For | Python Limitation |
-|------|-----------|----------|-------------------|
-| `fastmcp install claude-code server.py` | Calls `claude mcp add` under the hood, adds to `~/.claude.json` (user scope) | CLI tool users, developers | None — uv handles deps |
-| `.mcpb` Desktop Extension | ZIP bundle with `manifest.json`, double-click install in Claude Desktop | End-user one-click install | Compiled C extensions (pydantic, mcp SDK) cannot be portably bundled |
+| Package | Version | Side | Purpose | Why |
+|---------|---------|------|---------|-----|
+| `@supabase/supabase-js` | `^2.99.3` | Client + Server | Core SDK — DB queries, Auth, Storage, Realtime | Universal JS client; v2 is current stable (2.99.3, March 21 2026); 2.100.0 canary in flight |
+| `@supabase/ssr` | `^0.9.0` | Server-only | Cookie-based auth for Next.js SSR | Replaces deprecated `@supabase/auth-helpers-nextjs`; required for App Router Server Components and middleware |
 
-**Use `fastmcp install claude-code`** because:
-- This project's users are developers with `uv` installed (or can install it)
-- The `mcp` Python SDK requires `pydantic` which has compiled C extensions that break `.mcpb` portability
-- `fastmcp install` auto-generates the correct `claude mcp add` command with `uv run` transport
-- The resulting `~/.claude.json` entry works across all projects (user scope) — appropriate for a pipeline tool
+**Do NOT add `@supabase/auth-helpers-nextjs`** — deprecated, replaced by `@supabase/ssr`. Future bug fixes target `@supabase/ssr` only.
 
-The `.mcpb` path is a FUTURE option if a non-technical end-user distribution channel is needed, but it requires either switching to a Node.js wrapper or stripping all compiled extensions.
+#### Generated App Integration Pattern
 
-#### Installation Command Generated
-
-```bash
-# What fastmcp install claude-code server.py generates behind the scenes:
-claude mcp add web-app-factory --scope user -- \
-  uv run --with fastmcp fastmcp run /path/to/web_app_factory/mcp_server.py
-```
-
-#### Manual `claude mcp add` Equivalent
-
-```bash
-# For users who prefer manual setup, or for project-scoped install:
-claude mcp add web-app-factory --scope project -- \
-  uv run --with "web-app-factory[mcp]" web-app-factory-mcp
-
-# With env vars:
-claude mcp add web-app-factory --scope user \
-  -e ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY}" -- \
-  uv run --with "web-app-factory[mcp]" web-app-factory-mcp
-```
-
-**Scope recommendation:** `--scope user` for personal dev tool (available across all projects). Use `--scope project` if teams want to share the MCP server config via `.mcp.json` in the repo.
-
-#### pyproject.toml entry point
-
-```toml
-[project.scripts]
-web-app-factory-mcp = "web_app_factory.mcp_server:main"
-web-app-factory = "web_app_factory.cli:main"
-
-[project.optional-dependencies]
-mcp = ["fastmcp>=3.1.0"]
-```
-
-**Confidence:** HIGH — verified via FastMCP docs (gofastmcp.com) and Claude Code MCP docs.
-
----
-
-### MCP App API: FastMCP 3.x Tool Definitions
-
-**Decision: Use FastMCP 3.1.1 (already a dependency — no version bump needed)**
-
-The existing `fastmcp>=3.1.0` dependency is sufficient. The v2.0 MCP server exposes tools using the standard FastMCP decorator pattern:
-
-```python
-from fastmcp import FastMCP
-
-mcp = FastMCP("web-app-factory")
-
-@mcp.tool()
-async def generate_app(
-    idea: str,
-    target: str = "vercel",
-    mode: str = "auto"
-) -> str:
-    """Generate a web app from an idea description."""
-    ...
-
-@mcp.tool()
-async def get_status(pipeline_id: str) -> dict:
-    """Get the current pipeline status."""
-    ...
-
-@mcp.tool()
-async def approve_phase(pipeline_id: str, phase_id: str) -> str:
-    """Approve a phase checkpoint in interactive mode."""
-    ...
-```
-
-No new dependencies needed — `fastmcp>=3.1.0` already covers this.
-
-**Confidence:** HIGH — FastMCP 3.1.1 is current (March 14, 2026), already in pyproject.toml.
-
----
-
-### Local Dev Server: Subprocess-Managed Next.js
-
-**Decision: `next dev` for local preview (not `next build` + standalone `server.js`)**
-
-For local development preview before cloud deploy, use `next dev` via Python subprocess. This is the correct choice because:
-- `next dev` starts in seconds; `next build` + `node .next/standalone/server.js` takes 30–120s
-- The goal is preview/iteration, not production accuracy
-- Standalone mode (`output: 'standalone'`) is reserved for cloud deployment packaging
-
-For the final "build and deploy" step, use standalone mode to produce `server.js` for AWS/GCP container deployments.
-
-#### Port Detection
-
-Use Python's `socket` stdlib (not an external library) to find an available port before starting:
-
-```python
-import socket
-import subprocess
-
-def find_free_port(preferred: int = 3000) -> int:
-    """Find an available port, trying preferred first."""
-    for port in [preferred, preferred + 1, preferred + 2, 3100, 3200, 8080]:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("localhost", port))
-                return port
-            except OSError:
-                continue
-    # Fallback: let OS assign
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(("localhost", 0))
-        return s.getsockname()[1]
-
-def start_local_dev_server(app_dir: str) -> tuple[subprocess.Popen, int]:
-    port = find_free_port()
-    proc = subprocess.Popen(
-        ["npm", "run", "dev", "--", "-p", str(port)],
-        cwd=app_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-    )
-    return proc, port
-```
-
-**Do NOT add `portpicker`** — it is a Google test-infra library designed for unit tests, not production port management. The stdlib `socket.bind(('localhost', 0))` pattern is idiomatic and has zero dependencies.
-
-#### `next.config.ts` for dual mode
-
-The generated apps must support both dev and standalone:
+Two client types, one for each execution context:
 
 ```typescript
-// next.config.ts — supports both next dev (local) and standalone (cloud)
-const nextConfig: NextConfig = {
-  output: process.env.NEXT_BUILD_TARGET === "standalone" ? "standalone" : undefined,
-  // ... rest of config
-};
-```
+// lib/supabase/client.ts — Client Components (browser)
+import { createBrowserClient } from "@supabase/ssr";
 
-Pipeline sets `NEXT_BUILD_TARGET=standalone` before running `next build` for cloud deploy.
-
-**Confidence:** HIGH — verified from Next.js official docs and confirmed PORT env var handling in server.js.
-
----
-
-### Multi-Cloud Deployment
-
-**Decision: Three-tier deploy abstraction with platform-specific CLI wrappers**
-
-Build a `DeploymentProvider` abstract base class with three implementations. No shared "cloud SDK" meta-library — each provider uses its native tool.
-
-```python
-from abc import ABC, abstractmethod
-
-class DeploymentProvider(ABC):
-    @abstractmethod
-    async def deploy(self, app_dir: str, env_vars: dict) -> DeploymentResult: ...
-
-    @abstractmethod
-    async def check_prerequisites(self) -> list[str]: ...  # returns list of missing tools
-```
-
-#### Provider 1: Vercel (existing, enhanced)
-
-**Tool: `vercel-cli` Python package (v50.35.0, auto-updated)**
-
-```python
-# pyproject.toml addition:
-# "vercel-cli>=50.0.0"
-from vercel_cli import run_vercel
-
-exit_code = run_vercel(
-    ["deploy", "--prod", "--yes"],
-    cwd=app_dir,
-    env={"VERCEL_TOKEN": token, "VERCEL_ORG_ID": org_id, "VERCEL_PROJECT_ID": proj_id}
-)
-```
-
-Why `vercel-cli` Python package over raw `subprocess` + system `vercel`:
-- Bundles its own Node.js binary (via `nodejs-wheel-binaries`) — no Node.js installation required from user
-- `run_vercel()` is a proper Python API, not a subprocess string
-- Auto-updated via GitHub Actions tracking npm releases
-- Version 50.35.0 released March 22, 2026 — actively maintained
-
-**Do NOT require system-installed Node.js for Vercel deployment.**
-
-**New dependency:** `vercel-cli>=50.0.0`
-
-**Confidence:** HIGH — verified pypi.org and GitHub repo (101 releases, active CI).
-
-#### Provider 2: AWS (new)
-
-**Tool: `aws-cdk-lib` + `open-next-cdk` Python packages**
-
-```toml
-# pyproject.toml additions (optional-dependencies, cloud extras):
-[project.optional-dependencies]
-aws = [
-    "aws-cdk-lib>=2.240.0",
-    "open-next-cdk>=0.1.0",
-    "constructs>=10.0.0",
-]
-```
-
-Architecture (CloudFront + Lambda@Edge + S3):
-1. Next.js app built with `output: 'standalone'`
-2. `open-next-cdk` converts standalone output to Lambda-compatible format
-3. `aws-cdk-lib` synthesizes CloudFormation template
-4. `cdk deploy` (CLI, invoked via subprocess) deploys the stack
-
-Why `open-next-cdk` over `cdk-nextjs` (cdklabs):
-- `open-next-cdk` has explicit Python package support on PyPI
-- `cdk-nextjs` (cdklabs) is TypeScript-first; Python bindings are generated JSII and can lag
-- `open-next-cdk` uses OpenNext which supports all Next.js features in serverless context
-
-Prerequisite checks the provider must validate:
-- AWS CLI installed (`shutil.which("aws")`)
-- AWS credentials configured (`~/.aws/credentials` or `AWS_ACCESS_KEY_ID` env)
-- CDK bootstrapped in target region (check via `aws cloudformation describe-stacks --stack-name CDKToolkit`)
-
-**Confidence:** MEDIUM — `open-next-cdk` Python version verified on PyPI; architecture confirmed via multiple sources; exact version pinning needs validation at implementation time.
-
-#### Provider 3: Google Cloud (new)
-
-**Tool: `gcloud` CLI via subprocess (no Python SDK wrapper)**
-
-For GCP Cloud Run deployments, use `gcloud run deploy --source .` directly. Do NOT add `google-cloud-run` Python client library because:
-- The Python client library (`google-cloud-run 0.15.0`) is a REST API wrapper, not a deployment tool
-- The actual deployment workflow requires Docker image build + push + service update — the `gcloud` CLI handles all of this atomically with `--source .`
-- Adding Google Auth SDK dependencies (`google-auth`, `google-api-python-client`) adds significant weight for marginal benefit
-
-Architecture (Cloud Run + Artifact Registry):
-1. Next.js app built with `output: 'standalone'`
-2. `Dockerfile` generated by pipeline using multi-stage build
-3. `gcloud run deploy --source . --region us-central1 --allow-unauthenticated` handles build+push+deploy
-
-```python
-import subprocess
-import shutil
-
-def deploy_to_cloud_run(app_dir: str, project_id: str, service_name: str, region: str = "us-central1") -> str:
-    if not shutil.which("gcloud"):
-        raise EnvironmentError("gcloud CLI not found. Install Google Cloud SDK.")
-
-    result = subprocess.run(
-        [
-            "gcloud", "run", "deploy", service_name,
-            "--source", ".",
-            "--project", project_id,
-            "--region", region,
-            "--platform", "managed",
-            "--allow-unauthenticated",
-            "--memory", "512Mi",
-            "--cpu-boost",  # reduces cold start
-            "--format", "json",
-        ],
-        cwd=app_dir,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return result.stdout  # JSON with service URL
-```
-
-Prerequisite checks:
-- `shutil.which("gcloud")` — gcloud CLI installed
-- `shutil.which("docker")` — Docker installed (required by `gcloud run deploy --source`)
-- `gcloud auth print-access-token` — authenticated
-- Project ID configured
-
-**No new Python dependencies for GCP.** Only stdlib `subprocess` and `shutil`.
-
-**Confidence:** HIGH — gcloud deploy pattern verified from official Google Cloud documentation and Next.js deploy-google-cloud-run template (2026).
-
----
-
-### Environment Detection
-
-**Decision: stdlib only (`shutil.which`, `subprocess`, `socket`) — no new dependencies**
-
-Environment detection runs before pipeline start to give users clear actionable errors. It checks three categories:
-
-#### Category 1: Python Environment
-
-```python
-import sys
-
-MINIMUM_PYTHON = (3, 10)
-
-def check_python() -> list[str]:
-    issues = []
-    if sys.version_info < MINIMUM_PYTHON:
-        issues.append(f"Python {'.'.join(map(str, MINIMUM_PYTHON))}+ required, found {sys.version}")
-    return issues
-```
-
-#### Category 2: Node.js / npm (required for generated app development)
-
-```python
-import shutil
-import subprocess
-import re
-
-NODE_MINIMUM = (20, 9, 0)
-
-def check_node() -> list[str]:
-    issues = []
-    node_path = shutil.which("node")
-    if not node_path:
-        issues.append("Node.js not found. Install from https://nodejs.org (v20.9+ required for Next.js 16)")
-        return issues
-
-    result = subprocess.run(["node", "--version"], capture_output=True, text=True)
-    match = re.match(r"v(\d+)\.(\d+)\.(\d+)", result.stdout.strip())
-    if match:
-        version = tuple(int(x) for x in match.groups())
-        if version < NODE_MINIMUM:
-            issues.append(f"Node.js {'.'.join(map(str, NODE_MINIMUM))}+ required, found {result.stdout.strip()}")
-
-    npm_path = shutil.which("npm")
-    if not npm_path:
-        issues.append("npm not found. Reinstall Node.js.")
-
-    return issues
-```
-
-#### Category 3: Cloud CLI Tools (per-provider, checked lazily)
-
-```python
-PROVIDER_PREREQUISITES = {
-    "vercel": [],  # vercel-cli Python package bundles its own Node.js
-    "aws": [
-        ("aws", "AWS CLI — install via https://aws.amazon.com/cli/"),
-        ("cdk", "AWS CDK CLI — pip install aws-cdk-cli OR npm install -g aws-cdk"),
-    ],
-    "gcp": [
-        ("gcloud", "Google Cloud SDK — install via https://cloud.google.com/sdk/install"),
-        ("docker", "Docker — required for gcloud source deploy"),
-    ],
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 }
 
-def check_cloud_prerequisites(provider: str) -> list[str]:
-    issues = []
-    for cmd, install_hint in PROVIDER_PREREQUISITES.get(provider, []):
-        if not shutil.which(cmd):
-            issues.append(f"'{cmd}' not found. {install_hint}")
-    return issues
+// lib/supabase/server.ts — Server Components, Route Handlers, Server Actions
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+export async function createClient() {
+  const cookieStore = await cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+}
 ```
 
-#### Category 4: Anthropic API Key
+#### Environment Variables Injected by Pipeline
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project_ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>
+SUPABASE_SERVICE_ROLE_KEY=<service_role_key>
+```
+
+The pipeline provisions these from the Supabase Management API and injects them into the generated app's `.env.local` and Vercel project environment.
+
+**Confidence:** HIGH — verified from Supabase official docs (SSR guide, March 2026) and npm version confirmed.
+
+---
+
+### Backend Generation: Vercel Functions Pattern (Generated Apps)
+
+**Decision: Next.js App Router Route Handlers at `app/api/**` — no separate Express/Hono**
+
+For generated backends, use Next.js App Router Route Handlers. They become Vercel serverless functions automatically with zero configuration. No separate Node.js server or framework is needed.
+
+```typescript
+// Generated app: app/api/items/route.ts
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+export async function GET() {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("items").select("*");
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json(data);
+}
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const body = await request.json();
+  const { data, error } = await supabase.from("items").insert(body).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json(data, { status: 201 });
+}
+```
+
+**Why Route Handlers over Server Actions for the generated REST API:**
+- Server Actions are POST-only; REST clients (iOS apps) need GET, PUT, DELETE
+- iOS backend generation requires a conventional REST interface
+- Route Handlers produce standard HTTP endpoints consumable by Swift URLSession
+
+**Confidence:** HIGH — verified from Next.js official docs and Vercel deployment docs (March 2026).
+
+---
+
+### Backend Provisioning: Supabase Management API (Pipeline, Python)
+
+**Decision: `httpx` (already a pipeline dependency) for Supabase Management API calls — no new Python dependency**
+
+The pipeline provisions Supabase projects programmatically using the Supabase Management API. No Supabase Python SDK wrapper for management operations exists — use direct REST calls with `httpx`.
 
 ```python
-import os
+import httpx
 
-def check_api_key() -> list[str]:
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        return ["ANTHROPIC_API_KEY environment variable not set."]
-    return []
+SUPABASE_MANAGEMENT_URL = "https://api.supabase.com/v1"
+
+async def create_supabase_project(
+    access_token: str,  # personal access token from user's Supabase account
+    org_id: str,
+    project_name: str,
+    db_password: str,
+    region: str = "us-east-1",
+) -> dict:
+    """Create a Supabase project via Management API."""
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{SUPABASE_MANAGEMENT_URL}/projects",
+            headers={"Authorization": f"Bearer {access_token}"},
+            json={
+                "name": project_name,
+                "organization_id": org_id,
+                "db_pass": db_password,
+                "region": region,
+                "plan": "free",
+            },
+            timeout=120.0,  # project creation takes 30–90s
+        )
+        response.raise_for_status()
+        return response.json()  # contains project_ref, anon_key, service_role_key
+
+async def get_project_api_keys(access_token: str, project_ref: str) -> dict:
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            f"{SUPABASE_MANAGEMENT_URL}/projects/{project_ref}/api-keys",
+            headers={"Authorization": f"Bearer {access_token}"},
+        )
+        response.raise_for_status()
+        return response.json()
 ```
 
-**No new dependencies.** All checks use `shutil`, `subprocess`, `os`, `socket`, and `re` from stdlib.
+**Authentication:** Supabase Management API uses Personal Access Tokens (PAT). Users generate a PAT at https://app.supabase.com/account/tokens. The pipeline stores this via `keyring` (already used for ANTHROPIC_API_KEY).
 
-**Confidence:** HIGH — standard Python patterns, no library API to verify.
+**New credential to manage:** `SUPABASE_ACCESS_TOKEN` — stored in keyring, surfaced in `waf_check_env` tool output.
+
+**No new Python dependencies.** `httpx` is already in `pyproject.toml`.
+
+**Confidence:** HIGH — Supabase Management API is documented at https://supabase.com/docs/reference/api/introduction; `httpx` is already a pipeline dep.
 
 ---
 
-### Summary: New Dependencies for v2.0
+### DB Schema Generation: `supabase` npm CLI (Generated Apps, Dev Tool)
 
-| Package | Version | Added To | Why |
+**Decision: `supabase` npm CLI v2.83.0 as `devDependency` in generated apps (not in pipeline Python deps)**
+
+Generated apps use the Supabase CLI for type generation and local development. The CLI is added to the generated app's `package.json`, not to the Python pipeline.
+
+```json
+// Generated app package.json devDependencies
+{
+  "supabase": "^2.83.0"
+}
+```
+
+```json
+// Generated app package.json scripts
+{
+  "supabase:types": "supabase gen types typescript --project-id \"$SUPABASE_PROJECT_REF\" > src/types/database.types.ts"
+}
+```
+
+**Why as devDependency in generated app, not in pipeline:**
+- The CLI is used by the app developer for ongoing schema work after generation
+- Pipeline provisioning uses the Management API directly (httpx), not the CLI
+- Avoids adding a Node.js CLI dependency to the Python pipeline
+
+**Confidence:** HIGH — supabase npm CLI v2.83.0 confirmed on npm (March 21, 2026).
+
+---
+
+### allnew-mobile-baas Integration
+
+**Decision: Copy allnew-baas pattern — pure Node.js ESM, Vercel Functions at `api/**/*.js`, no framework**
+
+The allnew-mobile-baas at `projects/allnew-baas/vercel/` is an existing Vercel Functions project with one pattern:
+- Pure Node.js ESM (`"type": "module"`)
+- Functions at `api/**/*.js` with `export default async function handler(req, res)`
+- No Express, Hono, or framework overhead
+- `vercel.json` with `"functions": { "api/**/*.js": { "maxDuration": 10 } }`
+- CORS, rate-limiting, and shared-secret auth baked into each handler
+
+For the WAF backend template that targets iOS clients (the "allnew-mobile-baas integration"), generate the same pattern — a `vercel-functions/` subdirectory inside the generated app with this structure.
+
+**Key environment variables from allnew-baas to replicate:**
+
+| Variable | Purpose |
+|----------|---------|
+| `BAAS_ALLOWED_ORIGINS` | CSV of allowed CORS origins |
+| `BAAS_ALLOWED_APP_IDS` | CSV of allowed app IDs (prevents unauthorized callers) |
+| `BAAS_CLIENT_SHARED_SECRET` | Bearer token for server-to-server auth |
+| `SUPABASE_SERVICE_ROLE_KEY` | DB writes that bypass RLS |
+
+**No new packages.** The allnew-baas uses `@google/genai` for Gemini-specific features. The WAF template for iOS backends uses `@supabase/supabase-js` instead.
+
+**Confidence:** HIGH — pattern extracted from live code at `projects/allnew-baas/vercel/api/gemini/live-token.js`.
+
+---
+
+### iOS Backend Generation
+
+**Decision: Generate a standalone `backend/` directory with Vercel Functions + Supabase — not a Next.js app**
+
+iOS backend generation produces a minimal `backend/` project (not a full Next.js app) because:
+- iOS clients call REST endpoints directly; no React/HTML needed
+- Simpler to reason about: `api/*.js` functions + `vercel.json` + `.env`
+- No build step, no `next build`, deploys in seconds via `vercel --prod`
+- Same pattern as allnew-mobile-baas (proven in production)
+
+Generated structure:
+```
+backend/
+├── api/
+│   ├── health.js          # GET /api/health
+│   ├── auth/
+│   │   └── callback.js    # GET /api/auth/callback (OAuth redirect)
+│   └── [resource]/
+│       └── index.js       # GET/POST /api/[resource]
+├── vercel.json
+├── package.json           # { "type": "module", "dependencies": { "@supabase/supabase-js": "^2.99.3" } }
+└── .env.example
+```
+
+Swift SDK compatibility: `supabase-swift` v2.39.0 (Swift Package Manager, `https://github.com/supabase/supabase-swift.git`, `.upToNextMajor(from: "2.0.0")`). Platform support: iOS 13+, macOS 10.15+.
+
+**No new Python pipeline dependencies.** The generator writes these files from templates.
+
+**Confidence:** HIGH — allnew-baas pattern verified from source; supabase-swift v2.39.0 confirmed on GitHub.
+
+---
+
+### OpenAI Apps SDK: ChatGPT Distribution
+
+**Decision: `@modelcontextprotocol/ext-apps` + `@modelcontextprotocol/sdk` as additional MCP server mode**
+
+The OpenAI Apps SDK is not actually an OpenAI-owned package. It is the MCP Apps standard, maintained by the MCP organization at `modelcontextprotocol/ext-apps`. ChatGPT implements this standard.
+
+| Package | Version | Purpose | Why |
 |---------|---------|---------|-----|
-| `vercel-cli` | `>=50.0.0` | `dependencies` (always) | Python wrapper for Vercel CLI; bundles Node.js; replaces subprocess-based vercel deploy |
-| `aws-cdk-lib` | `>=2.240.0` | `optional-dependencies[aws]` | AWS CDK Python constructs for CloudFormation/Lambda/S3 |
-| `open-next-cdk` | `>=0.1.0` | `optional-dependencies[aws]` | Converts Next.js standalone output to Lambda-compatible format |
-| `constructs` | `>=10.0.0` | `optional-dependencies[aws]` | Required peer dep for aws-cdk-lib |
+| `@modelcontextprotocol/ext-apps` | `^1.2.2` | MCP Apps UI registration, iframe bridge | Official SDK for registering Views (ChatGPT UI widgets) from MCP servers |
+| `@modelcontextprotocol/sdk` | `^1.20.2` | MCP server runtime | Already used via FastMCP; this is the underlying SDK |
+| `zod` | `^3.25.76` | Schema validation for tool inputs | Required peer dep for @modelcontextprotocol/sdk |
 
-**No new dependencies** for:
-- GCP deployment (stdlib subprocess + gcloud CLI)
-- Environment detection (stdlib only)
-- Local dev server (stdlib socket + subprocess)
-- MCP distribution (fastmcp already in dependencies)
+**These are JavaScript/TypeScript dependencies, not Python.** The web-app-factory MCP server is in Python (FastMCP). ChatGPT distribution requires either:
 
-#### Updated pyproject.toml additions
+**Option A (recommended for Phase 1): Expose existing FastMCP server as streamable-HTTP** — ChatGPT's MCP connector supports HTTP+SSE transport. The existing Python FastMCP server already supports this. No new dependencies needed for basic tool access from ChatGPT.
+
+**Option B (for ChatGPT UI Widget): Add a companion Node.js MCP server** — A thin `chatgpt-app/server.js` that imports `@modelcontextprotocol/ext-apps` and registers UI resources (Views). This server runs alongside the Python server or replaces it for ChatGPT clients.
+
+**Recommendation: Start with Option A (zero new deps), add Option B only if a ChatGPT-specific UI widget is required.**
+
+#### ChatGPT App Submission Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| Hosting | MCP server must be on a publicly accessible domain (no localhost) |
+| Transport | HTTP/SSE (streamable-HTTP transport — ChatGPT MCP connector) |
+| Security | CSP headers required if app has a UI (iframe-based Views) |
+| Privacy policy | Required for all app submissions |
+| Review | OpenAI developer account + verified developer status required |
+| Tool annotations | Write/destructive tools must set `readOnlyHint: false` and `destructiveHint: true` |
+
+#### For Option A: FastMCP HTTP transport (zero new dependencies)
+
+FastMCP already supports streamable-HTTP transport (the MCP transport ChatGPT's MCP connector uses). Configure:
+
+```python
+mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
+```
+
+This is sufficient for ChatGPT to discover and invoke the pipeline tools. No UI widget, but full functionality.
+
+#### For Option B: Node.js companion server
+
+```bash
+# Only if ChatGPT UI Widget is required
+npm install @modelcontextprotocol/ext-apps @modelcontextprotocol/sdk zod
+```
+
+```javascript
+// chatgpt-app/server.js
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerView } from "@modelcontextprotocol/ext-apps/server";
+
+const server = new McpServer({ name: "web-app-factory", version: "3.0.0" });
+
+// Register ChatGPT UI widget
+registerView(server, {
+  name: "app-status",
+  uri: "https://web-app-factory.example.com/widget/status.html",
+});
+```
+
+**Confidence:** HIGH for transport protocol and submission requirements (official OpenAI docs). HIGH for package names/versions (GitHub releases, npm). MEDIUM for Option B implementation details (beta SDK, may evolve).
+
+---
+
+### Summary: New Dependencies for v3.0
+
+#### Python Pipeline (`pyproject.toml`) — No New Deps
+
+All Supabase provisioning uses `httpx` (already in deps) against the Supabase Management API.
 
 ```toml
-[project]
-dependencies = [
-    "claude-agent-sdk>=0.1.50",
-    "fastmcp>=3.1.0",
-    "httpx>=0.28.0",
-    "jsonschema>=4.20.0",
-    "mcp>=1.26.0",
-    "pyyaml>=6.0",
-    "vercel-cli>=50.0.0",  # NEW: Python wrapper for Vercel CLI
-]
+# No changes needed to [project.dependencies] for Supabase provisioning
+# httpx>=0.28.0 already covers Management API calls
+```
 
-[project.optional-dependencies]
-aws = [
-    "aws-cdk-lib>=2.240.0",
-    "constructs>=10.0.0",
-    "open-next-cdk>=0.1.0",
-]
-mcp = []  # fastmcp already in main deps; this extra exists for documentation clarity
+New credential stored via `keyring` (already in deps): `SUPABASE_ACCESS_TOKEN`.
 
-[project.scripts]
-web-app-factory = "web_app_factory.cli:main"
-web-app-factory-mcp = "web_app_factory.mcp_server:main"
+#### Generated App Templates — New npm Packages
+
+These are added to **generated app** `package.json` templates, not to the Python pipeline:
+
+```json
+// Generated Next.js app — package.json additions
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3",
+    "@supabase/ssr": "^0.9.0"
+  },
+  "devDependencies": {
+    "supabase": "^2.83.0"
+  }
+}
+```
+
+#### Generated iOS Backend (`backend/`) — npm Packages
+
+```json
+// Generated backend — package.json (standalone Vercel Functions)
+{
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.3"
+  }
+}
+```
+
+#### ChatGPT Distribution — Optional Node.js Packages (Option B only)
+
+```bash
+# Add only if ChatGPT UI Widget (Views) is required
+npm install @modelcontextprotocol/ext-apps@^1.2.2 @modelcontextprotocol/sdk@^1.20.2 zod@^3.25.76
 ```
 
 ---
 
-### What NOT to Add (v2.0 Scope)
+### What NOT to Add (v3.0 Scope)
 
-| Package | Why Not |
-|---------|---------|
-| `portpicker` | Test-infrastructure library; stdlib `socket.bind(('localhost', 0))` is idiomatic and sufficient |
-| `google-cloud-run` Python SDK | REST API wrapper, not a deploy tool; `gcloud` CLI does the job with zero Python dependencies |
-| `google-auth` / `google-api-python-client` | Heavy; not needed when `gcloud` CLI handles auth |
-| `.mcpb` / `@anthropic-ai/mcpb` toolchain | Broken for Python MCP servers with compiled deps (pydantic); use `fastmcp install claude-code` instead |
-| `semver` (PyPI) | Stdlib `tuple` comparison on version strings is sufficient for our detection needs |
-| `cdk-nextjs` (cdklabs TypeScript) | TypeScript-first; Python JSII bindings lag; `open-next-cdk` has native Python package |
-| Node.js as system requirement | `vercel-cli` Python package bundles its own Node.js; users should not need to install Node.js to USE the factory (they need it to DEVELOP the generated apps) |
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| `@supabase/auth-helpers-nextjs` | Deprecated; future fixes go to `@supabase/ssr` only | `@supabase/ssr` |
+| `supabase-py` (Python SDK) | Management API (project provisioning) is not covered by it; runtime SDK is JS-side | `httpx` against Management API REST |
+| `express` / `hono` in generated backends | Adds cold-start overhead for Vercel Functions; Route Handlers and plain ESM handlers are zero-dep | Native Next.js Route Handlers or plain ESM `api/*.js` |
+| `prisma` / `drizzle` ORM | Supabase's auto-generated PostgREST API + `supabase-js` typed client eliminates need for a separate ORM | `@supabase/supabase-js` with generated `database.types.ts` |
+| `@openai/agents` SDK | This is the Agents SDK for building AI workflows, not for ChatGPT App Store distribution | `@modelcontextprotocol/ext-apps` for UI; FastMCP HTTP transport for tool access |
+| Supabase Edge Functions (Deno) | Adds Deno runtime complexity; Vercel Functions are already the deployment target | Vercel Functions (Node.js ESM) |
+| `pg` / `postgres.js` direct DB | Bypasses Supabase RLS; Management API provisions Supabase specifically for its auth/RLS layer | `@supabase/supabase-js` with `service_role` key for admin ops |
 
 ---
 
-### Integration Points with Existing Stack
+### Version Compatibility
 
-| Existing Component | v2.0 Integration |
+| Package A | Compatible With | Notes |
+|-----------|-----------------|-------|
+| `@supabase/supabase-js@^2.99.3` | Next.js 16.x, React 19.x | No known conflicts; tested against Next.js App Router |
+| `@supabase/ssr@^0.9.0` | `@supabase/supabase-js@^2.x` | Peer dep: `@supabase/supabase-js >= 2.59.0` |
+| `@supabase/supabase-js@^2.99.3` | Tailwind CSS 4.x, shadcn/ui latest | Pure logic library, no styling conflict |
+| `@modelcontextprotocol/ext-apps@^1.2.2` | `@modelcontextprotocol/sdk@^1.20.2` | Both from MCP org; designed as companion packages |
+| `supabase` CLI `^2.83.0` | Node.js >=20 | Minimum Node version matches existing pipeline requirement |
+| `supabase-swift@^2.x` (iOS client) | iOS 13+, macOS 10.15+ | Server-side API must use standard REST (not Supabase Realtime protocol) for cold-start compat |
+
+---
+
+### Integration Points with Existing v2.0 Stack
+
+| Existing Component | v3.0 Integration |
 |-------------------|------------------|
-| `deploy-agent` (Phase 3) | Extends to call `DeploymentProvider.deploy()` instead of hardcoded Vercel CLI commands |
-| `fastmcp` MCP server (approval gates) | The same server gets the three new tools: `generate_app`, `get_status`, `approve_phase` |
-| `pipeline_state.py` | Stores `deployment_provider` selection and `local_preview_url` in pipeline state |
-| `next.config.ts` (generated apps) | Adds `output: process.env.NEXT_BUILD_TARGET === 'standalone' ? 'standalone' : undefined` |
-| `vercel.json` generator | Continues to work; no changes needed for Vercel path |
-| CLI entry point | Adds `--cloud [vercel|aws|gcp]` flag and `--local-only` flag |
+| `DeploymentProvider` (Vercel path) | Adds `SUPABASE_PROJECT_REF`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel project env vars after provisioning |
+| `waf_check_env` MCP tool | Adds `SUPABASE_ACCESS_TOKEN` to required credentials checklist |
+| `pipeline_state.py` | Adds `supabase_project_ref`, `supabase_url`, `supabase_anon_key` fields to pipeline state |
+| `next.config.ts` (generated apps) | No change needed; Route Handlers work without additional config |
+| `vercel.json` generator (generated apps) | Adds `"functions": { "app/api/**/*.js": { "maxDuration": 10 } }` for backend routes |
+| `_keychain.py` | Adds `SUPABASE_ACCESS_TOKEN` to managed credentials alongside `ANTHROPIC_API_KEY` |
+| FastMCP server (`mcp_server.py`) | Option A: add `transport="streamable-http"` to `mcp.run()` call for ChatGPT MCP connector support |
 
 ---
 
-## v1.0 Stack (Unchanged — Reference)
+## v1.0 / v2.0 Stack (Unchanged — Reference)
 
-The sections below are preserved from the v1.0 research (2026-03-21). Do not modify based on v2.0 research — these are validated and in production.
-
----
-
-### Stack 1: Pipeline (Python Orchestration)
-
-| Technology | Version | Purpose | Why Recommended |
-|------------|---------|---------|-----------------|
-| Python | 3.10+ | Runtime | Required by Claude Agent SDK |
-| `claude-agent-sdk` | 0.1.50 | LLM orchestration | Agent loop + MCP tool support; proven in v1.0 |
-| `fastmcp` | 3.1.1 | MCP server for approval gates | De-facto standard; 1M+ downloads/day |
-| `uv` | latest | Package manager | 10–100x faster than pip; already used |
-| `ruff` | 0.15.4+ | Linter + formatter | Single tool; already configured |
-| `pytest` | 9.0+ | Test runner | Standard; 447+ tests already pass |
-
-### Stack 2: Generated Web Applications (Next.js)
-
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Next.js | 16.2.0 | Full-stack React framework; App Router; Turbopack |
-| React | 19.2 | UI library |
-| TypeScript | 5.1+ | Type safety |
-| Tailwind CSS | 4.2.2 | Styling; Oxide engine |
-| shadcn/ui | latest | Component library |
-| Zod | 4.x | Runtime validation |
-| Vitest | 4.1.0 | Unit testing |
-| Playwright | 1.58.2 | E2E + quality gates |
-
-Full v1.0 stack details: See git history for 2026-03-21 STACK.md.
+See earlier STACK.md content (git history 2026-03-23 for v2.0 additions, 2026-03-21 for v1.0 base stack). Preserved unchanged below this section.
 
 ---
 
 ## Sources
 
-- [FastMCP PyPI — v3.1.1, March 14 2026](https://pypi.org/project/fastmcp/) — **HIGH confidence**
-- [FastMCP Claude Code Integration](https://gofastmcp.com/integrations/claude-code) — `fastmcp install claude-code` command details — **HIGH confidence**
-- [FastMCP MCP JSON Configuration](https://gofastmcp.com/integrations/mcp-json-configuration) — `uv run` transport pattern — **HIGH confidence**
-- [Claude Code MCP Docs](https://code.claude.com/docs/en/mcp) — `claude mcp add --scope user|project` scopes — **HIGH confidence**
-- [mcpb GitHub](https://github.com/modelcontextprotocol/mcpb) — .mcpb format; Python compiled extension limitation — **HIGH confidence**
-- [Anthropic Desktop Extensions Blog](https://www.anthropic.com/engineering/desktop-extensions) — .mcpb is for Claude Desktop; Python limitation confirmed — **HIGH confidence**
-- [vercel-cli Python PyPI — v50.35.0](https://github.com/nuage-studio/vercel-cli-python) — bundles Node.js, `run_vercel()` API, 101 releases active — **HIGH confidence**
-- [open-next-cdk PyPI](https://pypi.org/project/open-next-cdk/) — Python package for CDK + Next.js on AWS — **MEDIUM confidence** (architecture verified, exact latest version requires implementation-time pinning)
-- [aws-cdk-lib PyPI — v2.240.0+](https://pypi.org/project/aws-cdk-lib/) — Python CDK library, Python 3.9+ — **HIGH confidence**
-- [Google Cloud Run — Deploy Next.js](https://docs.cloud.google.com/run/docs/quickstarts/frameworks/deploy-nextjs-service) — `gcloud run deploy --source .` pattern — **HIGH confidence**
-- [google-cloud-run PyPI — v0.15.0](https://pypi.org/project/google-cloud-run/) — REST API client (NOT recommended for deploy automation) — **HIGH confidence** (confirmed it is the wrong tool)
-- [Next.js output standalone docs](https://nextjs.org/docs/app/api-reference/config/next-config-js/output) — standalone mode, `server.js`, `PORT` env var — **HIGH confidence**
-- WebSearch: `next dev` port flag, `-p` option — **HIGH confidence** (multiple consistent sources)
+- [@supabase/supabase-js npm — v2.99.3, March 21 2026](https://www.npmjs.com/package/@supabase/supabase-js) — **HIGH confidence**
+- [@supabase/ssr npm — v0.9.0, March 22 2026](https://www.npmjs.com/package/@supabase/ssr) — **HIGH confidence**
+- [Supabase SSR docs — createServerClient/createBrowserClient pattern](https://supabase.com/docs/guides/auth/server-side/nextjs) — **HIGH confidence**
+- [supabase CLI npm — v2.83.0, March 21 2026](https://www.npmjs.com/package/supabase) — **HIGH confidence**
+- [supabase Python SDK (supabase-py) — v2.28.3, March 20 2026](https://pypi.org/project/supabase/) — documented (not used, confirmed httpx is correct choice) — **HIGH confidence**
+- [Supabase Management API reference](https://supabase.com/docs/reference/api/introduction) — project creation, PAT auth — **HIGH confidence**
+- [supabase-swift — v2.39.0, iOS 13+ / macOS 10.15+](https://github.com/supabase/supabase-swift) — **HIGH confidence**
+- [OpenAI Apps SDK docs — MCP foundation, quickstart](https://developers.openai.com/apps-sdk/quickstart) — packages `@modelcontextprotocol/sdk@^1.20.2`, `@modelcontextprotocol/ext-apps`, `zod` — **HIGH confidence**
+- [@modelcontextprotocol/ext-apps — v1.2.2](https://github.com/modelcontextprotocol/ext-apps) — **HIGH confidence** (version from search results)
+- [OpenAI ChatGPT app submission requirements](https://developers.openai.com/apps-sdk/deploy/submission) — public domain, CSP, no localhost — **HIGH confidence**
+- [MCP Apps compatibility in ChatGPT](https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt) — postMessage bridge, iframe transport — **HIGH confidence**
+- [Vercel + Supabase integration template](https://vercel.com/templates/next.js/supabase) — standard env var names, connection pattern — **HIGH confidence**
+- [Next.js Route Handlers docs](https://nextjs.org/docs/app/getting-started/route-handlers) — App Router API pattern — **HIGH confidence**
+- allnew-baas live code at `projects/allnew-baas/vercel/` — Node.js ESM, handler pattern, env vars — **HIGH confidence** (first-party)
 
 ---
 
-*Stack research for: web-app-factory v2.0 — MCP App distribution, local dev server, multi-cloud deploy*
-*Researched: 2026-03-23*
+*Stack research for: web-app-factory v3.0 — Supabase backend generation, allnew-mobile-baas integration, iOS backend generation, OpenAI Apps SDK (ChatGPT distribution)*
+*Researched: 2026-03-24*
