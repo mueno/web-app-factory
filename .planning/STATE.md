@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: planning
-stopped_at: Completed 16-01-PLAN.md
-last_updated: "2026-03-24T13:41:07.747Z"
+stopped_at: Completed 16-02-PLAN.md
+last_updated: "2026-03-24T13:46:36.208Z"
 last_activity: 2026-03-24 — Roadmap created for v3.0 Full Stack (6 phases, 39/39 requirements mapped)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -56,6 +56,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - SECG requirements distributed to phases where concern is introduced (not a separate security phase)
 - [Phase 16-mcp-infrastructure-hardening]: Impl layer pattern: _tool_impls.py holds all tool business logic; transports are thin wrappers delegating via return await impl_*()
 - [Phase 16-mcp-infrastructure-hardening]: Tool safety classification: waf_get_status=readOnly, waf_stop_dev_server=destructive, waf_generate_app=openWorld; all others readOnly=false/destructive=false/openWorld=false
+- [Phase 16]: HTTP server (openai_mcp_server.py) uses separate FastMCP instance; never cross-imports with stdio server; both import _tool_impls.py only
 
 ### Pending Todos
 
@@ -78,6 +79,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T13:41:07.744Z
-Stopped at: Completed 16-01-PLAN.md
+Last session: 2026-03-24T13:46:36.205Z
+Stopped at: Completed 16-02-PLAN.md
 Resume with: `/gsd:plan-phase 16`

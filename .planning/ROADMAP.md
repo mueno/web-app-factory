@@ -45,7 +45,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 
 ### v3.0 Full Stack (Phases 16-21) — Active
 
-- [ ] **Phase 16: MCP Infrastructure Hardening** — Extract shared tool logic, add HTTP transport, annotate all tools for OpenAI Apps SDK
+- [x] **Phase 16: MCP Infrastructure Hardening** — Extract shared tool logic, add HTTP transport, annotate all tools for OpenAI Apps SDK (completed 2026-03-24)
 - [ ] **Phase 17: Supabase Provisioning** — Auto-provision Supabase project via Management API with RLS-default security baseline
 - [ ] **Phase 18: Backend API Generation** — Generate Next.js Route Handlers from backend-spec.json with Zod validation and SQL injection prevention
 - [ ] **Phase 19: Supabase Auth Scaffolding** — Generate @supabase/ssr auth integration, protected routes, and sign-in/sign-up pages
@@ -63,7 +63,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   2. Both stdio and HTTP servers invoke identical business logic — a fix in one place fixes both
   3. All 7 tools have readOnlyHint, destructiveHint, and openWorldHint annotations visible in tool manifests
   4. CI fails if any tool registration in either server lacks the waf_ prefix
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [ ] 16-01-PLAN.md — Extract shared impl logic to _tool_impls.py and annotate stdio server
 - [ ] 16-02-PLAN.md — Create HTTP transport server and extend CI prefix enforcement
@@ -148,7 +148,7 @@ Plans:
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
-| 16. MCP Infrastructure Hardening | 1/2 | In Progress|  | - |
+| 16. MCP Infrastructure Hardening | 2/2 | Complete   | 2026-03-24 | - |
 | 17. Supabase Provisioning | v3.0 | 0/? | Not started | - |
 | 18. Backend API Generation | v3.0 | 0/? | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
