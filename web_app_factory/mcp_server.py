@@ -200,8 +200,12 @@ async def waf_approve_gate(
             "To use manual gate approval, start the pipeline with `mode='interactive'`."
         )
 
-    # Write approval/rejection to the gate file the internal server polls
-    gate_dir = _PROJECT_ROOT / "output" / ".gate-responses"
+    # Write approval/rejection to the gate file the internal server polls.
+    # Use GATE_RESPONSES_DIR (shared constant) instead of a hardcoded path so
+    # that mcp_approval_gate.py reader and this writer always agree on location.
+    from config.settings import GATE_RESPONSES_DIR  # noqa: PLC0415
+
+    gate_dir = GATE_RESPONSES_DIR
     gate_dir.mkdir(parents=True, exist_ok=True)
     gate_file = gate_dir / f"{run_id}.json"
 

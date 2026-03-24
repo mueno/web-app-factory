@@ -24,6 +24,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # Used by MCP server for file-based polling approval flow.
 APPROVAL_TMP_DIR = _env_path("WEB_FACTORY_APPROVAL_DIR", Path("/tmp"))
 
+# Directory where waf_approve_gate writes gate-response JSON files and
+# mcp_approval_gate reads them. Single source of truth shared by both.
+# Override with WEB_FACTORY_GATE_RESPONSES_DIR for custom paths in CI/tests.
+GATE_RESPONSES_DIR = _env_path(
+    "WEB_FACTORY_GATE_RESPONSES_DIR",
+    PROJECT_ROOT / "output" / ".gate-responses",
+)
+
 # ── Web deployment defaults ────────────────────────────────────
 DEFAULT_FRAMEWORK = os.environ.get("WEB_FACTORY_FRAMEWORK", "nextjs")
 DEFAULT_DEPLOY_TARGET = os.environ.get("WEB_FACTORY_DEPLOY_TARGET", "vercel")
