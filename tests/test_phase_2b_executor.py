@@ -193,8 +193,8 @@ class TestPhase2bBuildExecutorAgentPrompt:
         from tools.phase_executors.registry import _clear_registry
         _clear_registry()
 
-    def test_prompt_contains_prd_content(self, tmp_path):
-        """execute() injects PRD file content into agent prompt (not just path)."""
+    def _capture_all_prompts(self, tmp_path) -> list[str]:
+        """Run executor and return all prompts passed to run_build_agent."""
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
@@ -202,124 +202,79 @@ class TestPhase2bBuildExecutorAgentPrompt:
         ctx = _make_ctx(tmp_path)
         _create_spec_files(ctx.project_dir)
 
-        captured_prompts: list[str] = []
+        captured: list[str] = []
 
         def fake_run_build_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
-            captured_prompts.append(prompt)
+            captured.append(prompt)
             return "mocked build agent output"
 
         with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
              patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        # PRD content should be injected (not just the path)
-        assert "Component Inventory" in prompt or "NavBar" in prompt
+        return captured
+
+    def test_prompt_contains_prd_content(self, tmp_path):
+        """execute() injects PRD file content into an agent prompt (not just path).
+
+        With three-sub-step decomposition, PRD content is in the first prompt
+        (shared components). Check that at least one prompt contains it.
+        """
+        prompts = self._capture_all_prompts(tmp_path)
+        # At least one prompt must inject PRD content
+        combined = " ".join(prompts)
+        assert "Component Inventory" in combined or "NavBar" in combined
 
     def test_prompt_contains_screen_spec_content(self, tmp_path):
-        """execute() injects screen-spec.json content into agent prompt (not just path)."""
-        import importlib
-        import tools.phase_executors.phase_2b_executor as mod
-        importlib.reload(mod)
+        """execute() injects screen-spec.json content into an agent prompt (not just path).
 
-        ctx = _make_ctx(tmp_path)
-        _create_spec_files(ctx.project_dir)
-
-        captured_prompts: list[str] = []
-
-        def fake_run_build_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
-            captured_prompts.append(prompt)
-            return "mocked build agent output"
-
-        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
-            mod.Phase2bBuildExecutor().execute(ctx)
-
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        # screen-spec.json content (as JSON text) should be in the prompt
-        assert "DashboardCard" in prompt or "/dashboard" in prompt or "screen" in prompt.lower()
+        With three-sub-step decomposition, screen-spec content is in the pages prompt.
+        Check that at least one prompt contains it.
+        """
+        prompts = self._capture_all_prompts(tmp_path)
+        combined = " ".join(prompts)
+        # screen-spec.json content (as JSON text) should be in at least one prompt
+        assert "DashboardCard" in combined or "/dashboard" in combined or "screen" in combined.lower()
 
     def test_prompt_instructs_error_tsx_per_route_segment(self, tmp_path):
-        """execute() prompt must instruct error.tsx generation per route segment (BILD-06)."""
-        import importlib
-        import tools.phase_executors.phase_2b_executor as mod
-        importlib.reload(mod)
+        """execute() prompt must instruct error.tsx generation per route segment (BILD-06).
 
-        ctx = _make_ctx(tmp_path)
-        _create_spec_files(ctx.project_dir)
-
-        captured_prompts: list[str] = []
-
-        def fake_run_build_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
-            captured_prompts.append(prompt)
-            return "mocked build agent output"
-
-        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
-            mod.Phase2bBuildExecutor().execute(ctx)
-
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        assert "error.tsx" in prompt
+        With three-sub-step decomposition, error.tsx instruction is in the pages prompt.
+        """
+        prompts = self._capture_all_prompts(tmp_path)
+        # error.tsx instruction must appear in at least one prompt (pages prompt)
+        combined = " ".join(prompts)
+        assert "error.tsx" in combined
         # Must mention route segment or async data dependencies
-        prompt_lower = prompt.lower()
-        assert "route" in prompt_lower or "segment" in prompt_lower or "async" in prompt_lower
+        combined_lower = combined.lower()
+        assert "route" in combined_lower or "segment" in combined_lower or "async" in combined_lower
 
     def test_prompt_instructs_generation_order_shared_components_first(self, tmp_path):
-        """execute() prompt instructs generating shared components before pages."""
-        import importlib
-        import tools.phase_executors.phase_2b_executor as mod
-        importlib.reload(mod)
+        """execute() uses separate prompts for shared components and pages.
 
-        ctx = _make_ctx(tmp_path)
-        _create_spec_files(ctx.project_dir)
-
-        captured_prompts: list[str] = []
-
-        def fake_run_build_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
-            captured_prompts.append(prompt)
-            return "mocked build agent output"
-
-        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
-            mod.Phase2bBuildExecutor().execute(ctx)
-
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        prompt_lower = prompt.lower()
-        # Should instruct shared components first, then pages
-        assert "component" in prompt_lower
-        assert "page" in prompt_lower
-        # Check ordering language
-        assert "first" in prompt_lower or "then" in prompt_lower or "before" in prompt_lower
+        With three-sub-step decomposition, the FIRST prompt targets components only
+        and the SECOND prompt targets pages — enforcing ordering by structure.
+        """
+        prompts = self._capture_all_prompts(tmp_path)
+        assert len(prompts) == 3
+        first_prompt_lower = prompts[0].lower()
+        # First prompt must mention components
+        assert "component" in first_prompt_lower
+        # Second prompt must mention pages or routes
+        second_prompt_lower = prompts[1].lower()
+        assert "page" in second_prompt_lower or "route" in second_prompt_lower
 
     def test_prompt_instructs_mobile_first_responsive(self, tmp_path):
-        """execute() prompt instructs mobile-first Tailwind responsive classes."""
-        import importlib
-        import tools.phase_executors.phase_2b_executor as mod
-        importlib.reload(mod)
+        """execute() prompt instructs mobile-first Tailwind responsive classes.
 
-        ctx = _make_ctx(tmp_path)
-        _create_spec_files(ctx.project_dir)
-
-        captured_prompts: list[str] = []
-
-        def fake_run_build_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
-            captured_prompts.append(prompt)
-            return "mocked build agent output"
-
-        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_run_build_agent), \
-             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
-            mod.Phase2bBuildExecutor().execute(ctx)
-
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        prompt_lower = prompt.lower()
-        assert "mobile" in prompt_lower
+        With three-sub-step decomposition, this instruction is in the pages prompt.
+        """
+        prompts = self._capture_all_prompts(tmp_path)
+        combined = " ".join(prompts)
+        combined_lower = combined.lower()
+        assert "mobile" in combined_lower
         # Should mention md: or lg: Tailwind breakpoints, or responsive
-        assert "md:" in prompt or "lg:" in prompt or "responsive" in prompt_lower
+        assert "md:" in combined or "lg:" in combined or "responsive" in combined_lower
 
 
 # ---------------------------------------------------------------------------
@@ -470,7 +425,11 @@ class TestPhase2bBuildExecutorSuccess:
         )
 
     def test_execute_uses_error_tsx_instruction_for_async_data_routes(self, tmp_path):
-        """BILD-06: agent prompt must mention 'use client' for error.tsx."""
+        """BILD-06: agent prompt must mention 'use client' for error.tsx.
+
+        With three-sub-step decomposition, error.tsx + 'use client' instruction
+        is in the pages prompt (second call). Check across all prompts.
+        """
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
@@ -488,10 +447,9 @@ class TestPhase2bBuildExecutorSuccess:
              patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
             mod.Phase2bBuildExecutor().execute(ctx)
 
-        assert len(captured_prompts) == 1
-        prompt = captured_prompts[0]
-        # Per BILD-06: error.tsx must have 'use client'
-        assert "use client" in prompt or '"use client"' in prompt or "'use client'" in prompt
+        # Per BILD-06: error.tsx must have 'use client' — check across all prompts
+        combined = " ".join(captured_prompts)
+        assert "use client" in combined or '"use client"' in combined or "'use client'" in combined
 
 
 # ---------------------------------------------------------------------------
