@@ -49,7 +49,7 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 ### Pipeline Quality (Backlog)
 
-- [ ] **QUAL-01**: Phase 2b executes in incremental sub-steps (shared components → pages → integration) with checkpoint per step (BL-001)
+- [x] **QUAL-01**: Phase 2b executes in incremental sub-steps (shared components → pages → integration) with checkpoint per step (BL-001)
 - [x] **QUAL-02**: E2E Playwright gate validates form submission → result page flows after build (BL-002)
 
 ## v3.0 Requirements
@@ -107,7 +107,7 @@ Deferred to future release.
 | DEPL-04 | Phase 9 | Complete |
 | DEPL-05 | Phase 9 | Complete |
 | DEPL-06 | Phase 9 | Complete |
-| QUAL-01 | Phase 13 | Pending |
+| QUAL-01 | Phase 13 | Complete |
 | QUAL-02 | Phase 13 | Complete |
 
 **Coverage:**

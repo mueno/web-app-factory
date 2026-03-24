@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: completed
-stopped_at: Completed 13-02-PLAN.md — E2E form flow gate implemented, 21 tests, Phase 2b wired
-last_updated: "2026-03-24T06:17:57.196Z"
+stopped_at: Completed 13-01-PLAN.md — Phase 2b three-sub-step decomposition with checkpoint resume
+last_updated: "2026-03-24T06:18:23.484Z"
 last_activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total)
 progress:
   total_phases: 13
@@ -67,6 +67,7 @@ Carried from v1.0 + v2.0 research:
 - [Phase 12-environment-detection-distribution]: execute_install=True without tool_to_install returns error string (guard against accidental installs)
 - [Phase 13]: Use sync_playwright (not async) — pipeline is synchronous, event loop conflicts avoided
 - [Phase 13]: skip_allowed pattern for E2E gate: skipped=True + skip_allowed=True for apps without forms — not applicable, not a failure
+- [Phase 13-pipeline-quality]: Integration prompt omits PRD/screen-spec to prevent agent re-generating already-written files (Pitfall 2 per RESEARCH.md)
 
 ### Pending Todos
 
@@ -82,6 +83,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:17:57.192Z
-Stopped at: Completed 13-02-PLAN.md — E2E form flow gate implemented, 21 tests, Phase 2b wired
+Last session: 2026-03-24T06:18:23.481Z
+Stopped at: Completed 13-01-PLAN.md — Phase 2b three-sub-step decomposition with checkpoint resume
 Resume file: None
