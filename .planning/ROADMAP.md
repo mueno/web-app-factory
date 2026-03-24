@@ -63,7 +63,10 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   2. Both stdio and HTTP servers invoke identical business logic — a fix in one place fixes both
   3. All 7 tools have readOnlyHint, destructiveHint, and openWorldHint annotations visible in tool manifests
   4. CI fails if any tool registration in either server lacks the waf_ prefix
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 16-01-PLAN.md — Extract shared impl logic to _tool_impls.py and annotate stdio server
+- [ ] 16-02-PLAN.md — Create HTTP transport server and extend CI prefix enforcement
 
 ### Phase 17: Supabase Provisioning
 **Goal**: Running `waf_generate_app` with a Supabase-enabled spec automatically provisions a live Supabase project with RLS enforced on every table — no manual Supabase setup required
@@ -145,7 +148,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
-| 16. MCP Infrastructure Hardening | v3.0 | 0/? | Not started | - |
+| 16. MCP Infrastructure Hardening | v3.0 | 0/2 | Planning complete | - |
 | 17. Supabase Provisioning | v3.0 | 0/? | Not started | - |
 | 18. Backend API Generation | v3.0 | 0/? | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
