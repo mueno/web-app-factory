@@ -10,8 +10,8 @@ Checks (in order of severity):
   3. BLOCK: Privacy policy must contain required disclosure sections
   4. BLOCK: Terms of service must contain required sections
   5. BLOCK: Contact information must be present and non-placeholder
-  6. ADVISORY: Data retention period should be mentioned
-  7. ADVISORY: Third-party services should be disclosed if PRD references them
+  6. BLOCK (conditional): Data retention must be mentioned when PRD indicates user data collection
+  7. BLOCK (conditional): Third-party services must be disclosed when PRD explicitly references them
   8. ADVISORY: App-specific features from PRD should be referenced
 
 Exported function: run_legal_gate
@@ -85,6 +85,13 @@ _THIRD_PARTY_KEYWORDS = {
 # PRD path relative to project_dir
 _PRD_PATH = Path("docs") / "pipeline" / "prd.md"
 
+# Patterns in PRD that indicate the app collects user data (triggers retention BLOCK)
+_DATA_COLLECTION_INDICATORS = re.compile(
+    r"(?:user\s+data|sign[- ]?up|log[- ]?in|account|profile|form\s+submission"
+    r"|collect|store|database|auth|registration|personal\s+info)",
+    re.IGNORECASE,
+)
+
 
 def _extract_feature_names(prd_content: str) -> list[str]:
     """Extract feature names from PRD's bold-name patterns."""
@@ -139,27 +146,32 @@ def _check_contact_info(content: str, doc_type: str) -> list[str]:
 def _check_third_party_disclosure(
     legal_content: str,
     prd_content: str,
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     """Check if third-party services mentioned in PRD are disclosed in legal docs.
 
-    Returns advisory strings for undisclosed services.
+    Returns (blocking_issues, advisories).
+    Services explicitly named in the PRD are BLOCK-level; fuzzy matches are advisory.
     """
-    advisories = []
+    issues = []
     legal_lower = legal_content.lower()
     prd_lower = prd_content.lower()
 
     for keyword, service_name in _THIRD_PARTY_KEYWORDS.items():
         if keyword in prd_lower and keyword not in legal_lower:
-            advisories.append(
-                f"Third-party service '{service_name}' appears in PRD but is not "
-                f"mentioned in legal documents. Consider disclosing data shared with "
-                f"this service."
+            issues.append(
+                f"Third-party service '{service_name}' is referenced in PRD but not "
+                f"disclosed in legal documents. Privacy policy must disclose data "
+                f"shared with third-party services."
             )
-    return advisories
+    return issues, []
 
 
-def _check_retention(content: str) -> list[str]:
-    """Check if privacy policy mentions data retention/deletion."""
+def _check_retention(content: str, prd_content: str | None = None) -> tuple[list[str], list[str]]:
+    """Check if privacy policy mentions data retention/deletion.
+
+    Returns (blocking_issues, advisories).
+    BLOCK when the PRD indicates user data collection; advisory otherwise.
+    """
     retention_patterns = [
         r"retain",
         r"retention",
@@ -170,12 +182,18 @@ def _check_retention(content: str) -> list[str]:
     content_lower = content.lower()
     for pattern in retention_patterns:
         if re.search(pattern, content_lower):
-            return []
-    return [
+            return [], []
+
+    msg = (
         "Privacy Policy: no mention of data retention or deletion policy. "
-        "Consider adding how long user data is retained and how users can "
+        "Must specify how long user data is retained and how users can "
         "request deletion."
-    ]
+    )
+
+    # Conditional: BLOCK if PRD indicates data collection, advisory otherwise
+    if prd_content and _DATA_COLLECTION_INDICATORS.search(prd_content):
+        return [msg], []
+    return [], [msg]
 
 
 def run_legal_gate(
@@ -191,8 +209,8 @@ def run_legal_gate(
     3. Privacy policy contains required disclosure sections
     4. Terms of service contains required sections
     5. Real contact information is present (not placeholder emails)
-    6. Data retention is mentioned (advisory)
-    7. Third-party services from PRD are disclosed (advisory)
+    6. Data retention is mentioned (BLOCK if PRD indicates data collection)
+    7. Third-party services from PRD are disclosed (BLOCK if PRD references them)
     8. At least one app-specific feature from PRD is referenced (advisory)
 
     Args:
@@ -249,8 +267,8 @@ def run_legal_gate(
             )
             # Check 5a: contact info in privacy
             issues.extend(_check_contact_info(content, "Privacy Policy"))
-            # Check 6: retention advisory
-            advisories.extend(_check_retention(content))
+            # Check 6: retention (BLOCK if PRD indicates data collection)
+            # prd_content loaded later; defer retention check
 
     # ── Check 4: Terms completeness ──────────────────────────────────────
     terms_content = ""
@@ -263,20 +281,21 @@ def run_legal_gate(
             # Check 5b: contact info in terms
             issues.extend(_check_contact_info(content, "Terms of Service"))
 
-    # ── Check 7 & 8: PRD-based checks (advisory) ────────────────────────
+    # ── Check 6, 7, 8: PRD-based checks ─────────────────────────────────
     prd_base = Path(prd_dir) if prd_dir else project_path
     prd_path = prd_base / _PRD_PATH
+    prd_content: str | None = None
     if prd_path.exists() and file_contents:
         try:
             prd_content = prd_path.read_text(encoding="utf-8")
             combined_legal = privacy_content + "\n" + terms_content
 
-            # Check 7: third-party disclosure
-            advisories.extend(
-                _check_third_party_disclosure(combined_legal, prd_content)
-            )
+            # Check 7: third-party disclosure (BLOCK if PRD references services)
+            tp_issues, tp_advisories = _check_third_party_disclosure(combined_legal, prd_content)
+            issues.extend(tp_issues)
+            advisories.extend(tp_advisories)
 
-            # Check 8: feature reference
+            # Check 8: feature reference (advisory)
             feature_names = _extract_feature_names(prd_content)
             if feature_names:
                 feature_found = any(
@@ -291,6 +310,12 @@ def run_legal_gate(
                     )
         except OSError:
             pass
+
+    # Check 6: retention (deferred to here so prd_content is available)
+    if privacy_content:
+        ret_issues, ret_advisories = _check_retention(privacy_content, prd_content)
+        issues.extend(ret_issues)
+        advisories.extend(ret_advisories)
 
     passed = len(issues) == 0
 

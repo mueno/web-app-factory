@@ -249,8 +249,8 @@ class TestLegalGate:
 
     # ── Third-party disclosure advisory (NEW — L-1 audit fix) ─────────────
 
-    def test_third_party_in_prd_but_not_legal_advisory(self, tmp_path):
-        """PRD mentions OpenAI but legal docs don't → advisory."""
+    def test_third_party_in_prd_but_not_legal_blocks(self, tmp_path):
+        """PRD mentions OpenAI but legal docs don't → BLOCK (not advisory)."""
         self._create_legal_files(
             tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
@@ -260,10 +260,11 @@ class TestLegalGate:
         )
         from tools.gates.legal_gate import run_legal_gate
         result = run_legal_gate(str(tmp_path))
-        assert any("OpenAI" in a for a in result.advisories)
+        assert not result.passed
+        assert any("OpenAI" in i for i in result.issues)
 
-    def test_third_party_disclosed_no_advisory(self, tmp_path):
-        """PRD mentions Vercel, legal docs mention Vercel → no advisory."""
+    def test_third_party_disclosed_no_block(self, tmp_path):
+        """PRD mentions Vercel, legal docs mention Vercel → no block."""
         self._create_legal_files(
             tmp_path, privacy_content=_GOOD_PRIVACY, terms_content=_GOOD_TERMS
         )
@@ -273,8 +274,26 @@ class TestLegalGate:
         )
         from tools.gates.legal_gate import run_legal_gate
         result = run_legal_gate(str(tmp_path))
-        vercel_advisories = [a for a in result.advisories if "Vercel" in a]
-        assert len(vercel_advisories) == 0
+        vercel_issues = [i for i in result.issues if "Vercel" in i]
+        assert len(vercel_issues) == 0
+
+    def test_retention_blocks_when_prd_collects_data(self, tmp_path):
+        """PRD indicates user data collection + no retention mention → BLOCK."""
+        no_retention = _GOOD_PRIVACY.replace(
+            "## Data Retention\nWe retain your personal data for 12 months. You may request deletion at any time.\n",
+            ""
+        ).replace("deletion", "correction")
+        self._create_legal_files(
+            tmp_path, privacy_content=no_retention, terms_content=_GOOD_TERMS
+        )
+        self._create_prd(
+            tmp_path,
+            "## Features\n\n- **User Profile**: Sign-up and account management\n",
+        )
+        from tools.gates.legal_gate import run_legal_gate
+        result = run_legal_gate(str(tmp_path))
+        assert not result.passed
+        assert any("retention" in i.lower() for i in result.issues)
 
     # ── Feature reference advisory ────────────────────────────────────────
 
