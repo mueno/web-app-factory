@@ -158,6 +158,11 @@ phases:
               scope: "src/"
               must_not_match: true
 
+      - type: "e2e_form_flow"
+        description: "E2E form submission flow: form page navigates to result page and renders content"
+        conditions:
+          timeout_seconds: 30
+
   - id: "3"
     name: "Ship"
     purpose: >

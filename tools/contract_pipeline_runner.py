@@ -301,6 +301,18 @@ def _run_gate_checks(
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
+        elif gate_type == "e2e_form_flow":
+            from tools.gates.e2e_gate import run_e2e_gate
+            target_dir = nextjs_dir if nextjs_dir else project_dir
+            spec_path = str(Path(project_dir) / "docs" / "pipeline" / "screen-spec.json")
+            gate_result = run_e2e_gate(
+                project_dir=target_dir,
+                spec_path=spec_path,
+                phase_id=phase_id,
+            )
+            if not gate_result.passed and not gate_result.skipped:
+                issues.extend(gate_result.issues)
+
         else:
             # Unknown gate type: fail-closed per gate_policy (GATE-00 guard)
             issues.append(

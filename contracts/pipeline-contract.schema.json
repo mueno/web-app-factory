@@ -111,7 +111,9 @@
             "security_headers",
             "link_integrity",
             "deployment",
-            "mcp_approval"
+            "mcp_approval",
+            "legal",
+            "e2e_form_flow"
           ],
           "description": "Gate type determines which gate runner handles validation"
         },
