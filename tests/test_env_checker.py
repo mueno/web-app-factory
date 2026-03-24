@@ -69,10 +69,10 @@ class TestCheckEnv:
     def test_all_present(self):
         """check_env('vercel') returns ToolStatus dicts for node/npm/python/vercel, all present."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result(True)),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value="tok123"),
         ):
             statuses = check_env("vercel")
@@ -103,10 +103,10 @@ class TestCheckEnv:
             "version": None,
         }
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=node_missing),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=node_missing),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
         ):
             statuses = check_env("vercel")
@@ -125,10 +125,10 @@ class TestCheckEnv:
             "version": "v16.0.0",
         }
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=node_old),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=node_old),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
         ):
             statuses = check_env("vercel")
@@ -142,9 +142,9 @@ class TestCheckEnv:
     def test_gcloud_included_for_gcp(self):
         """check_env('gcp') returns an entry for gcloud."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
             patch("web_app_factory._env_checker._check_gcloud", return_value={
                 "tool": "gcloud",
                 "status": "present",
@@ -162,10 +162,10 @@ class TestCheckEnv:
     def test_gcloud_skipped_for_vercel(self):
         """check_env('vercel') does not include a gcloud entry."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
         ):
             statuses = check_env("vercel")
@@ -176,9 +176,9 @@ class TestCheckEnv:
     def test_local_deploy_target(self):
         """check_env('local') returns only node, npm, python — no vercel or gcloud."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
         ):
             statuses = check_env("local")
 
@@ -198,10 +198,10 @@ class TestVercelAuthStatus:
     def test_scope_warning_when_token_set(self):
         """When VERCEL_TOKEN env var is set, vercel status='present' with org-scoped note."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value="tok123"),
         ):
             statuses = check_env("vercel")
@@ -213,12 +213,12 @@ class TestVercelAuthStatus:
     def test_unauth_when_no_token(self):
         """When vercel CLI present but no VERCEL_TOKEN and keychain returns None, status='present_unauth'."""
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
-            patch("os.environ.get", return_value=None),
-            patch("web_app_factory._keychain.get_credential", return_value=None),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker.os.environ.get", return_value=None),
+            patch("web_app_factory._env_checker.get_credential", return_value=None),
         ):
             statuses = check_env("vercel")
 
@@ -241,12 +241,12 @@ class TestInstallCommands:
             "version": None,
         }
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=node_missing),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=node_missing),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
-            patch("sys.platform", "darwin"),
+            patch("web_app_factory._env_checker.sys.platform", "darwin"),
         ):
             statuses = check_env("vercel")
 
@@ -263,12 +263,12 @@ class TestInstallCommands:
             "version": None,
         }
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=node_missing),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=_make_npm_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=node_missing),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
-            patch("sys.platform", "linux"),
+            patch("web_app_factory._env_checker.sys.platform", "linux"),
         ):
             statuses = check_env("vercel")
 
@@ -285,10 +285,10 @@ class TestInstallCommands:
             "version": None,
         }
         with (
-            patch("pipeline_runtime.startup_preflight._check_nodejs", return_value=_make_node_result(True)),
-            patch("pipeline_runtime.startup_preflight._check_npm", return_value=npm_missing),
-            patch("pipeline_runtime.startup_preflight._check_python_version", return_value=_make_python_result()),
-            patch("pipeline_runtime.startup_preflight._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=npm_missing),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
             patch("os.environ.get", return_value=None),
         ):
             statuses = check_env("vercel")
@@ -340,7 +340,7 @@ class TestInstallTool:
 
     def test_install_not_available_returns_manual(self):
         """install_tool('node') on linux (no single-command install) returns manual instruction."""
-        with patch("sys.platform", "linux"):
+        with patch("web_app_factory._env_checker.sys.platform", "linux"):
             result = install_tool("node")
         # On linux, node has no simple single-command install via list args
         # Should return a manual install instruction, not try subprocess
