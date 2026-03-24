@@ -216,6 +216,63 @@ def _check_gcloud() -> dict[str, Any]:
     }
 
 
+def _check_supabase_credentials() -> list[dict[str, Any]]:
+    """Check for required Supabase API credentials.
+
+    Checks two credentials:
+    - supabase_access_token (SUPABASE_ACCESS_TOKEN)
+    - supabase_org_id (SUPABASE_ORG_ID)
+
+    Uses get_credential() which implements 3-tier lookup: banto -> keyring -> env var.
+
+    Returns:
+        List of 2 ToolStatus dicts, one per credential.
+    """
+    statuses: list[dict[str, Any]] = []
+
+    creds = [
+        {
+            "key": "supabase_access_token",
+            "tool": "supabase-access-token",
+            "env_var": "SUPABASE_ACCESS_TOKEN",
+            "banto_cmd": "banto store supabase-access-token",
+        },
+        {
+            "key": "supabase_org_id",
+            "tool": "supabase-org-id",
+            "env_var": "SUPABASE_ORG_ID",
+            "banto_cmd": "banto store supabase-org-id",
+        },
+    ]
+
+    for cred in creds:
+        value = get_credential(cred["key"])
+        if value is not None:
+            statuses.append({
+                "tool": cred["tool"],
+                "status": "present",
+                "version_found": None,
+                "version_required": None,
+                "install_command": None,
+                "note": None,
+            })
+        else:
+            statuses.append({
+                "tool": cred["tool"],
+                "status": "missing",
+                "version_found": None,
+                "version_required": None,
+                "install_command": None,
+                "note": (
+                    f"{cred['tool']} not set. "
+                    f"Run: {cred['banto_cmd']}  "
+                    f"OR  export {cred['env_var']}=<your-value>"
+                ),
+            })
+
+    return statuses
+
+
 def _check_vercel_auth() -> str:
     """Determine Vercel auth status.
 
@@ -246,10 +303,11 @@ def check_env(deploy_target: str) -> list[dict[str, Any]]:
     Always checks: node, npm, python.
     For deploy_target='vercel': also checks vercel CLI + auth.
     For deploy_target='gcp': also checks gcloud CLI + auth.
+    For deploy_target='supabase': also checks Supabase credentials (access token + org ID).
     For deploy_target='local': only node, npm, python.
 
     Args:
-        deploy_target: One of "vercel", "gcp", "local".
+        deploy_target: One of "vercel", "gcp", "supabase", "local".
 
     Returns:
         List of ToolStatus dicts, one per checked tool.
@@ -314,6 +372,9 @@ def check_env(deploy_target: str) -> list[dict[str, Any]]:
 
     elif deploy_target == "gcp":
         statuses.append(_check_gcloud())
+
+    elif deploy_target == "supabase":
+        statuses.extend(_check_supabase_credentials())
 
     # local: no extra checks needed
 

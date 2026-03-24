@@ -355,6 +355,139 @@ class TestInstallTool:
 # TestFormatEnvReport
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# TestSupabaseCredentials
+# ---------------------------------------------------------------------------
+
+
+class TestSupabaseCredentials:
+    """Tests for Supabase credential detection in check_env."""
+
+    def test_supabase_target_returns_credential_statuses(self):
+        """check_env('supabase') returns ToolStatus entries for supabase-access-token and supabase-org-id."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_supabase_credentials", return_value=[
+                {
+                    "tool": "supabase-access-token",
+                    "status": "present",
+                    "version_found": None,
+                    "version_required": None,
+                    "install_command": None,
+                    "note": None,
+                },
+                {
+                    "tool": "supabase-org-id",
+                    "status": "present",
+                    "version_found": None,
+                    "version_required": None,
+                    "install_command": None,
+                    "note": None,
+                },
+            ]),
+        ):
+            statuses = check_env("supabase")
+
+        tools = {s["tool"] for s in statuses}
+        assert "supabase-access-token" in tools
+        assert "supabase-org-id" in tools
+
+    def test_supabase_credentials_present_status(self):
+        """When credentials are present, status is 'present' with note=None."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker.get_credential", side_effect=lambda k: "some_value"),
+        ):
+            statuses = check_env("supabase")
+
+        token_s = next(s for s in statuses if s["tool"] == "supabase-access-token")
+        org_s = next(s for s in statuses if s["tool"] == "supabase-org-id")
+
+        assert token_s["status"] == "present"
+        assert token_s["note"] is None
+        assert org_s["status"] == "present"
+        assert org_s["note"] is None
+
+    def test_supabase_credentials_missing_status_with_remediation(self):
+        """When credentials are missing, status='missing' with note containing both banto and export guidance."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker.get_credential", return_value=None),
+        ):
+            statuses = check_env("supabase")
+
+        token_s = next(s for s in statuses if s["tool"] == "supabase-access-token")
+        assert token_s["status"] == "missing"
+        assert token_s["note"] is not None
+        assert "banto store supabase-access-token" in token_s["note"]
+        assert "SUPABASE_ACCESS_TOKEN" in token_s["note"]
+
+        org_s = next(s for s in statuses if s["tool"] == "supabase-org-id")
+        assert org_s["status"] == "missing"
+        assert org_s["note"] is not None
+        assert "SUPABASE_ORG_ID" in org_s["note"]
+
+    def test_local_target_excludes_supabase(self):
+        """check_env('local') does NOT include supabase credential checks."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+        ):
+            statuses = check_env("local")
+
+        tools = {s["tool"] for s in statuses}
+        assert "supabase-access-token" not in tools
+        assert "supabase-org-id" not in tools
+
+    def test_vercel_target_excludes_supabase(self):
+        """check_env('vercel') does NOT include supabase credential checks (separate deploy target)."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker._check_vercel_cli", return_value=_make_vercel_result(True)),
+            patch("os.environ.get", return_value="tok123"),
+        ):
+            statuses = check_env("vercel")
+
+        tools = {s["tool"] for s in statuses}
+        assert "supabase-access-token" not in tools
+        assert "supabase-org-id" not in tools
+
+    def test_supabase_status_dict_shape(self):
+        """Each supabase credential ToolStatus dict has all required keys."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker.get_credential", return_value=None),
+        ):
+            statuses = check_env("supabase")
+
+        supabase_statuses = [s for s in statuses if s["tool"].startswith("supabase")]
+        assert len(supabase_statuses) == 2
+
+        for s in supabase_statuses:
+            assert "tool" in s
+            assert "status" in s
+            assert "version_found" in s
+            assert "version_required" in s
+            assert "install_command" in s
+            assert "note" in s
+
+
+# ---------------------------------------------------------------------------
+# TestFormatEnvReport
+# ---------------------------------------------------------------------------
+
+
 class TestFormatEnvReport:
     def _all_present_statuses(self) -> list[dict]:
         return [
