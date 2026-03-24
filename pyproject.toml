@@ -43,6 +43,7 @@ Issues = "https://github.com/anthropics/web-app-factory/issues"
 dev = [
     "mypy>=1.19.1",
     "pytest>=9.0.2",
+    "pytest-asyncio>=0.23.0",
     "ruff>=0.15.4",
 ]
 
