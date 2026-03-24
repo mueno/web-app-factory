@@ -65,8 +65,8 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
   4. CI fails if any tool registration in either server lacks the waf_ prefix
 **Plans:** 2/2 plans complete
 Plans:
-- [ ] 16-01-PLAN.md — Extract shared impl logic to _tool_impls.py and annotate stdio server
-- [ ] 16-02-PLAN.md — Create HTTP transport server and extend CI prefix enforcement
+- [x] 16-01-PLAN.md — Extract shared impl logic to _tool_impls.py and annotate stdio server
+- [x] 16-02-PLAN.md — Create HTTP transport server and extend CI prefix enforcement
 
 ### Phase 17: Supabase Provisioning
 **Goal**: Running `waf_generate_app` with a Supabase-enabled spec automatically provisions a live Supabase project with RLS enforced on every table — no manual Supabase setup required
@@ -78,7 +78,11 @@ Plans:
   3. waf_check_env reports missing SUPABASE_ACCESS_TOKEN and SUPABASE_ORG_ID with actionable remediation steps
   4. Supabase credentials are read from OS keychain — the value is never logged or written to any file
   5. Generated apps have supabase-browser.ts (anon key only) and supabase-server.ts (service_role, server-only) as separate files — NEXT_PUBLIC_*SERVICE*ROLE* patterns cause the env-exposure gate to fail
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 17-01-PLAN.md — Refactor _keychain.py to banto-first credential management and extend waf_check_env
+- [ ] 17-02-PLAN.md — Create dual Supabase client TypeScript templates and SECG-01 service_role gate
+- [ ] 17-03-PLAN.md — Build SupabaseProvisioner, migration SQL generator, and supabase_gate.py
 
 ### Phase 18: Backend API Generation
 **Goal**: Every generated app with a backend spec has fully functional Next.js Route Handlers with Zod input validation, standardized error responses, and a health endpoint — with a gate that rejects any route missing validation or containing SQL injection patterns
@@ -148,8 +152,8 @@ Plans:
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
-| 16. MCP Infrastructure Hardening | 2/2 | Complete    | 2026-03-24 | - |
-| 17. Supabase Provisioning | v3.0 | 0/? | Not started | - |
+| 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
+| 17. Supabase Provisioning | v3.0 | 0/3 | Planning | - |
 | 18. Backend API Generation | v3.0 | 0/? | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |
