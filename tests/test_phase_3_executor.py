@@ -2,7 +2,7 @@
 
 Verifies Phase3ShipExecutor:
 - phase_id property returns "3"
-- sub_steps list matches expected 10 items
+- sub_steps list matches expected 13 items (includes optional Supabase sub-steps)
 - provision sub-step behavior (success / failure)
 - deploy_preview URL capture and deployment.json writing
 - legal document generation with PRD context
@@ -106,12 +106,15 @@ class TestPhase3ExecutorProperties:
         assert executor.phase_id == "3"
 
     def test_sub_steps_list(self):
-        """sub_steps returns expected 10 items in order."""
+        """sub_steps returns expected 13 items in order (includes optional Supabase steps)."""
         from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
         executor = Phase3ShipExecutor()
         expected = [
             "provision",
             "deploy_preview",
+            "supabase_provision",
+            "supabase_render",
+            "supabase_gate",
             "generate_legal",
             "gate_legal",
             "gate_lighthouse",

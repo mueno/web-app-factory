@@ -2,11 +2,14 @@
 """Phase 3 executor: Ship.
 
 Orchestrates the full ship pipeline:
-  1. provision     — via DeployProvider.deploy() (vercel link --yes for Vercel target)
-  2. deploy_preview — via DeployProvider.deploy() (vercel deploy, get preview URL)
-  3. generate_legal — deploy-agent generates /privacy and /terms pages with PRD context
-  4. gate_legal    — validate legal doc presence, no placeholders, feature reference
-  5. gate_lighthouse — Lighthouse performance/accessibility/SEO gates (max 3 retries)
+  1. provision        — via DeployProvider.deploy() (vercel link --yes for Vercel target)
+  2. deploy_preview   — via DeployProvider.deploy() (vercel deploy, get preview URL)
+  2a. supabase_provision — (optional) create Supabase project, poll healthy, inject Vercel env
+  2b. supabase_render    — (optional) render supabase-browser.ts + supabase-server.ts into app
+  2c. supabase_gate      — (optional) verify RLS coverage + project health + Vercel env injection
+  3. generate_legal   — deploy-agent generates /privacy and /terms pages with PRD context
+  4. gate_legal       — validate legal doc presence, no placeholders, feature reference
+  5. gate_lighthouse  — Lighthouse performance/accessibility/SEO gates (max 3 retries)
   6. gate_accessibility — axe-core critical violation gate (max 3 retries)
   7. gate_security_headers — security headers gate (run once — config-level fix)
   8. gate_link_integrity — link integrity BFS crawler (run once — structural fix)
@@ -15,6 +18,8 @@ Orchestrates the full ship pipeline:
 
 Steps 1+2+10 are combined into a single provider.deploy() call for Vercel/GCP/AWS.
 The retry cycle (steps 5+6) calls provider.deploy() again for redeployment after fixes.
+Supabase sub-steps (2a-2c) are only executed when ctx.extra["supabase_enabled"] is True
+and deploy_target != "local".
 
 Self-registers in the executor registry at module import time.
 
@@ -31,6 +36,7 @@ to DeployProvider implementations which use explicit arg lists (no shell=True).
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Callable
@@ -81,10 +87,18 @@ class Phase3ShipExecutor(PhaseExecutor):
 
     @property
     def sub_steps(self) -> list:
-        """Ordered sub-steps for Phase 3."""
+        """Ordered sub-steps for Phase 3.
+
+        Supabase sub-steps (supabase_provision, supabase_render, supabase_gate) are
+        always listed here but are conditionally skipped in execute() when
+        supabase_enabled is False or deploy_target is "local".
+        """
         return [
             "provision",
             "deploy_preview",
+            "supabase_provision",
+            "supabase_render",
+            "supabase_gate",
             "generate_legal",
             "gate_legal",
             "gate_lighthouse",
@@ -201,6 +215,39 @@ class Phase3ShipExecutor(PhaseExecutor):
                 artifacts=[preview_url, str(ctx.project_dir)],
                 sub_steps=sub_step_results,
             )
+
+        # ── Supabase sub-steps (optional) ──────────────────────────────────────
+        # Only run when supabase_enabled=True; local deploy target already exited above.
+        if ctx.extra.get("supabase_enabled", False):
+            result = self._supabase_provision(ctx)
+            sub_step_results.append(result)
+            if not result.success:
+                return PhaseResult(
+                    phase_id="3",
+                    success=False,
+                    error=result.error,
+                    sub_steps=sub_step_results,
+                )
+
+            result = self._supabase_render(ctx)
+            sub_step_results.append(result)
+            if not result.success:
+                return PhaseResult(
+                    phase_id="3",
+                    success=False,
+                    error=result.error,
+                    sub_steps=sub_step_results,
+                )
+
+            result = self._supabase_gate(ctx)
+            sub_step_results.append(result)
+            if not result.success:
+                return PhaseResult(
+                    phase_id="3",
+                    success=False,
+                    error=result.error,
+                    sub_steps=sub_step_results,
+                )
 
         # ── Step 3: Generate Legal Documents ───────────────────────────────────
         result = self._generate_legal(ctx)
@@ -626,6 +673,170 @@ Focus only on fixing the specific issues listed. Do not change unrelated code.
             sub_step_id="gate_mcp_approval",
             success=False,
             error=f"Production deploy not approved: {'; '.join(gate_result.issues)}",
+        )
+
+    # ── Supabase sub-step implementations ───────────────────────────────────────
+
+    def _supabase_provision(self, ctx: PhaseContext) -> SubStepResult:
+        """Supabase provision sub-step: create project, poll healthy, get keys, inject env.
+
+        Uses lazy imports to avoid loading httpx/banto unless Supabase is enabled.
+        Runs async provisioner methods via asyncio.run() (sync/async bridge).
+
+        Security: credential values are never logged; only operation names and status codes.
+        """
+        from web_app_factory._keychain import get_credential  # noqa: PLC0415
+
+        supabase_access_token = get_credential("supabase_access_token")
+        supabase_org_id = get_credential("supabase_org_id")
+
+        if not supabase_access_token or not supabase_org_id:
+            return SubStepResult(
+                sub_step_id="supabase_provision",
+                success=False,
+                error=(
+                    "Missing Supabase credentials: supabase_access_token and "
+                    "supabase_org_id must be available via banto or env vars"
+                ),
+            )
+
+        from web_app_factory._supabase_provisioner import SupabaseProvisioner  # noqa: PLC0415
+
+        try:
+            provisioner = SupabaseProvisioner(
+                access_token=supabase_access_token,
+                org_id=supabase_org_id,
+            )
+
+            async def _run() -> dict:
+                project_data = await provisioner.create_project(name=ctx.app_name)
+                ref = project_data["ref"]
+                await provisioner.poll_until_healthy(ref)
+                api_keys = await provisioner.get_api_keys(ref)
+
+                # Inject Vercel env vars if credentials are available
+                vercel_token = get_credential("vercel_token")
+                vercel_project_id = ctx.extra.get("vercel_project_id") or get_credential(
+                    "vercel_project_id"
+                )
+                if vercel_token and vercel_project_id:
+                    supabase_url = f"https://{ref}.supabase.co"
+                    await provisioner.inject_vercel_env(
+                        vercel_token=vercel_token,
+                        vercel_project_id=vercel_project_id,
+                        supabase_url=supabase_url,
+                        anon_key=api_keys.get("anon", ""),
+                        service_role_key=api_keys.get("service_role", ""),
+                    )
+                else:
+                    logger.warning(
+                        "Vercel credentials not available — skipping env injection"
+                    )
+
+                return {"ref": ref, "api_keys": api_keys}
+
+            result_data = asyncio.run(_run())
+            # Store project_ref and api_keys in ctx.extra for downstream steps
+            ctx.extra["supabase_project_ref"] = result_data["ref"]
+            ctx.extra["supabase_api_keys"] = result_data["api_keys"]
+
+        except Exception as exc:
+            return SubStepResult(
+                sub_step_id="supabase_provision",
+                success=False,
+                error=f"Supabase provisioning failed: {type(exc).__name__}",
+            )
+
+        return SubStepResult(
+            sub_step_id="supabase_provision",
+            success=True,
+            notes=f"Supabase project provisioned (ref: {ctx.extra['supabase_project_ref']})",
+        )
+
+    def _supabase_render(self, ctx: PhaseContext) -> SubStepResult:
+        """Supabase render sub-step: copy .tmpl client files into generated app.
+
+        Renders supabase-browser.ts and supabase-server.ts into the generated
+        app's src/lib/supabase/ directory, and adds npm deps to package.json.
+        """
+        from web_app_factory._supabase_template_renderer import (  # noqa: PLC0415
+            add_supabase_deps,
+            render_supabase_templates,
+        )
+
+        nextjs_dir = Path(ctx.extra.get("nextjs_dir") or str(ctx.project_dir))
+        pkg_json_path = nextjs_dir / "package.json"
+
+        try:
+            created_files = render_supabase_templates(nextjs_dir)
+
+            if pkg_json_path.exists():
+                add_supabase_deps(pkg_json_path)
+            else:
+                logger.warning(
+                    "package.json not found at %s — skipping dep injection", pkg_json_path
+                )
+
+        except Exception as exc:
+            return SubStepResult(
+                sub_step_id="supabase_render",
+                success=False,
+                error=f"Supabase template rendering failed: {type(exc).__name__}",
+            )
+
+        return SubStepResult(
+            sub_step_id="supabase_render",
+            success=True,
+            artifacts=created_files,
+            notes=f"Rendered {len(created_files)} Supabase client files",
+        )
+
+    def _supabase_gate(self, ctx: PhaseContext) -> SubStepResult:
+        """Supabase gate sub-step: verify RLS coverage, project health, Vercel env.
+
+        Calls run_supabase_gate with project_ref and credentials stored in ctx.extra
+        by _supabase_provision.
+        """
+        from tools.gates.supabase_gate import run_supabase_gate  # noqa: PLC0415
+        from web_app_factory._keychain import get_credential  # noqa: PLC0415
+
+        project_ref = ctx.extra.get("supabase_project_ref")
+        supabase_access_token = get_credential("supabase_access_token")
+        vercel_token = get_credential("vercel_token")
+        vercel_project_id = ctx.extra.get("vercel_project_id") or get_credential(
+            "vercel_project_id"
+        )
+
+        try:
+            gate_result = run_supabase_gate(
+                project_dir=str(ctx.project_dir),
+                phase_id="3",
+                supabase_access_token=supabase_access_token,
+                project_ref=project_ref,
+                vercel_token=vercel_token,
+                vercel_project_id=vercel_project_id,
+            )
+        except Exception as exc:
+            return SubStepResult(
+                sub_step_id="supabase_gate",
+                success=False,
+                error=f"Supabase gate raised exception: {type(exc).__name__}",
+            )
+
+        if gate_result.passed:
+            advisories_note = ""
+            if gate_result.advisories:
+                advisories_note = f" Advisories: {'; '.join(gate_result.advisories)}"
+            return SubStepResult(
+                sub_step_id="supabase_gate",
+                success=True,
+                notes=f"Supabase gate passed.{advisories_note}",
+            )
+
+        return SubStepResult(
+            sub_step_id="supabase_gate",
+            success=False,
+            error=f"Supabase gate failed: {'; '.join(gate_result.issues)}",
         )
 
 
