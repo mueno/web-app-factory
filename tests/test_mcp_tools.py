@@ -162,7 +162,7 @@ class TestWafListRuns:
     """TOOL-04: waf_list_runs lists all pipeline runs."""
 
     def test_empty_list(self):
-        with patch("web_app_factory.mcp_server._scan_disk_runs", return_value=[]):
+        with patch("web_app_factory._tool_impls._scan_disk_runs", return_value=[]):
             from web_app_factory.mcp_server import waf_list_runs
             result = asyncio.run(waf_list_runs())
         assert "No pipeline runs found" in result
@@ -177,7 +177,7 @@ class TestWafListRuns:
             message="Starting",
         ))
 
-        with patch("web_app_factory.mcp_server._scan_disk_runs", return_value=[]):
+        with patch("web_app_factory._tool_impls._scan_disk_runs", return_value=[]):
             from web_app_factory.mcp_server import waf_list_runs
             result = asyncio.run(waf_list_runs())
 
@@ -194,7 +194,7 @@ class TestWafListRuns:
                 "url": "https://my-app.vercel.app",
             },
         ]
-        with patch("web_app_factory.mcp_server._scan_disk_runs", return_value=disk_runs):
+        with patch("web_app_factory._tool_impls._scan_disk_runs", return_value=disk_runs):
             from web_app_factory.mcp_server import waf_list_runs
             result = asyncio.run(waf_list_runs())
 

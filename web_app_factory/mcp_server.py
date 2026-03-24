@@ -16,18 +16,29 @@ Tools (TOOL-01 through TOOL-07, TOOL-05):
   waf_start_dev_server  — Start a local dev server for a completed pipeline run
   waf_stop_dev_server   — Stop a running local dev server for a pipeline run
   waf_check_env         -- Check environment readiness and optionally install missing tools
+
+Business logic is in _tool_impls.py — this file is a thin transport wrapper only.
 """
 
 from __future__ import annotations
 
-import asyncio
-import re
 import sys
 from pathlib import Path
 
 from fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
-# ── sys.path so internal modules are importable ──────────────────────────────
+from web_app_factory._tool_impls import (
+    impl_approve_gate,
+    impl_check_env,
+    impl_generate_app,
+    impl_get_status,
+    impl_list_runs,
+    impl_start_dev_server,
+    impl_stop_dev_server,
+)
+
+# ── sys.path so internal modules are importable ───────────────────────────────
 _PROJECT_ROOT = Path(__file__).parent.parent
 if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
@@ -42,18 +53,13 @@ mcp = FastMCP(
 )
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-def _slugify(idea: str) -> str:
-    """Convert idea text to a filesystem-safe slug for project directory."""
-    slug = re.sub(r"[^a-z0-9]+", "-", idea.lower().strip())
-    slug = re.sub(r"-{2,}", "-", slug).strip("-")
-    return slug[:40] or "app"
-
-
 # ── TOOL-01: waf_generate_app ────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    openWorldHint=True,
+))
 async def waf_generate_app(
     idea: str,
     mode: str = "auto",
@@ -79,29 +85,23 @@ async def waf_generate_app(
     Returns:
         Execution plan as formatted markdown with run_id for status polling.
     """
-    from web_app_factory._input_validator import validate_idea  # noqa: PLC0415
-    from web_app_factory._pipeline_bridge import start_pipeline_async  # noqa: PLC0415
-    from web_app_factory._status_formatter import format_plan_started  # noqa: PLC0415
-
-    idea = validate_idea(idea)
-    project_dir = str(_PROJECT_ROOT / "output" / _slugify(idea))
-
-    run_id, plan = await start_pipeline_async(
+    return await impl_generate_app(
         idea,
-        project_dir,
-        deploy_target=deploy_target,
         mode=mode,
+        deploy_target=deploy_target,
         company_name=company_name,
         contact_email=contact_email,
         resume_run_id=resume_run_id,
     )
 
-    return format_plan_started(run_id, plan)
-
 
 # ── TOOL-02: waf_get_status ──────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    openWorldHint=False,
+))
 async def waf_get_status(run_id: str) -> str:
     """Get current progress of a pipeline run.
 
@@ -114,59 +114,16 @@ async def waf_get_status(run_id: str) -> str:
     Returns:
         Formatted markdown with progress table and recent activity.
     """
-    from web_app_factory._progress_store import get_store  # noqa: PLC0415
-    from web_app_factory._status_formatter import format_status  # noqa: PLC0415
-
-    store = get_store()
-    summary = store.get_run_summary(run_id)
-
-    if summary is None:
-        # Try cold path: load from disk state.json for completed/old runs
-        return _format_disk_status(run_id)
-
-    events = store.get_events(run_id, since=-10)
-    return format_status(run_id, summary, events)
-
-
-def _format_disk_status(run_id: str) -> str:
-    """Fall back to reading pipeline state from disk for completed runs."""
-    try:
-        from tools.pipeline_state import load_state  # noqa: PLC0415
-
-        # Search output/ for runs matching this run_id
-        output_dir = _PROJECT_ROOT / "output"
-        if output_dir.exists():
-            for project_dir in output_dir.iterdir():
-                if project_dir.is_dir():
-                    state = load_state(run_id, str(project_dir))
-                    if state is not None:
-                        phases_info = []
-                        for phase_id, record in state.phases.items():
-                            if isinstance(record, dict):
-                                status = record.get("status", "unknown")
-                            else:
-                                status = getattr(record, "status", "unknown")
-                            phases_info.append(f"| Phase {phase_id} | {status.title()} |")
-
-                        lines = [
-                            f"## Pipeline Status: {run_id}",
-                            "",
-                            f"**Status:** {state.status.title()}",
-                            "",
-                            "| Phase | Status |",
-                            "|-------|--------|",
-                            *phases_info,
-                        ]
-                        return "\n".join(lines)
-    except Exception:
-        pass
-
-    return f"Run `{run_id}` not found. Use `waf_list_runs()` to see available runs."
+    return await impl_get_status(run_id)
 
 
 # ── TOOL-03: waf_approve_gate ────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    openWorldHint=False,
+))
 async def waf_approve_gate(
     run_id: str,
     decision: str,
@@ -185,49 +142,16 @@ async def waf_approve_gate(
     Returns:
         Confirmation message with next steps.
     """
-    if decision not in ("approve", "reject"):
-        return f"Invalid decision: {decision!r}. Must be 'approve' or 'reject'."
-
-    # Check if the run is in auto mode — gate approval is only for interactive mode
-    from web_app_factory._progress_store import get_store  # noqa: PLC0415
-
-    store = get_store()
-    run_mode = store.get_mode(run_id)
-    if run_mode == "auto":
-        return (
-            f"Run `{run_id}` is in **auto** mode. "
-            "Gates are approved automatically — manual approval is not applicable.\n\n"
-            "To use manual gate approval, start the pipeline with `mode='interactive'`."
-        )
-
-    # Write approval/rejection to the gate file the internal server polls.
-    # Use GATE_RESPONSES_DIR (shared constant) instead of a hardcoded path so
-    # that mcp_approval_gate.py reader and this writer always agree on location.
-    from config.settings import GATE_RESPONSES_DIR  # noqa: PLC0415
-
-    gate_dir = GATE_RESPONSES_DIR
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    gate_file = gate_dir / f"{run_id}.json"
-
-    import json  # noqa: PLC0415
-
-    gate_file.write_text(
-        json.dumps({
-            "run_id": run_id,
-            "decision": decision,
-            "feedback": feedback,
-        }),
-        encoding="utf-8",
-    )
-
-    if decision == "approve":
-        return f"✓ Gate approved for run `{run_id}`. Pipeline will continue."
-    return f"✗ Gate rejected for run `{run_id}`. Feedback: {feedback or '(none)'}"
+    return await impl_approve_gate(run_id, decision, feedback=feedback)
 
 
 # ── TOOL-04: waf_list_runs ───────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    openWorldHint=False,
+))
 async def waf_list_runs() -> str:
     """List all pipeline runs with their current status.
 
@@ -236,64 +160,16 @@ async def waf_list_runs() -> str:
     Returns:
         Formatted table of all runs with status and timestamps.
     """
-    from web_app_factory._progress_store import get_store  # noqa: PLC0415
-    from web_app_factory._status_formatter import format_runs_table  # noqa: PLC0415
-
-    store = get_store()
-    runs = store.list_runs()
-
-    # Also scan output/ for historical runs not in memory
-    disk_runs = _scan_disk_runs()
-
-    # Merge: in-memory runs take precedence
-    seen_ids = {r["run_id"] for r in runs}
-    for dr in disk_runs:
-        if dr["run_id"] not in seen_ids:
-            runs.append(dr)
-
-    return format_runs_table(runs)
-
-
-def _scan_disk_runs() -> list[dict]:
-    """Scan output/ directories for historical pipeline runs."""
-    runs = []
-    output_dir = _PROJECT_ROOT / "output"
-    if not output_dir.exists():
-        return runs
-
-    for project_dir in output_dir.iterdir():
-        if not project_dir.is_dir():
-            continue
-        runs_dir = project_dir / "docs" / "pipeline" / "runs"
-        if not runs_dir.exists():
-            continue
-        for run_dir in runs_dir.iterdir():
-            state_file = run_dir / "state.json"
-            if state_file.exists():
-                try:
-                    import json  # noqa: PLC0415
-
-                    data = json.loads(state_file.read_text(encoding="utf-8"))
-                    run_entry: dict = {
-                        "run_id": data.get("run_id", run_dir.name),
-                        "status": data.get("status", "unknown"),
-                        "started_at": data.get("started_at"),
-                    }
-                    # Extract output URL from deployment.json if available
-                    deploy_file = project_dir / "docs" / "pipeline" / "deployment.json"
-                    if deploy_file.exists():
-                        deploy_data = json.loads(deploy_file.read_text(encoding="utf-8"))
-                        run_entry["url"] = deploy_data.get("url") or deploy_data.get("deploy_url")
-                    runs.append(run_entry)
-                except Exception:
-                    pass
-
-    return runs
+    return await impl_list_runs()
 
 
 # ── TOOL-06: waf_start_dev_server ────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    openWorldHint=False,
+))
 async def waf_start_dev_server(run_id: str) -> str:
     """Start a local dev server for a completed pipeline run.
 
@@ -308,18 +184,16 @@ async def waf_start_dev_server(run_id: str) -> str:
         Markdown with the localhost URL, or an error message if the
         server could not be started within the timeout.
     """
-    from web_app_factory._dev_server import start_dev_server  # noqa: PLC0415
-
-    # start_dev_server blocks for up to 30s — run in executor to avoid
-    # blocking the asyncio event loop.
-    return await asyncio.get_event_loop().run_in_executor(
-        None, start_dev_server, run_id
-    )
+    return await impl_start_dev_server(run_id)
 
 
 # ── TOOL-07: waf_stop_dev_server ─────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=True,
+    openWorldHint=False,
+))
 async def waf_stop_dev_server(run_id: str) -> str:
     """Stop a running local dev server for a pipeline run.
 
@@ -334,14 +208,16 @@ async def waf_stop_dev_server(run_id: str) -> str:
         Confirmation that the server was stopped, or a "not running"
         message if no server was found for the given run_id.
     """
-    from web_app_factory._dev_server import stop_dev_server  # noqa: PLC0415
-
-    return stop_dev_server(run_id)
+    return await impl_stop_dev_server(run_id)
 
 
 # ── TOOL-05: waf_check_env ───────────────────────────────────────────────────
 
-@mcp.tool()
+@mcp.tool(annotations=ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    openWorldHint=False,
+))
 async def waf_check_env(
     deploy_target: str = "vercel",
     execute_install: bool = False,
@@ -373,25 +249,11 @@ async def waf_check_env(
         per-tool notes. If ``execute_install=True`` and ``tool_to_install`` is
         provided, the install result is appended at the end of the report.
     """
-    from web_app_factory._env_checker import check_env, format_env_report, install_tool  # noqa: PLC0415
-
-    # check_env may call subprocess (gcloud --version etc.) — run in executor
-    statuses = await asyncio.get_event_loop().run_in_executor(None, check_env, deploy_target)
-
-    install_result: str | None = None
-
-    if execute_install:
-        if tool_to_install is None:
-            return (
-                "Error: execute_install=True requires tool_to_install to be provided. "
-                "Both parameters must be supplied together to prevent accidental installs. "
-                "Example: waf_check_env(execute_install=True, tool_to_install='vercel')"
-            )
-        install_result = await asyncio.get_event_loop().run_in_executor(
-            None, install_tool, tool_to_install
-        )
-
-    return format_env_report(statuses, install_result=install_result)
+    return await impl_check_env(
+        deploy_target,
+        execute_install=execute_install,
+        tool_to_install=tool_to_install,
+    )
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
