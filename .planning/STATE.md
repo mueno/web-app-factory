@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
-status: ready_to_plan
-stopped_at: Phase 14 complete, ready to plan Phase 15
-last_updated: "2026-03-24T09:30:00.000Z"
-last_activity: 2026-03-24 — Phase 14 complete. BREAK-01, BREAK-02 closed. Interactive gate approval wired end-to-end.
+status: planning
+stopped_at: Phase 15 context gathered
+last_updated: "2026-03-24T08:59:44.919Z"
+last_activity: 2026-03-24 — Phase 14 complete. Interactive gate approval wired end-to-end.
 progress:
   total_phases: 15
-  completed_phases: 14
+  completed_phases: 13
   total_plans: 30
   completed_plans: 30
   percent: 100
@@ -90,6 +90,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24
-Stopped at: Phase 14 complete, ready to plan Phase 15
-Resume file: None
+Last session: 2026-03-24T08:59:44.915Z
+Stopped at: Phase 15 context gathered
+Resume file: .planning/phases/15-declare-playwright-dependency/15-CONTEXT.md
