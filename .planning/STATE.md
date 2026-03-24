@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Completed 17-supabase-provisioning 17-03-PLAN.md
-last_updated: "2026-03-24T22:43:32.272Z"
+stopped_at: Completed 17-supabase-provisioning 17-04-PLAN.md
+last_updated: "2026-03-24T22:53:46.397Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 17
+  completed_plans: 6
+  percent: 97
 ---
 
 # Project State
@@ -65,6 +65,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 17-supabase-provisioning]: check_env('supabase') as distinct deploy_target: keeps Supabase and Vercel credential checks orthogonal
 - [Phase 17-supabase-provisioning]: httpx.AsyncClient for provisioner, httpx.Client for gate — provisioner is called from async context; gate runner is synchronous
 - [Phase 17-supabase-provisioning]: Advisory vs blocking separation: network errors become advisories; missing RLS on tables and missing Vercel env vars are always blocking
+- [Phase 17-supabase-provisioning]: Lazy imports for all Supabase deps in phase_3_executor: non-Supabase pipelines never pay httpx/banto/provisioner import cost
+- [Phase 17-supabase-provisioning]: asyncio.run() bridge for async SupabaseProvisioner in synchronous Phase 3 executor — consistent with deploy_agent_runner pattern
 
 ### Pending Todos
 
@@ -87,6 +89,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:43:32.269Z
-Stopped at: Completed 17-supabase-provisioning 17-03-PLAN.md
+Last session: 2026-03-24T22:53:46.379Z
+Stopped at: Completed 17-supabase-provisioning 17-04-PLAN.md
 Resume file: None
