@@ -21,7 +21,7 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 - [ ] **SUPA-03**: `supabase_gate.py` verifies: project created, credentials injected into Vercel env, RLS enabled on all tables
 - [ ] **SUPA-04**: `waf_check_env` extended to detect `SUPABASE_ACCESS_TOKEN` and `SUPABASE_ORG_ID` presence
 - [ ] **SUPA-05**: Supabase credentials (`SUPABASE_ACCESS_TOKEN`) stored and retrieved via OS keychain (same as v2.0 pattern)
-- [ ] **SUPA-06**: Dual Supabase client pattern generated: `supabase-browser.ts` (anon key) and `supabase-server.ts` (service_role, server-only)
+- [x] **SUPA-06**: Dual Supabase client pattern generated: `supabase-browser.ts` (anon key) and `supabase-server.ts` (service_role, server-only)
 
 ### Backend API Generation
 
@@ -62,7 +62,7 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 ### Security Gates (Generated Code)
 
-- [ ] **SECG-01**: Env exposure gate extended to scan for `NEXT_PUBLIC_*SERVICE*ROLE*` patterns (Supabase service_role leak)
+- [x] **SECG-01**: Env exposure gate extended to scan for `NEXT_PUBLIC_*SERVICE*ROLE*` patterns (Supabase service_role leak)
 - [ ] **SECG-02**: RLS gate scans every migration file — rejects if any `CREATE TABLE` lacks immediate `ENABLE ROW LEVEL SECURITY`
 - [ ] **SECG-03**: Backend route gate scans for string concatenation in query chains (SQL injection prevention)
 - [ ] **SECG-04**: Cross-user write test generated for every RLS-protected table (policy violation assertion)
@@ -108,8 +108,8 @@ Deferred to future release.
 | SUPA-03 | Phase 17 | Pending |
 | SUPA-04 | Phase 17 | Pending |
 | SUPA-05 | Phase 17 | Pending |
-| SUPA-06 | Phase 17 | Pending |
-| SECG-01 | Phase 17 | Pending |
+| SUPA-06 | Phase 17 | Complete |
+| SECG-01 | Phase 17 | Complete |
 | SECG-02 | Phase 17 | Pending |
 | BGEN-01 | Phase 18 | Pending |
 | BGEN-02 | Phase 18 | Pending |

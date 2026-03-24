@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: planning
-stopped_at: Phase 17 plans verified (4 plans, 3 waves)
-last_updated: "2026-03-24T22:26:56.644Z"
+stopped_at: Completed 17-supabase-provisioning 17-01-PLAN.md
+last_updated: "2026-03-24T22:33:58.365Z"
 last_activity: 2026-03-24 — Phase 16 complete (2/2 plans, MCPH-01–04 satisfied)
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 6
-  completed_plans: 2
+  completed_plans: 4
   percent: 17
 ---
 
@@ -58,6 +58,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 16-mcp-infrastructure-hardening]: Tool safety classification: waf_get_status=readOnly, waf_stop_dev_server=destructive, waf_generate_app=openWorld; all others readOnly=false/destructive=false/openWorld=false
 - [Phase 16]: HTTP server (openai_mcp_server.py) uses separate FastMCP instance; never cross-imports with stdio server; both import _tool_impls.py only
 - [Phase 16]: Dual transport architecture confirmed — stdio + HTTP servers share _tool_impls.py, CI locks tool-name parity
+- [Phase 17-supabase-provisioning]: NEXT_PUBLIC_SUPABASE_ANON_KEY allowlisted in GATE-06: Supabase anon key is intentionally public, blocking it was a false positive
+- [Phase 17-supabase-provisioning]: SECG-01 regex uses two branches (SERVICE*ROLE and SVC*ROLE) to catch common SVC abbreviation variant
+- [Phase 17-supabase-provisioning]: banto as priority-1 credential backend: banto unifies all credential management across Supabase, Vercel, and Anthropic keys
+- [Phase 17-supabase-provisioning]: SecureVault=None stub when banto absent: enables patch() in tests without create=True workaround
+- [Phase 17-supabase-provisioning]: check_env('supabase') as distinct deploy_target: keeps Supabase and Vercel credential checks orthogonal
 
 ### Pending Todos
 
@@ -80,6 +85,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T22:26:56.642Z
-Stopped at: Phase 17 plans verified (4 plans, 3 waves)
-Resume file: .planning/phases/17-supabase-provisioning/17-01-PLAN.md
+Last session: 2026-03-24T22:33:58.363Z
+Stopped at: Completed 17-supabase-provisioning 17-01-PLAN.md
+Resume file: None
