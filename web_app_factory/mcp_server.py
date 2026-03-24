@@ -8,13 +8,14 @@ Tool namespace convention:
   This is enforced by tests/test_mcp_server_tool_names.py — any tool
   registered without the prefix will cause CI to fail.
 
-Tools (TOOL-01 through TOOL-07):
+Tools (TOOL-01 through TOOL-07, TOOL-05):
   waf_generate_app      — Start pipeline, return execution plan + run_id
   waf_get_status        — Poll current progress of a pipeline run
   waf_approve_gate      — Approve or reject an interactive-mode gate
   waf_list_runs         — List all pipeline runs with status
   waf_start_dev_server  — Start a local dev server for a completed pipeline run
   waf_stop_dev_server   — Stop a running local dev server for a pipeline run
+  waf_check_env         -- Check environment readiness and optionally install missing tools
 """
 
 from __future__ import annotations
@@ -332,6 +333,61 @@ async def waf_stop_dev_server(run_id: str) -> str:
     from web_app_factory._dev_server import stop_dev_server  # noqa: PLC0415
 
     return stop_dev_server(run_id)
+
+
+# ── TOOL-05: waf_check_env ───────────────────────────────────────────────────
+
+@mcp.tool()
+async def waf_check_env(
+    deploy_target: str = "vercel",
+    execute_install: bool = False,
+    tool_to_install: str | None = None,
+) -> str:
+    """Check environment readiness for the web-app-factory pipeline.
+
+    Detects whether required tools (Node.js, npm, Python, and deploy-target-specific
+    CLIs) are installed, up-to-date, and authenticated. Returns a structured markdown
+    table with per-tool status.
+
+    Args:
+        deploy_target: Target platform to check. One of "vercel" (default), "gcp",
+                       "local". Determines which deploy-target-specific CLIs are
+                       checked (e.g. "vercel" checks the Vercel CLI + token;
+                       "gcp" checks gcloud CLI + auth).
+        execute_install: Set to True to run an automated install after checking.
+                         Requires ``tool_to_install`` to be provided as well.
+                         Both parameters must be supplied together to prevent
+                         accidental silent installs.
+        tool_to_install: Logical name of the tool to install (e.g. "node", "npm",
+                         "vercel", "gcloud"). Only valid when ``execute_install``
+                         is True. The tool must be in the install allowlist —
+                         unknown tool names are rejected before any subprocess call.
+
+    Returns:
+        Formatted markdown report with a per-tool status table (Tool, Status,
+        Version Found, Required, Install Command) plus a summary line and any
+        per-tool notes. If ``execute_install=True`` and ``tool_to_install`` is
+        provided, the install result is appended at the end of the report.
+    """
+    from web_app_factory._env_checker import check_env, format_env_report, install_tool  # noqa: PLC0415
+
+    # check_env may call subprocess (gcloud --version etc.) — run in executor
+    statuses = await asyncio.get_event_loop().run_in_executor(None, check_env, deploy_target)
+
+    install_result: str | None = None
+
+    if execute_install:
+        if tool_to_install is None:
+            return (
+                "Error: execute_install=True requires tool_to_install to be provided. "
+                "Both parameters must be supplied together to prevent accidental installs. "
+                "Example: waf_check_env(execute_install=True, tool_to_install='vercel')"
+            )
+        install_result = await asyncio.get_event_loop().run_in_executor(
+            None, install_tool, tool_to_install
+        )
+
+    return format_env_report(statuses, install_result=install_result)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────
