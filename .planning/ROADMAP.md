@@ -210,7 +210,11 @@ Plans:
   2. `waf_check_env` distinguishes between "tool missing", "tool outdated", and "tool present but not authenticated" — Vercel token scope warning is included when Vercel is the deploy target
   3. `waf_check_env` offers to execute missing-tool installs with explicit user permission — it does not silently install anything
   4. `claude mcp add web-app-factory -- uvx web-app-factory` succeeds on a clean macOS and Linux machine with only Python and `uv` installed
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — Environment checker module (TDD): check_env, install_tool, format_env_report with platform-aware detection
+- [ ] 12-02-PLAN.md — MCP tool registration: waf_check_env in mcp_server.py + distribution packaging validation
 
 #### Phase 13: Pipeline Quality
 **Goal**: The Phase 2b build step produces higher-quality output through incremental sub-steps, and form flows are validated end-to-end before deployment
@@ -240,5 +244,5 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 9. Deploy Abstraction | v2.0 | 3/3 | Complete | 2026-03-23 |
 | 10. Local Dev Server | v2.0 | 2/2 | Complete | 2026-03-23 |
 | 11. MCP Tool Layer | v2.0 | 0/0 | Complete | 2026-03-24 |
-| 12. Environment Detection + Distribution | v2.0 | 0/TBD | Not started | - |
+| 12. Environment Detection + Distribution | v2.0 | 0/2 | Not started | - |
 | 13. Pipeline Quality | v2.0 | 0/TBD | Not started | - |
