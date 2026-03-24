@@ -31,6 +31,7 @@ dependencies = [
 
 [project.scripts]
 web-app-factory-mcp = "web_app_factory.mcp_server:main"
+web-app-factory-mcp-http = "web_app_factory.openai_mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/anthropics/web-app-factory"
