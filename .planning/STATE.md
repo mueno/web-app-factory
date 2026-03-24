@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: completed
-stopped_at: Completed 12-02-PLAN.md — waf_check_env MCP tool registered, 7 tools total, Phase 12 complete
-last_updated: "2026-03-24T06:09:20.915Z"
+stopped_at: Completed 13-02-PLAN.md — E2E form flow gate implemented, 21 tests, Phase 2b wired
+last_updated: "2026-03-24T06:17:57.196Z"
 last_activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total)
 progress:
   total_phases: 13
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 28
-  completed_plans: 26
+  completed_plans: 28
   percent: 96
 ---
 
@@ -65,6 +65,8 @@ Carried from v1.0 + v2.0 research:
 - [Phase 12-environment-detection-distribution Plan 01]: node on linux has no _INSTALL_ARGS entry — too many distro variants; returns manual nodesource/nvm instructions instead
 - [Phase 12-environment-detection-distribution]: waf_check_env uses run_in_executor for check_env and install_tool — both may call subprocess and block 2-5s
 - [Phase 12-environment-detection-distribution]: execute_install=True without tool_to_install returns error string (guard against accidental installs)
+- [Phase 13]: Use sync_playwright (not async) — pipeline is synchronous, event loop conflicts avoided
+- [Phase 13]: skip_allowed pattern for E2E gate: skipped=True + skip_allowed=True for apps without forms — not applicable, not a failure
 
 ### Pending Todos
 
@@ -80,6 +82,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:05:20.081Z
-Stopped at: Completed 12-02-PLAN.md — waf_check_env MCP tool registered, 7 tools total, Phase 12 complete
+Last session: 2026-03-24T06:17:57.192Z
+Stopped at: Completed 13-02-PLAN.md — E2E form flow gate implemented, 21 tests, Phase 2b wired
 Resume file: None
