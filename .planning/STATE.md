@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
-status: completed
-stopped_at: Completed 13-01-PLAN.md — Phase 2b three-sub-step decomposition with checkpoint resume
-last_updated: "2026-03-24T06:22:33.946Z"
-last_activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total)
+status: active
+stopped_at: Completed 14-01-PLAN.md — GATE_RESPONSES_DIR shared constant and interactive gate polling
+last_updated: "2026-03-24T07:00:00.000Z"
+last_activity: 2026-03-24 — Phase 14 Plan 01 complete (GATE_RESPONSES_DIR, _poll_mcp_gate_file, BREAK-02 closed)
 progress:
-  total_phases: 13
-  completed_phases: 12
-  total_plans: 28
-  completed_plans: 28
-  percent: 96
+  total_phases: 15
+  completed_phases: 13
+  total_plans: 30
+  completed_plans: 29
+  percent: 97
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-23)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application
-**Current focus:** Phase 13 — Pipeline Quality (next)
+**Current focus:** Phase 14 — Interactive Gate Approval Wiring
 
 ## Current Position
 
-Phase: 12 complete (2 of 2 plans done), Phase 13 next
-Plan: 12-02 complete (waf_check_env MCP tool)
-Status: Phase 12 complete. Next: Phase 13 (Pipeline Quality — depends only on Phase 8).
-Last activity: 2026-03-24 — Phase 12 Plan 02 complete (waf_check_env registered, 7 tools total)
+Phase: 14 active (1 of 2 plans done), Plan 02 next
+Plan: 14-01 complete (GATE_RESPONSES_DIR + _poll_mcp_gate_file)
+Status: Phase 14 Plan 01 complete. Next: Phase 14 Plan 02 (pipeline bridge + runner wiring).
+Last activity: 2026-03-24 — Phase 14 Plan 01 complete (GATE_RESPONSES_DIR, _poll_mcp_gate_file, BREAK-02 closed)
 
-Progress: [█████████░] 96% (v2.0 milestone — 12 of 13 phases complete)
+Progress: [█████████░] 97% (v2.0 milestone — 13 of 15 phases complete)
 
 ## Accumulated Context
 
@@ -68,6 +68,10 @@ Carried from v1.0 + v2.0 research:
 - [Phase 13]: Use sync_playwright (not async) — pipeline is synchronous, event loop conflicts avoided
 - [Phase 13]: skip_allowed pattern for E2E gate: skipped=True + skip_allowed=True for apps without forms — not applicable, not a failure
 - [Phase 13-pipeline-quality]: Integration prompt omits PRD/screen-spec to prevent agent re-generating already-written files (Pitfall 2 per RESEARCH.md)
+- [Phase 14-wire-interactive-gate-approval Plan 01]: GATE_RESPONSES_DIR is single source of truth for gate-response path, env-overridable via WEB_FACTORY_GATE_RESPONSES_DIR
+- [Phase 14-wire-interactive-gate-approval Plan 01]: _poll_mcp_gate_file timeout=0 means poll indefinitely, matching legacy approve_gate behavior
+- [Phase 14-wire-interactive-gate-approval Plan 01]: Gate file consumed (deleted) after read via unlink(missing_ok=True) to prevent double-processing
+- [Phase 14-wire-interactive-gate-approval Plan 01]: interactive/run_id params are keyword-only with defaults — all existing callers remain unchanged
 
 ### Pending Todos
 
@@ -83,6 +87,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T06:18:23.481Z
-Stopped at: Completed 13-01-PLAN.md — Phase 2b three-sub-step decomposition with checkpoint resume
+Last session: 2026-03-24T07:00:00.000Z
+Stopped at: Completed 14-01-PLAN.md — GATE_RESPONSES_DIR shared constant and interactive gate polling
 Resume file: None

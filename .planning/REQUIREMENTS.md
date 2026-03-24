@@ -19,7 +19,7 @@ Requirements for MCP Apps milestone. Each maps to roadmap phases.
 
 - [x] **TOOL-01**: `waf_generate_app` accepts idea, mode (auto/interactive), and deploy target; starts pipeline in background
 - [x] **TOOL-02**: `waf_get_status` returns current phase, progress percentage, and recent activity for a run
-- [ ] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
+- [x] **TOOL-03**: `waf_approve_gate` allows user to approve or reject a gate with feedback
 - [x] **TOOL-04**: `waf_list_runs` returns all pipeline runs with status, timestamps, and output URLs
 - [x] **TOOL-05**: `waf_check_env` detects Node.js, Python, CLI tools and reports missing/outdated with install instructions
 - [x] **TOOL-06**: `waf_start_dev_server` starts local Next.js dev server for a generated app and returns URL
@@ -89,7 +89,7 @@ Deferred to future release.
 | MCPI-05 | Phase 8 | Complete |
 | TOOL-01 | Phase 11 | Complete |
 | TOOL-02 | Phase 11 | Complete |
-| TOOL-03 | Phase 14 | Pending |
+| TOOL-03 | Phase 14 | Complete |
 | TOOL-04 | Phase 11 | Complete |
 | TOOL-05 | Phase 12 | Complete |
 | TOOL-06 | Phase 10 | Complete |
