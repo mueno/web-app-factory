@@ -8,6 +8,19 @@ An automated web application development pipeline that transforms a user's app i
 
 A single command takes a web app idea from concept to deployed, production-quality web application — with market validation, UX design, implementation, testing, legal compliance, and deployment handled automatically.
 
+## Current Milestone: v3.0 Full Stack
+
+**Goal:** Add backend generation (REST API + Supabase DB + Auth), integrate allnew-mobile-baas, support iOS app backends, and distribute to both Claude and ChatGPT via OpenAI Apps SDK.
+
+**Target features:**
+- Backend API generation from natural language (Vercel Functions + Supabase)
+- DB provisioning (Supabase PostgreSQL + Realtime)
+- Authentication scaffolding (Supabase Auth — Apple/Google/Email)
+- allnew-mobile-baas integration as WAF backend template
+- iOS app backend generation (server-side API for iOS clients)
+- OpenAI Apps SDK full support (ChatGPT UI Widget + App Store submission)
+- Dual distribution: Claude MCP + ChatGPT App Store
+
 ## Current State
 
 v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
@@ -46,23 +59,35 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 
 ### Active
 
-(Next milestone TBD — run `/gsd:new-milestone` to define)
+- [ ] Backend API generation (REST endpoints from natural language)
+- [ ] Supabase DB provisioning (PostgreSQL + Realtime)
+- [ ] Supabase Auth scaffolding (Apple/Google/Email sign-in)
+- [ ] allnew-mobile-baas integration into WAF
+- [ ] iOS backend generation (server-side API for iOS apps)
+- [ ] OpenAI Apps SDK support (ChatGPT distribution)
+- [ ] ChatGPT UI Widget / components
+- [ ] OpenAI App Store submission & review compliance
 
 ### Out of Scope
 
 - iOS/Swift code generation — handled by ios-app-factory
 - App Store submission — web apps deploy to web hosting
 - Custom domain / DNS management — platform subdomain sufficient
-- Backend database provisioning — v2 generates frontend + serverless API routes
+- ~~Backend database provisioning~~ — **promoted to v3.0 Active** (Supabase)
 - Payment processing integration — too complex for automated generation
+- AWS CDK full implementation — deferred to v4.0 (Vercel prioritized for backend)
+- Azure Static Web Apps / Cloudflare Pages — deferred to v4.0
 
 ## Context
 
 - v1.0 shipped 2026-03-22: 7 phases, 16 plans, 447+ tests, 36/36 requirements
 - v2.0 shipped 2026-03-24: 8 phases, 16 plans, 88 commits, 27/27 requirements
 - Total: 15 phases, 31 plans shipped across 2 milestones
-- BL-003 (Phase 1b data flow schema in screen-spec.json) remains open for future milestone
+- allnew-mobile-baas: 稼働中 Vercel Functions (Gemini Live トークン発行)、projects/allnew-baas/vercel/ に存在
+- OpenAI Apps SDK: MCP ベース、ChatGPT App Store 審査あり
+- BL-003 (Phase 1b data flow schema in screen-spec.json) remains open
 - Tech stack: Python 3.10+, FastMCP 3.x, Claude Agent SDK, Next.js (generated apps)
+- New tech: Supabase (DB + Auth + Realtime), OpenAI Apps SDK
 
 ## Constraints
 
@@ -93,5 +118,9 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 | Interactive gate polling via file (v2) | _poll_mcp_gate_file blocks worker thread until gate file appears; gate file consumed after read | ✓ Phase 14 |
 | interactive_mode wired bridge→runner→gate (v2) | Closes BREAK-01 — mode='interactive' no longer silently dropped | ✓ Phase 14 |
 
+| Vercel + Supabase for backend (v3) | Supabase iOS SDK available, Vercel already primary deploy target, auth + DB + realtime in one platform | — Pending |
+| OpenAI Apps full support (v3) | MCP is shared protocol; dual distribution to Claude + ChatGPT maximizes reach | — Pending |
+| allnew-baas integration (v3) | Consolidate backend infrastructure under WAF; avoid per-app BaaS proliferation | — Pending |
+
 ---
-*Last updated: 2026-03-24 after v2.0 milestone*
+*Last updated: 2026-03-24 after v3.0 milestone start*
