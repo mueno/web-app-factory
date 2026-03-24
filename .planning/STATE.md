@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: MCP Apps
 status: planning
-stopped_at: Phase 15 context gathered
-last_updated: "2026-03-24T08:59:44.919Z"
+stopped_at: Completed 15-01-PLAN.md
+last_updated: "2026-03-24T09:13:45.611Z"
 last_activity: 2026-03-24 — Phase 14 complete. Interactive gate approval wired end-to-end.
 progress:
   total_phases: 15
-  completed_phases: 13
-  total_plans: 30
-  completed_plans: 30
+  completed_phases: 14
+  total_plans: 31
+  completed_plans: 31
   percent: 100
 ---
 
@@ -75,6 +75,8 @@ Carried from v1.0 + v2.0 research:
 - [Phase 14-wire-interactive-gate-approval Plan 02]: interactive_mode forwarded unconditionally in pipeline_kwargs (not conditional like company_name) — always has a bool value
 - [Phase 14-wire-interactive-gate-approval Plan 02]: gate_waiting emitted before poll loop so waf_get_status shows paused state immediately
 - [Phase 14-wire-interactive-gate-approval Plan 02]: _setup() pattern for test isolation: import run_pipeline THEN _clear_registry() — necessary because module-level executor imports fire on first import
+- [Phase 15-declare-playwright-dependency]: playwright added to [project.dependencies] (not optional-dependencies/dependency-groups) — uvx only installs direct dependencies
+- [Phase 15-declare-playwright-dependency]: E2E gate BLOCKED message updated from pip-install guidance to browser-binary-only (playwright install chromium)
 
 ### Pending Todos
 
@@ -90,6 +92,6 @@ Carried from v1.0 + v2.0 research:
 
 ## Session Continuity
 
-Last session: 2026-03-24T08:59:44.915Z
-Stopped at: Phase 15 context gathered
-Resume file: .planning/phases/15-declare-playwright-dependency/15-CONTEXT.md
+Last session: 2026-03-24T09:13:45.608Z
+Stopped at: Completed 15-01-PLAN.md
+Resume file: None

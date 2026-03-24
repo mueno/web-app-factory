@@ -256,7 +256,7 @@ Plans:
   1. `playwright` is declared in `pyproject.toml` as a direct dependency (not optional) so `uvx web-app-factory` installs it automatically
   2. `uvx web-app-factory` installs playwright as part of the default dependency set, or the E2E gate install instructions are documented
   3. The E2E gate imports playwright successfully and executes the form flow test (not returning BLOCKED due to missing import)
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] 15-01-PLAN.md — Add playwright to pyproject.toml direct dependencies, update E2E gate BLOCKED message
@@ -282,4 +282,4 @@ v1.0 phases (1-7) complete. v2.0 phases execute in order: 8 → 9 → 10 → 11 
 | 12. Environment Detection + Distribution | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
-| 15. Declare Playwright Dependency | v2.0 | 0/1 | Pending | - |
+| 15. Declare Playwright Dependency | 1/1 | Complete   | 2026-03-24 | - |
