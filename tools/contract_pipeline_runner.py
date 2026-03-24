@@ -154,6 +154,9 @@ def _run_gate_checks(
     project_dir: str,
     *,
     nextjs_dir: str | None = None,
+    interactive_mode: bool = False,
+    run_id: str = "",
+    on_progress: Optional[ProgressCallback] = None,
 ) -> tuple[bool, list[str]]:
     """Run gate checks dispatched by gate type.
 
@@ -287,7 +290,18 @@ def _run_gate_checks(
 
         elif gate_type == "mcp_approval":
             from tools.gates.mcp_approval_gate import run_mcp_approval_gate
-            gate_result = run_mcp_approval_gate(phase_id=phase_id, project_dir=project_dir)
+            if interactive_mode:
+                _emit_progress(
+                    on_progress, "gate_waiting", phase_id,
+                    f"Paused at gate -- call waf_approve_gate('{run_id}', 'approve') to continue",
+                    {"run_id": run_id, "phase_id": phase_id},
+                )
+            gate_result = run_mcp_approval_gate(
+                phase_id=phase_id,
+                project_dir=project_dir,
+                interactive=interactive_mode,
+                run_id=run_id,
+            )
             if not gate_result.passed:
                 issues.extend(gate_result.issues)
 
@@ -354,6 +368,7 @@ def run_pipeline(
     contact_email: Optional[str] = None,
     deploy_target: str = "vercel",
     on_progress: Optional[ProgressCallback] = None,
+    interactive_mode: bool = False,
 ) -> dict[str, Any]:
     """Execute the pipeline from contract definition.
 
@@ -376,6 +391,9 @@ def run_pipeline(
             Signature: (event_type, phase_id, message, detail_dict).
             When None (default), zero overhead. Callback errors are swallowed
             so they never break the pipeline.
+        interactive_mode: If True, mcp_approval gates block on a gate-response
+            file written by waf_approve_gate instead of using the legacy
+            asyncio.run(approve_gate(...)) path.  Default False (auto mode).
 
     Returns:
         Summary dict with keys: status, run_id, phases_executed, phases_skipped,
@@ -529,7 +547,11 @@ def run_pipeline(
                     {"gate_types": [g.get("type") for g in contract_phase.get("gates", [])]},
                 )
                 gate_passed, gate_issues = _run_gate_checks(
-                    contract_phase, project_dir, nextjs_dir=nextjs_dir
+                    contract_phase, project_dir,
+                    nextjs_dir=nextjs_dir,
+                    interactive_mode=interactive_mode,
+                    run_id=run_id,
+                    on_progress=on_progress,
                 )
                 _emit_progress(
                     on_progress,

@@ -709,7 +709,14 @@ class TestNewGateDispatch:
             passed, issues = _run_gate_checks(contract_phase, str(tmp_path))
 
         assert passed is True
-        mock_gate.assert_called_once_with(phase_id="3", project_dir=str(tmp_path))
+        # Since Plan 14-02, _run_gate_checks always passes interactive=False and run_id=""
+        # when called without interactive_mode (backward compat defaults).
+        mock_gate.assert_called_once_with(
+            phase_id="3",
+            project_dir=str(tmp_path),
+            interactive=False,
+            run_id="",
+        )
 
     def test_gate_dispatch_legal(self, tmp_path):
         """_run_gate_checks dispatches gate_type='legal' to run_legal_gate."""
@@ -1136,39 +1143,37 @@ class TestInteractiveGate:
         ],
     }
 
-    def setup_method(self):
-        from tools.phase_executors.registry import _clear_registry
+    def _setup(self):
+        """Import run_pipeline (may trigger module-level executor registrations) THEN clear registry."""
+        from tools.contract_pipeline_runner import run_pipeline  # noqa: F401 — triggers registrations
+        from tools.phase_executors.registry import _clear_registry, register
         _clear_registry()
+        return run_pipeline, register
 
-    def teardown_method(self):
-        from tools.phase_executors.registry import _clear_registry
-        _clear_registry()
+    def _gate_result(self, passed: bool, issues=None):
+        from tools.gates.gate_result import GateResult
+        from datetime import datetime, timezone
+        return GateResult(
+            gate_type="mcp_approval",
+            phase_id="1a",
+            passed=passed,
+            status="PASS" if passed else "BLOCKED",
+            severity="INFO" if passed else "BLOCK",
+            confidence=1.0 if passed else 0.0,
+            checked_at=datetime.now(timezone.utc).isoformat(),
+            issues=issues or [],
+        )
 
     def test_interactive_mode_calls_approval_gate_with_interactive_true(self, tmp_path):
         """run_pipeline(interactive_mode=True) calls run_mcp_approval_gate with interactive=True."""
-        from tools.contract_pipeline_runner import run_pipeline
-        from tools.phase_executors.registry import register
-        from tools.gates.gate_result import GateResult
-        from datetime import datetime, timezone
-
+        run_pipeline, register = self._setup()
         register(_make_stub_executor("1a", success=True))
-
-        passing_result = GateResult(
-            gate_type="mcp_approval",
-            phase_id="1a",
-            passed=True,
-            status="PASS",
-            severity="INFO",
-            confidence=1.0,
-            checked_at=datetime.now(timezone.utc).isoformat(),
-            issues=[],
-        )
 
         with patch(
             "tools.gates.mcp_approval_gate.run_mcp_approval_gate",
-            return_value=passing_result,
+            return_value=self._gate_result(passed=True),
         ) as mock_gate:
-            result = run_pipeline(
+            run_pipeline(
                 contract=self._INTERACTIVE_CONTRACT,
                 project_dir=str(tmp_path),
                 idea="interactive test idea",
@@ -1188,30 +1193,15 @@ class TestInteractiveGate:
 
     def test_interactive_mode_false_omits_interactive_param(self, tmp_path):
         """run_pipeline() without interactive_mode calls run_mcp_approval_gate with interactive=False (default)."""
-        from tools.contract_pipeline_runner import run_pipeline
-        from tools.phase_executors.registry import register
-        from tools.gates.gate_result import GateResult
-        from datetime import datetime, timezone
-
+        run_pipeline, register = self._setup()
         register(_make_stub_executor("1a", success=True))
-
-        passing_result = GateResult(
-            gate_type="mcp_approval",
-            phase_id="1a",
-            passed=True,
-            status="PASS",
-            severity="INFO",
-            confidence=1.0,
-            checked_at=datetime.now(timezone.utc).isoformat(),
-            issues=[],
-        )
 
         with patch(
             "tools.gates.mcp_approval_gate.run_mcp_approval_gate",
-            return_value=passing_result,
+            return_value=self._gate_result(passed=True),
         ) as mock_gate:
             # Default: interactive_mode NOT passed -> defaults to False
-            result = run_pipeline(
+            run_pipeline(
                 contract=self._INTERACTIVE_CONTRACT,
                 project_dir=str(tmp_path),
                 idea="auto test idea",
@@ -1228,27 +1218,12 @@ class TestInteractiveGate:
 
     def test_rejection_produces_failed_status(self, tmp_path):
         """run_pipeline(interactive_mode=True) where gate returns reject -> status='failed' with gate_issues."""
-        from tools.contract_pipeline_runner import run_pipeline
-        from tools.phase_executors.registry import register
-        from tools.gates.gate_result import GateResult
-        from datetime import datetime, timezone
-
+        run_pipeline, register = self._setup()
         register(_make_stub_executor("1a", success=True))
-
-        rejected_result = GateResult(
-            gate_type="mcp_approval",
-            phase_id="1a",
-            passed=False,
-            status="BLOCKED",
-            severity="BLOCK",
-            confidence=0.0,
-            checked_at=datetime.now(timezone.utc).isoformat(),
-            issues=["Rejected by human reviewer"],
-        )
 
         with patch(
             "tools.gates.mcp_approval_gate.run_mcp_approval_gate",
-            return_value=rejected_result,
+            return_value=self._gate_result(passed=False, issues=["Rejected by human reviewer"]),
         ):
             result = run_pipeline(
                 contract=self._INTERACTIVE_CONTRACT,
@@ -1269,23 +1244,8 @@ class TestInteractiveGate:
 
     def test_gate_waiting_event_emitted_before_interactive_gate(self, tmp_path):
         """gate_waiting progress event is emitted before interactive gate poll begins."""
-        from tools.contract_pipeline_runner import run_pipeline
-        from tools.phase_executors.registry import register
-        from tools.gates.gate_result import GateResult
-        from datetime import datetime, timezone
-
+        run_pipeline, register = self._setup()
         register(_make_stub_executor("1a", success=True))
-
-        passing_result = GateResult(
-            gate_type="mcp_approval",
-            phase_id="1a",
-            passed=True,
-            status="PASS",
-            severity="INFO",
-            confidence=1.0,
-            checked_at=datetime.now(timezone.utc).isoformat(),
-            issues=[],
-        )
 
         emitted_events: list = []
 
@@ -1294,7 +1254,7 @@ class TestInteractiveGate:
 
         with patch(
             "tools.gates.mcp_approval_gate.run_mcp_approval_gate",
-            return_value=passing_result,
+            return_value=self._gate_result(passed=True),
         ):
             run_pipeline(
                 contract=self._INTERACTIVE_CONTRACT,

@@ -138,7 +138,7 @@ async def start_pipeline_async(
         idea:           The app idea string (plain text description).
         project_dir:    Root directory for the project being built.
         deploy_target:  Deployment target ("vercel", "gcp", "aws").  Default "vercel".
-        mode:           Pipeline execution mode ("auto", "dry_run").  Default "auto".
+        mode:           Pipeline execution mode ("auto", "interactive", "dry_run").  Default "auto".
         contract_path:  Path to the pipeline contract YAML.  Defaults to
                         ``contracts/pipeline-contract.web.v1.yaml``.
         company_name:   Company name for legal document generation.
@@ -178,6 +178,7 @@ async def start_pipeline_async(
         "project_dir": project_dir,
         "idea": idea,
         "dry_run": (mode == "dry_run"),
+        "interactive_mode": (mode == "interactive"),   # closes BREAK-01
         "on_progress": _on_progress,
     }
     if contract_path:
