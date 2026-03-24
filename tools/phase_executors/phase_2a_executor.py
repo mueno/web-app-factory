@@ -328,6 +328,65 @@ Your tasks:
    }}
    ```
 
+6. Create `src/lib/crypto.ts` — a ready-to-use encryption/hashing utility:
+   ```typescript
+   import {{ randomBytes, createCipheriv, createDecipheriv, scryptSync }} from "crypto";
+
+   const ALGORITHM = "aes-256-gcm" as const;
+   const IV_LENGTH = 16;
+   const AUTH_TAG_LENGTH = 16;
+
+   function getKey(): Buffer {{
+     const raw = process.env.DATABASE_ENCRYPTION_KEY;
+     if (!raw) throw new Error("DATABASE_ENCRYPTION_KEY env var is required");
+     return scryptSync(raw, "salt", 32);
+   }}
+
+   export function encrypt(plaintext: string): string {{
+     const iv = randomBytes(IV_LENGTH);
+     const cipher = createCipheriv(ALGORITHM, getKey(), iv);
+     const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+     const tag = cipher.getAuthTag();
+     return [iv.toString("hex"), encrypted.toString("hex"), tag.toString("hex")].join(":");
+   }}
+
+   export function decrypt(ciphertext: string): string {{
+     const [ivHex, encHex, tagHex] = ciphertext.split(":");
+     const decipher = createDecipheriv(ALGORITHM, getKey(), Buffer.from(ivHex, "hex"));
+     decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+     return decipher.update(Buffer.from(encHex, "hex")) + decipher.final("utf8");
+   }}
+   ```
+
+7. Create `src/lib/password.ts` — bcrypt password hashing utility:
+   ```typescript
+   // NOTE: Run `npm install bcryptjs @types/bcryptjs` before using.
+   import bcrypt from "bcryptjs";
+
+   const SALT_ROUNDS = 12;
+
+   export async function hashPassword(plain: string): Promise<string> {{
+     return bcrypt.hash(plain, SALT_ROUNDS);
+   }}
+
+   export async function verifyPassword(plain: string, hash: string): Promise<boolean> {{
+     return bcrypt.compare(plain, hash);
+   }}
+   ```
+
+8. Create `.env.example` with security-related env vars documented:
+   ```
+   # Database
+   DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+
+   # Encryption key for PII fields (generate: openssl rand -hex 32)
+   DATABASE_ENCRYPTION_KEY=
+
+   # Auth (if applicable)
+   NEXTAUTH_SECRET=
+   NEXTAUTH_URL=http://localhost:3000
+   ```
+
 Keep all files TypeScript-typed with explicit prop interfaces and return types.
 Do not add "use client" to layout.tsx or page.tsx.
 """

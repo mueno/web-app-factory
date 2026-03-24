@@ -374,6 +374,28 @@ const venueSlug = typeof params.venueSlug === "string" ? params.venueSlug : "";
 If a form sends `originCity` but the page reads `origin`, the app is broken. \
 This is the #1 most critical validation to get right.
 
+**Data security (when PRD includes a Data Security section — MUST follow):**
+The scaffold already provides `src/lib/crypto.ts` and `src/lib/password.ts`. \
+Use them — do NOT implement your own encryption or hashing.
+
+If the PRD's Data Security section lists PII fields:
+- Store passwords via `hashPassword()` from `@/lib/password` → schema field \
+name MUST be `passwordHash`
+- Store PII via `encrypt()` from `@/lib/crypto` → schema field names MUST use \
+`*Encrypted` suffix (e.g. `emailEncrypted`, `phoneEncrypted`)
+- Payment data: use Stripe SDK, store only `stripeCustomerId` / `paymentMethodId`
+- Add `DATABASE_ENCRYPTION_KEY` to `.env.example` if not already present
+
+Prisma schema example (if using Prisma):
+```prisma
+model User {{
+  id             String @id @default(cuid())
+  emailEncrypted String    // encrypt(email) via src/lib/crypto.ts
+  passwordHash   String    // hashPassword(pw) via src/lib/password.ts
+  createdAt      DateTime @default(now())
+}}
+```
+
 **TypeScript rules:**
 - All props must have explicit TypeScript interfaces or type aliases
 - All function return types must be explicit

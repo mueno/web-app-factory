@@ -231,35 +231,53 @@ These rules ensure the generated app passes `tsc --noEmit` and `npm run build`:
 
 ## Data Storage Security (MANDATORY)
 
-When the PRD specifies user data collection, authentication, or database usage,
-apply these rules to ALL generated code:
+The scaffold includes ready-to-use security utilities. When the PRD specifies
+user data collection, authentication, or database usage, use them:
 
-1. **Passwords**: NEVER store plaintext. Use `bcrypt` (npm: `bcryptjs`) with
-   cost factor >= 10. The schema field must be named `passwordHash`, never `password`.
-   ```typescript
-   import bcrypt from "bcryptjs";
-   const hash = await bcrypt.hash(plaintext, 12);
-   ```
+### Password hashing — use `src/lib/password.ts` (already in scaffold)
+```typescript
+import { hashPassword, verifyPassword } from "@/lib/password";
 
-2. **PII encryption at rest**: Fields containing email, phone, address, or
-   government IDs (SSN, マイナンバー etc.) must be encrypted before database
-   storage. Use `aes-256-gcm` via Node.js `crypto` module or a library like
-   `@47ng/cloak`. Store the IV alongside the ciphertext.
+// Registration
+const passwordHash = await hashPassword(plaintext);
+// Schema: ALWAYS name the column `passwordHash`, never `password`
+await db.user.create({ data: { email, passwordHash } });
 
-3. **Credit card / payment data**: NEVER store raw card numbers. Delegate to
-   Stripe, PayPal, or another PCI-compliant tokenization provider. Store only
-   the token reference (e.g., `stripeCustomerId`, `paymentMethodId`).
+// Login
+const valid = await verifyPassword(input, user.passwordHash);
+```
 
-4. **Encryption key management**: Derive encryption keys from environment
-   variables (`DATABASE_ENCRYPTION_KEY`). Never hardcode keys in source.
-   Document the required env var in the project README.
+### PII encryption at rest — use `src/lib/crypto.ts` (already in scaffold)
+```typescript
+import { encrypt, decrypt } from "@/lib/crypto";
 
-5. **Database schema naming**: Use `*Hash` suffix for hashed fields and
-   `*Encrypted` suffix for encrypted fields to make the protection visible
-   in the schema (e.g., `emailEncrypted`, `passwordHash`).
+// Store: encrypt before DB write
+await db.user.create({ data: { emailEncrypted: encrypt(email) } });
+// Read: decrypt after DB read
+const email = decrypt(user.emailEncrypted);
+// Schema: use `*Encrypted` suffix — e.g. `emailEncrypted`, `phoneEncrypted`
+```
 
-6. **Prisma / ORM patterns**: If using Prisma, implement encryption in a
-   middleware or utility layer (`src/lib/crypto.ts`), not inline in each route.
+### Payment data — NEVER store raw card numbers
+```typescript
+// Use Stripe tokenization — store only references
+await db.user.update({
+  data: { stripeCustomerId: customer.id },  // ✅ token reference
+  // NEVER: { creditCard: "4242..." }       // ❌ raw card number
+});
+```
+
+### Schema naming convention
+| Data type | Schema field name | Utility |
+|-----------|-------------------|---------|
+| Password  | `passwordHash`    | `hashPassword()` from `src/lib/password.ts` |
+| Email/Phone/Address | `*Encrypted` (e.g. `emailEncrypted`) | `encrypt()` from `src/lib/crypto.ts` |
+| Government ID (SSN, マイナンバー) | `*Encrypted` | `encrypt()` from `src/lib/crypto.ts` |
+| Credit card | `stripeCustomerId` / `paymentMethodId` | Stripe SDK (never store raw) |
+
+### Environment variables
+Encryption key is read from `DATABASE_ENCRYPTION_KEY` env var (documented in
+`.env.example` which is part of the scaffold). Never hardcode keys in source.
 
 ## Code Generation Process
 
