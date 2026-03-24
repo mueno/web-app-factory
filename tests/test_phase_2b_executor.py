@@ -113,10 +113,13 @@ class TestPhase2bBuildExecutorBasic:
         importlib.reload(mod)
         executor = mod.Phase2bBuildExecutor()
         sub_steps = executor.sub_steps
-        assert "load_spec" in sub_steps
-        assert "generate_code" in sub_steps
-        assert "validate_packages" in sub_steps
-        # self_assess is now handled by contract_pipeline_runner (CONT-04)
+        assert sub_steps == [
+            "load_spec",
+            "generate_shared_components",
+            "generate_pages",
+            "generate_integration",
+            "validate_packages",
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -489,3 +492,232 @@ class TestPhase2bBuildExecutorSuccess:
         prompt = captured_prompts[0]
         # Per BILD-06: error.tsx must have 'use client'
         assert "use client" in prompt or '"use client"' in prompt or "'use client'" in prompt
+
+
+# ---------------------------------------------------------------------------
+# TestPhase2bSubStepCheckpoints
+# ---------------------------------------------------------------------------
+
+
+def _make_ctx_with_resume(tmp_path: Path, resume_sub_step: str | None = None) -> "PhaseContext":
+    """Create a PhaseContext with spec files and optional resume_sub_step."""
+    from tools.phase_executors.base import PhaseContext
+    project_dir = tmp_path / "pipeline-root"
+    (project_dir / "docs" / "pipeline").mkdir(parents=True)
+    _create_spec_files(project_dir)
+    return PhaseContext(
+        run_id="test-run-2b",
+        phase_id="2b",
+        project_dir=project_dir,
+        idea="A project management web app",
+        app_name="myapp",
+        resume_sub_step=resume_sub_step,
+    )
+
+
+class TestPhase2bSubStepCheckpoints:
+    """Tests that failure at each generation sub-step sets the correct resume_point."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_sub_steps_is_five_elements(self):
+        """executor.sub_steps must be the exact 5-element list."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        executor = mod.Phase2bBuildExecutor()
+        assert executor.sub_steps == [
+            "load_spec",
+            "generate_shared_components",
+            "generate_pages",
+            "generate_integration",
+            "validate_packages",
+        ]
+
+    def test_shared_components_failure_sets_resume_point(self, tmp_path):
+        """When run_build_agent returns empty on first generation call, resume_point == 'generate_shared_components'."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path)
+
+        # First call (shared components) returns empty → failure
+        # Other calls would not be reached
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=["", "success", "success"]), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is False
+        assert result.resume_point == "generate_shared_components"
+
+    def test_pages_failure_sets_resume_point(self, tmp_path):
+        """When run_build_agent returns empty on the second call (pages), resume_point == 'generate_pages'."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path)
+
+        # First call succeeds, second (pages) fails
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=["components output", "", "success"]), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is False
+        assert result.resume_point == "generate_pages"
+
+    def test_integration_failure_sets_resume_point(self, tmp_path):
+        """When run_build_agent returns empty on the third call (integration), resume_point == 'generate_integration'."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path)
+
+        # First two calls succeed, third (integration) fails
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=["components output", "pages output", ""]), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is False
+        assert result.resume_point == "generate_integration"
+
+    def test_three_agent_calls_on_full_run(self, tmp_path):
+        """When no resume_sub_step, run_build_agent is called exactly 3 times."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path)
+
+        run_agent_mock = MagicMock(side_effect=["components output", "pages output", "integration output"])
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", run_agent_mock), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is True
+        assert run_agent_mock.call_count == 3
+
+
+# ---------------------------------------------------------------------------
+# TestPhase2bBuildExecutorResume
+# ---------------------------------------------------------------------------
+
+
+class TestPhase2bBuildExecutorResume:
+    """Tests that ctx.resume_sub_step correctly skips earlier sub-steps."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_resume_from_generate_pages_skips_shared_components(self, tmp_path):
+        """When ctx.resume_sub_step='generate_pages', run_build_agent is called 2 times (pages + integration), not 3."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path, resume_sub_step="generate_pages")
+
+        run_agent_mock = MagicMock(side_effect=["pages output", "integration output"])
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", run_agent_mock), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is True
+        assert run_agent_mock.call_count == 2
+
+    def test_resume_from_generate_integration_skips_pages(self, tmp_path):
+        """When ctx.resume_sub_step='generate_integration', run_build_agent is called exactly 1 time."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path, resume_sub_step="generate_integration")
+
+        run_agent_mock = MagicMock(side_effect=["integration output"])
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", run_agent_mock), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert result.success is True
+        assert run_agent_mock.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# TestPhase2bSubStepPrompts
+# ---------------------------------------------------------------------------
+
+
+class TestPhase2bSubStepPrompts:
+    """Tests prompt isolation — each sub-step uses a focused prompt."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def _capture_prompts(self, tmp_path, resume_sub_step=None):
+        """Helper: run executor and return list of prompts passed to run_build_agent."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx_with_resume(tmp_path, resume_sub_step=resume_sub_step)
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output for call {len(captured)}"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            mod.Phase2bBuildExecutor().execute(ctx)
+
+        return captured
+
+    def test_shared_components_prompt_does_not_contain_page_instruction(self, tmp_path):
+        """First run_build_agent call prompt contains 'component' but NOT page-by-page generation language."""
+        prompts = self._capture_prompts(tmp_path)
+
+        assert len(prompts) == 3
+        first_prompt = prompts[0].lower()
+
+        # Must mention components
+        assert "component" in first_prompt
+
+        # Must NOT contain page-by-page or route-order generation language
+        assert "page-by-page" not in first_prompt
+        assert "route order" not in first_prompt
+
+    def test_pages_prompt_references_existing_components(self, tmp_path):
+        """Second run_build_agent call prompt mentions that shared components already exist."""
+        prompts = self._capture_prompts(tmp_path)
+
+        assert len(prompts) == 3
+        second_prompt = prompts[1].lower()
+
+        # Must mention page or route generation
+        assert "page" in second_prompt or "route" in second_prompt
+
+        # Must reference already-generated components
+        assert "already" in second_prompt or "exist" in second_prompt or "generated" in second_prompt
+
+    def test_integration_prompt_does_not_embed_prd(self, tmp_path):
+        """Third run_build_agent call prompt does NOT contain the full PRD text."""
+        prompts = self._capture_prompts(tmp_path)
+
+        assert len(prompts) == 3
+        third_prompt = prompts[2]
+
+        # The PRD fixture contains '## Component Inventory' — must NOT be in integration prompt
+        assert "## Component Inventory" not in third_prompt
+
+        # Integration prompt must reference types.ts or cross-page contracts
+        assert "types.ts" in third_prompt or "parameter" in third_prompt.lower() or "URLSearchParams" in third_prompt
