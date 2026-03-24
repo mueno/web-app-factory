@@ -148,7 +148,7 @@ Plans:
 | 13. Pipeline Quality | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
-| 16. MCP Infrastructure Hardening | 2/2 | Complete   | 2026-03-24 | - |
+| 16. MCP Infrastructure Hardening | 2/2 | Complete    | 2026-03-24 | - |
 | 17. Supabase Provisioning | v3.0 | 0/? | Not started | - |
 | 18. Backend API Generation | v3.0 | 0/? | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
