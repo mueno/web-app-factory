@@ -47,7 +47,7 @@ Full details: [milestones/v2.0-ROADMAP.md](milestones/v2.0-ROADMAP.md)
 
 - [x] **Phase 16: MCP Infrastructure Hardening** — Extract shared tool logic, add HTTP transport, annotate all tools for OpenAI Apps SDK (completed 2026-03-24)
 - [x] **Phase 17: Supabase Provisioning** — Auto-provision Supabase project via Management API with RLS-default security baseline (completed 2026-03-24)
-- [ ] **Phase 18: Backend API Generation** — Generate Next.js Route Handlers from backend-spec.json with Zod validation and SQL injection prevention
+- [x] **Phase 18: Backend API Generation** — Generate Next.js Route Handlers from backend-spec.json with Zod validation and SQL injection prevention (completed 2026-03-25)
 - [ ] **Phase 19: Supabase Auth Scaffolding** — Generate @supabase/ssr auth integration, protected routes, and sign-in/sign-up pages
 - [ ] **Phase 20: iOS Backend Generation** — Add ios-backend contract variant, executor registry dispatch, and OpenAPI spec output
 - [ ] **Phase 21: OpenAI Apps Distribution** — Deploy public HTTPS endpoint, add structuredContent returns, and prepare ChatGPT App Store submission
@@ -95,7 +95,7 @@ Plans:
   3. All generated error responses have the shape { error: string, code: string } — no naked Error objects or raw exception messages
   4. GET /api/health always returns 200 with a valid response body in every generated app
   5. The BackendSpecValidator gate catches string concatenation in query chains and fails the build before deployment
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [ ] 18-01-PLAN.md — Create BackendSpecValidator gate and backend TypeScript templates
 - [ ] 18-02-PLAN.md — Extend Phase 1b to produce backend-spec.json with cross-validation
@@ -159,7 +159,7 @@ Plans:
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
 | 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
 | 17. Supabase Provisioning | v3.0 | 4/4 | Complete | 2026-03-24 |
-| 18. Backend API Generation | 2/3 | In Progress|  | - |
+| 18. Backend API Generation | 3/3 | Complete   | 2026-03-25 | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |
 | 21. OpenAI Apps Distribution | v3.0 | 0/? | Not started | - |

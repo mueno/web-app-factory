@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Completed 18-02-PLAN.md (Phase 1b backend-spec extension)
-last_updated: "2026-03-25T00:53:08.602Z"
+stopped_at: Completed 18-03-PLAN.md (Phase 2b API route generation + gate wiring)
+last_updated: "2026-03-25T01:01:38.511Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 97
 ---
 
@@ -71,6 +71,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 18-backend-api-generation]: Graceful skip for apps without backend: if src/app/api/ does not exist gate returns passed=True — frontend-only apps not penalized
 - [Phase 18]: backend-spec sub-steps are OPTIONAL: absence of backend-spec.json results in skip, not failure
 - [Phase 18]: Phase 1b cross-validates backend-spec.json used_by_screens against screen-spec.json routes
+- [Phase 18]: generate_api_routes positioned after generate_pages and before generate_integration — Supabase server client available when API routes are created
+- [Phase 18]: API routes prompt excludes prd.md and screen-spec.json (Pitfall 2) — only backend-spec.json embedded
 
 ### Pending Todos
 
@@ -93,6 +95,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T00:53:08.599Z
-Stopped at: Completed 18-02-PLAN.md (Phase 1b backend-spec extension)
+Last session: 2026-03-25T01:01:38.508Z
+Stopped at: Completed 18-03-PLAN.md (Phase 2b API route generation + gate wiring)
 Resume file: None
