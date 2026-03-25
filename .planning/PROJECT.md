@@ -59,10 +59,9 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 
 - ✓ Backend API generation (REST endpoints from backend-spec.json → Next.js Route Handlers) — v3.0 Phase 18
 - ✓ Supabase DB provisioning (PostgreSQL + Realtime) — v3.0 Phase 17
+- ✓ Supabase Auth scaffolding (Passkey + Google/Apple OAuth, protected routes, middleware session refresh) — v3.0 Phase 19
 
 ### Active
-
-- [ ] Supabase Auth scaffolding (Apple/Google/Email sign-in)
 - [ ] allnew-mobile-baas integration into WAF
 - [ ] iOS backend generation (server-side API for iOS apps)
 - [ ] OpenAI Apps SDK support (ChatGPT distribution)
@@ -127,6 +126,9 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 | Backend-spec optional sub-steps (v3) | Absence of backend-spec.json = graceful skip, not failure; frontend-only apps not penalized | ✓ Phase 18 |
 | Pitfall 2 avoidance (v3) | API routes prompt embeds ONLY backend-spec.json, never prd.md or screen-spec.json — prevents agent from re-generating page files | ✓ Phase 18 |
 | All backend gate issues blocking (v3) | No advisories — every detected issue (missing Zod, SQL injection, secrets, no health endpoint) is hard-blocking | ✓ Phase 18 |
+| Passkey via @simplewebauthn (v3) | Supabase has no native WebAuthn; custom session bridge via admin generateLink + verifyOtp | ✓ Phase 19 |
+| @supabase/auth-ui-react banned (v3) | Archived Feb 2024; custom OAuth buttons with signInWithOAuth() instead | ✓ Phase 19 |
+| OAuth config as advisory (v3) | Google/Apple OAuth is optional — failure to configure is advisory, not blocking | ✓ Phase 19 |
 
 ---
-*Last updated: 2026-03-25 after Phase 18*
+*Last updated: 2026-03-25 after Phase 19*
