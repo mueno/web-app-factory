@@ -257,3 +257,53 @@ class SupabaseProvisioner:
 
         # Log only key names injected, never values
         logger.info("Injected env vars: %r", [e["key"] for e in env_vars])
+
+    async def configure_oauth_providers(
+        self,
+        ref: str,
+        google_client_id: str | None = None,
+        google_secret: str | None = None,
+        apple_client_id: str | None = None,
+        apple_secret: str | None = None,
+    ) -> None:
+        """Configure OAuth providers (Google and/or Apple) on a Supabase project.
+
+        Uses the Supabase Management API to PATCH /v1/projects/{ref}/config/auth
+        with the enabled OAuth provider credentials.
+
+        Security contract: credential VALUES are never logged — only key names.
+        If no providers are supplied (all args None), the API call is skipped.
+
+        Args:
+            ref: Supabase project reference identifier.
+            google_client_id: Google OAuth client ID, or None to skip Google.
+            google_secret: Google OAuth client secret, or None to skip Google.
+            apple_client_id: Apple OAuth client ID, or None to skip Apple.
+            apple_secret: Apple OAuth client secret, or None to skip Apple.
+
+        Raises:
+            httpx.HTTPStatusError: If the Management API returns a non-2xx status.
+        """
+        payload: dict[str, object] = {}
+
+        if google_client_id is not None and google_secret is not None:
+            payload["external_google_enabled"] = True
+            payload["external_google_client_id"] = google_client_id
+            payload["external_google_secret"] = google_secret
+
+        if apple_client_id is not None and apple_secret is not None:
+            payload["external_apple_enabled"] = True
+            payload["external_apple_client_id"] = apple_client_id
+            payload["external_apple_secret"] = apple_secret
+
+        if not payload:
+            logger.info("No OAuth providers configured for ref=%r — skipping PATCH", ref)
+            return
+
+        url = f"{_SUPABASE_API_BASE}/projects/{ref}/config/auth"
+        # Log only key names configured — NEVER log credential values
+        logger.info("OAuth providers configured: %r", list(payload.keys()))
+
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(url, json=payload, headers=self._headers())
+            response.raise_for_status()

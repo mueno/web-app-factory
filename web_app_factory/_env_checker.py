@@ -273,6 +273,82 @@ def _check_supabase_credentials() -> list[dict[str, Any]]:
     return statuses
 
 
+def _check_oauth_credentials() -> list[dict[str, Any]]:
+    """Check for optional OAuth credentials (Google and Apple).
+
+    These are advisory checks — OAuth is optional. Users can add OAuth later.
+    Checks 4 env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APPLE_CLIENT_ID,
+    APPLE_CLIENT_SECRET.
+
+    Returns:
+        List of 4 ToolStatus dicts, one per OAuth credential. Missing credentials
+        have status="missing" with advisory note (not blocking).
+    """
+    statuses: list[dict[str, Any]] = []
+
+    creds = [
+        {
+            "tool": "google-client-id",
+            "env_var": "GOOGLE_CLIENT_ID",
+            "note_if_missing": (
+                "Advisory: GOOGLE_CLIENT_ID not set. "
+                "Set from Google Cloud Console > APIs & Services > Credentials. "
+                "OAuth sign-in will be unavailable until configured."
+            ),
+        },
+        {
+            "tool": "google-client-secret",
+            "env_var": "GOOGLE_CLIENT_SECRET",
+            "note_if_missing": (
+                "Advisory: GOOGLE_CLIENT_SECRET not set. "
+                "Set from Google Cloud Console > APIs & Services > Credentials. "
+                "OAuth sign-in will be unavailable until configured."
+            ),
+        },
+        {
+            "tool": "apple-client-id",
+            "env_var": "APPLE_CLIENT_ID",
+            "note_if_missing": (
+                "Advisory: APPLE_CLIENT_ID not set. "
+                "Set from Apple Developer Console > Certificates, Identifiers & Profiles. "
+                "Sign in with Apple will be unavailable until configured."
+            ),
+        },
+        {
+            "tool": "apple-client-secret",
+            "env_var": "APPLE_CLIENT_SECRET",
+            "note_if_missing": (
+                "Advisory: APPLE_CLIENT_SECRET not set. "
+                "Set from Apple Developer Console. "
+                "Sign in with Apple will be unavailable until configured."
+            ),
+        },
+    ]
+
+    for cred in creds:
+        value = os.environ.get(cred["env_var"])
+        if value:
+            statuses.append({
+                "tool": cred["tool"],
+                "status": "present",
+                "version_found": None,
+                "version_required": None,
+                "install_command": None,
+                "note": None,
+            })
+        else:
+            statuses.append({
+                "tool": cred["tool"],
+                "status": "missing",
+                "version_found": None,
+                "version_required": None,
+                "install_command": None,
+                "note": cred["note_if_missing"],
+            })
+
+    return statuses
+
+
 def _check_vercel_auth() -> str:
     """Determine Vercel auth status.
 
@@ -375,6 +451,7 @@ def check_env(deploy_target: str) -> list[dict[str, Any]]:
 
     elif deploy_target == "supabase":
         statuses.extend(_check_supabase_credentials())
+        statuses.extend(_check_oauth_credentials())
 
     # local: no extra checks needed
 
