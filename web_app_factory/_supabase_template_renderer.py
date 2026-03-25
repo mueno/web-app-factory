@@ -32,6 +32,12 @@ _SUPABASE_DEPS: dict[str, str] = {
     "@supabase/supabase-js": "^2",
 }
 
+# Passkey (WebAuthn) npm packages — added when passkey auth templates are used
+_PASSKEY_DEPS: dict[str, str] = {
+    "@simplewebauthn/browser": "^9.0.0",
+    "@simplewebauthn/server": "^9.0.0",
+}
+
 # Output directory within the generated app (relative to output_dir)
 _SUPABASE_LIB_DIR = Path("src") / "lib" / "supabase"
 
@@ -111,6 +117,40 @@ def add_supabase_deps(package_json_path: Union[str, Path]) -> None:
 
     # Add Supabase packages (preserve existing versions if already present)
     for package, version in _SUPABASE_DEPS.items():
+        if package not in data["dependencies"]:
+            data["dependencies"][package] = version
+            logger.info("Added %s@%s to package.json dependencies", package, version)
+        else:
+            logger.debug("Package %s already in dependencies, skipping", package)
+
+    # Write back with consistent formatting (indent=2)
+    package_json_path.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+
+def add_passkey_deps(package_json_path: Union[str, Path]) -> None:
+    """Add @simplewebauthn npm packages to the generated app's package.json.
+
+    Adds @simplewebauthn/browser and @simplewebauthn/server to the dependencies
+    dict. Preserves all existing dependencies and their versions.
+
+    Args:
+        package_json_path: Path to the generated app's package.json file.
+    """
+    package_json_path = Path(package_json_path)
+
+    # Read existing package.json
+    content = package_json_path.read_text(encoding="utf-8")
+    data: dict = json.loads(content)
+
+    # Ensure dependencies key exists
+    if "dependencies" not in data:
+        data["dependencies"] = {}
+
+    # Add @simplewebauthn packages (preserve existing versions if already present)
+    for package, version in _PASSKEY_DEPS.items():
         if package not in data["dependencies"]:
             data["dependencies"][package] = version
             logger.info("Added %s@%s to package.json dependencies", package, version)

@@ -118,6 +118,7 @@ class TestPhase2bBuildExecutorBasic:
             "generate_shared_components",
             "generate_pages",
             "generate_api_routes",
+            "generate_auth_pages",
             "generate_integration",
             "validate_packages",
         ]
@@ -481,8 +482,8 @@ class TestPhase2bSubStepCheckpoints:
         from tools.phase_executors.registry import _clear_registry
         _clear_registry()
 
-    def test_sub_steps_is_six_elements(self):
-        """executor.sub_steps must be the exact 6-element list (BGEN-02 adds generate_api_routes)."""
+    def test_sub_steps_is_seven_elements(self):
+        """executor.sub_steps must be the exact 7-element list (BGEN-02 + AUTH-01 adds generate_api_routes + generate_auth_pages)."""
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
@@ -492,6 +493,7 @@ class TestPhase2bSubStepCheckpoints:
             "generate_shared_components",
             "generate_pages",
             "generate_api_routes",
+            "generate_auth_pages",
             "generate_integration",
             "validate_packages",
         ]
@@ -723,13 +725,13 @@ class TestPhase2bApiRoutesSubStep:
         _clear_registry()
 
     def test_sub_steps_include_generate_api_routes(self):
-        """Phase 2b sub_steps list must include 'generate_api_routes' (6 total)."""
+        """Phase 2b sub_steps list must include 'generate_api_routes' (7 total after AUTH-01)."""
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
         executor = mod.Phase2bBuildExecutor()
         assert "generate_api_routes" in executor.sub_steps
-        assert len(executor.sub_steps) == 6
+        assert len(executor.sub_steps) == 7
 
     def test_backend_spec_path_constant(self):
         """_BACKEND_SPEC_PATH must equal Path('docs') / 'pipeline' / 'backend-spec.json'."""
@@ -874,3 +876,241 @@ class TestPhase2bApiRoutesSubStep:
         system_prompt = BUILD_AGENT.system_prompt
         # Must mention Route Handler patterns or backend-spec
         assert "Route Handler" in system_prompt or "backend-spec" in system_prompt or "route handler" in system_prompt.lower()
+
+
+# ---------------------------------------------------------------------------
+# TestPhase2bAuthPages — TDD for generate_auth_pages sub-step (19-03)
+# ---------------------------------------------------------------------------
+
+
+def _create_env_local_with_supabase(nextjs_dir: Path) -> None:
+    """Create .env.local with NEXT_PUBLIC_SUPABASE_URL to signal Supabase enablement."""
+    nextjs_dir.mkdir(parents=True, exist_ok=True)
+    (nextjs_dir / ".env.local").write_text(
+        "NEXT_PUBLIC_SUPABASE_URL=https://abcxyz.supabase.co\n"
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY=anon-key-value\n",
+        encoding="utf-8",
+    )
+
+
+def _create_env_local_without_supabase(nextjs_dir: Path) -> None:
+    """Create .env.local WITHOUT NEXT_PUBLIC_SUPABASE_URL."""
+    nextjs_dir.mkdir(parents=True, exist_ok=True)
+    (nextjs_dir / ".env.local").write_text(
+        "NEXT_PUBLIC_APP_NAME=MyApp\n",
+        encoding="utf-8",
+    )
+
+
+class TestPhase2bAuthPagesSubStep:
+    """Tests for the new generate_auth_pages sub-step (Plan 19-03)."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_sub_steps_contains_generate_auth_pages(self):
+        """Phase 2b sub_steps list must include 'generate_auth_pages' (7 total)."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        executor = mod.Phase2bBuildExecutor()
+        assert "generate_auth_pages" in executor.sub_steps
+        assert len(executor.sub_steps) == 7
+
+    def test_generate_auth_pages_positioned_after_api_routes(self):
+        """'generate_auth_pages' appears after 'generate_api_routes' in sub_steps."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        executor = mod.Phase2bBuildExecutor()
+        steps = executor.sub_steps
+        api_routes_idx = steps.index("generate_api_routes")
+        auth_pages_idx = steps.index("generate_auth_pages")
+        assert auth_pages_idx > api_routes_idx
+
+    def test_generate_auth_pages_positioned_before_integration(self):
+        """'generate_auth_pages' appears before 'generate_integration' in sub_steps."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        executor = mod.Phase2bBuildExecutor()
+        steps = executor.sub_steps
+        auth_pages_idx = steps.index("generate_auth_pages")
+        integration_idx = steps.index("generate_integration")
+        assert auth_pages_idx < integration_idx
+
+    def test_generate_auth_pages_calls_render_auth_templates_when_supabase_enabled(self, tmp_path):
+        """generate_auth_pages calls render_auth_templates when .env.local has NEXT_PUBLIC_SUPABASE_URL."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        _create_env_local_with_supabase(nextjs_dir)
+
+        mock_render = MagicMock(return_value=["/mock/middleware.ts", "/mock/login.tsx"])
+        mock_add_passkey = MagicMock()
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch("web_app_factory._supabase_auth_renderer.render_auth_templates", mock_render),
+            patch("web_app_factory._supabase_template_renderer.add_passkey_deps", mock_add_passkey),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        mock_render.assert_called_once()
+        assert result.success is True
+
+    def test_generate_auth_pages_calls_add_passkey_deps_when_supabase_enabled(self, tmp_path):
+        """generate_auth_pages calls add_passkey_deps(package.json) when Supabase enabled."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        _create_env_local_with_supabase(nextjs_dir)
+
+        mock_render = MagicMock(return_value=["/mock/middleware.ts"])
+        mock_add_passkey = MagicMock()
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch("web_app_factory._supabase_auth_renderer.render_auth_templates", mock_render),
+            patch("web_app_factory._supabase_template_renderer.add_passkey_deps", mock_add_passkey),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        mock_add_passkey.assert_called_once()
+        call_arg = mock_add_passkey.call_args[0][0]
+        assert "package.json" in str(call_arg)
+
+    def test_generate_auth_pages_skips_when_no_env_local(self, tmp_path):
+        """generate_auth_pages skips auth generation when .env.local is absent."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        # No .env.local created — Supabase not enabled
+
+        mock_render = MagicMock(return_value=[])
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch("web_app_factory._supabase_auth_renderer.render_auth_templates", mock_render),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        mock_render.assert_not_called()
+        assert result.success is True
+
+    def test_generate_auth_pages_skips_when_env_local_lacks_supabase_url(self, tmp_path):
+        """generate_auth_pages skips when .env.local exists but lacks NEXT_PUBLIC_SUPABASE_URL."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        _create_env_local_without_supabase(nextjs_dir)
+
+        mock_render = MagicMock(return_value=[])
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch("web_app_factory._supabase_auth_renderer.render_auth_templates", mock_render),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        mock_render.assert_not_called()
+        assert result.success is True
+
+    def test_generate_auth_pages_substep_result_success_when_supabase(self, tmp_path):
+        """SubStepResult for generate_auth_pages has success=True when auth rendered."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        _create_env_local_with_supabase(nextjs_dir)
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch(
+                "web_app_factory._supabase_auth_renderer.render_auth_templates",
+                return_value=["/mock/middleware.ts", "/mock/login.tsx"],
+            ),
+            patch("web_app_factory._supabase_template_renderer.add_passkey_deps"),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        sub_step_ids = [s.sub_step_id for s in result.sub_steps]
+        assert "generate_auth_pages" in sub_step_ids
+        auth_step = next(s for s in result.sub_steps if s.sub_step_id == "generate_auth_pages")
+        assert auth_step.success is True
+
+    def test_generate_auth_pages_substep_result_success_when_not_supabase(self, tmp_path):
+        """SubStepResult for generate_auth_pages has success=True with skip note when not Supabase."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        # No Supabase env
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        sub_step_ids = [s.sub_step_id for s in result.sub_steps]
+        assert "generate_auth_pages" in sub_step_ids
+        auth_step = next(s for s in result.sub_steps if s.sub_step_id == "generate_auth_pages")
+        assert auth_step.success is True
+
+    def test_generate_auth_pages_failure_produces_substep_failure(self, tmp_path):
+        """FileNotFoundError from renderer produces SubStepResult(success=False)."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+
+        nextjs_dir = ctx.project_dir.parent / ctx.app_name
+        _create_env_local_with_supabase(nextjs_dir)
+
+        with (
+            patch("tools.phase_executors.phase_2b_executor.run_build_agent", return_value="output"),
+            patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}),
+            patch(
+                "web_app_factory._supabase_auth_renderer.render_auth_templates",
+                side_effect=FileNotFoundError("Template not found"),
+            ),
+        ):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        sub_step_ids = [s.sub_step_id for s in result.sub_steps]
+        assert "generate_auth_pages" in sub_step_ids
+        auth_step = next(s for s in result.sub_steps if s.sub_step_id == "generate_auth_pages")
+        assert auth_step.success is False

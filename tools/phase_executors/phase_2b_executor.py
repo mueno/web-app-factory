@@ -300,12 +300,13 @@ class Phase2bBuildExecutor(PhaseExecutor):
 
     @property
     def sub_steps(self) -> list:
-        """Ordered sub-steps for Phase 2b (6 steps, QUAL-01 + BGEN-02)."""
+        """Ordered sub-steps for Phase 2b (7 steps, QUAL-01 + BGEN-02 + AUTH-01)."""
         return [
             "load_spec",
             "generate_shared_components",
             "generate_pages",
             "generate_api_routes",
+            "generate_auth_pages",
             "generate_integration",
             "validate_packages",
         ]
@@ -365,7 +366,8 @@ class Phase2bBuildExecutor(PhaseExecutor):
         # _start_index() maps ctx.resume_sub_step to the sub_steps list index.
         # sub_steps indices: 0=load_spec, 1=generate_shared_components,
         #                    2=generate_pages, 3=generate_api_routes,
-        #                    4=generate_integration, 5=validate_packages
+        #                    4=generate_auth_pages, 5=generate_integration,
+        #                    6=validate_packages
         start_idx = self._start_index(ctx)
 
         # ── Step 2: Generate shared components ────────────────────────────
@@ -508,8 +510,70 @@ class Phase2bBuildExecutor(PhaseExecutor):
                     )
                 )
 
-        # ── Step 5: Generate integration ──────────────────────────────────
+        # ── Step 5: Generate auth pages (conditional on Supabase enablement) ─
+        # Detect Supabase enablement from .env.local (created by load_spec).
+        # Phase 3 (Supabase provisioning) runs after Phase 2b, so we cannot rely
+        # on src/lib/supabase/ files existing yet. Instead, detect via .env.local
+        # which is written by the scaffold when supabase is configured.
         if start_idx <= 4:
+            env_local = nextjs_dir / ".env.local"
+            supabase_enabled = (
+                env_local.exists()
+                and "NEXT_PUBLIC_SUPABASE_URL" in env_local.read_text(encoding="utf-8")
+            )
+
+            if supabase_enabled:
+                try:
+                    from web_app_factory._supabase_auth_renderer import (  # noqa: PLC0415
+                        render_auth_templates,
+                    )
+                    from web_app_factory._supabase_template_renderer import (  # noqa: PLC0415
+                        add_passkey_deps,
+                    )
+
+                    rendered = render_auth_templates(nextjs_dir)
+                    add_passkey_deps(nextjs_dir / "package.json")
+
+                    sub_step_results.append(
+                        SubStepResult(
+                            sub_step_id="generate_auth_pages",
+                            success=True,
+                            artifacts=rendered,
+                            notes=(
+                                f"Rendered {len(rendered)} auth templates + passkey deps added"
+                            ),
+                        )
+                    )
+                except Exception as exc:
+                    sub_step_results.append(
+                        SubStepResult(
+                            sub_step_id="generate_auth_pages",
+                            success=False,
+                            error=f"Auth template rendering failed: {type(exc).__name__}",
+                        )
+                    )
+                    return PhaseResult(
+                        phase_id="2b",
+                        success=False,
+                        error=f"Auth template rendering failed: {type(exc).__name__}",
+                        sub_steps=sub_step_results,
+                        resume_point="generate_auth_pages",
+                    )
+            else:
+                logger.info(
+                    "Phase 2b: NEXT_PUBLIC_SUPABASE_URL not in .env.local — "
+                    "skipping auth page generation"
+                )
+                sub_step_results.append(
+                    SubStepResult(
+                        sub_step_id="generate_auth_pages",
+                        success=True,
+                        notes="Skipped — not a Supabase app",
+                    )
+                )
+
+        # ── Step 6: Generate integration ──────────────────────────────────
+        if start_idx <= 5:
             integration_prompt = _INTEGRATION_PROMPT_TEMPLATE.format(
                 app_name=ctx.app_name,
                 idea=ctx.idea,
@@ -545,7 +609,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
                 )
             )
 
-        # ── Step 6: Validate npm packages ─────────────────────────────────
+        # ── Step 7: Validate npm packages ─────────────────────────────────
         npm_results = self._validate_extra_npm_packages(nextjs_dir)
         sub_step_results.append(
             SubStepResult(
