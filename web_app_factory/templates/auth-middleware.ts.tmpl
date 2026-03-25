@@ -1,0 +1,53 @@
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest): Promise<NextResponse> {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // anon key only — never use the privileged key here (SECG-01)
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  // IMPORTANT: Always use getUser() in server context.
+  // getUser() validates the token with the Supabase auth server, detecting
+  // revoked sessions. The alternative (reading cookies without validation)
+  // is not guaranteed to catch server-side revocations.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Default-protect: redirect unauthenticated users to login.
+  // Exclude /auth/* paths to prevent redirect loops on the auth callback.
+  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    url.searchParams.set('returnTo', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    // Skip Next.js internals and static assets — only run on page routes
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+}

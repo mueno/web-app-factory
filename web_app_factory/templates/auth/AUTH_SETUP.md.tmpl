@@ -1,0 +1,215 @@
+# Auth Setup Guide
+
+This guide walks you through manually configuring Google OAuth and Apple Sign-In for your application.
+
+> **Why manual?** Google and Apple OAuth credentials require actions in external developer portals
+> (billing acceptance, privacy policy URLs, human review steps) that cannot be automated.
+
+---
+
+## Prerequisites
+
+Before starting, ensure you have:
+- A [Supabase project](https://supabase.com) with the project reference (`NEXT_PUBLIC_SUPABASE_URL`)
+- A [Google Cloud Console](https://console.cloud.google.com) account
+- An [Apple Developer Portal](https://developer.apple.com) membership (paid, $99/year)
+
+---
+
+## 1. Google OAuth Setup
+
+### Step 1: Google Cloud Console — Create OAuth Credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Select or create a project
+3. Navigate to **APIs & Services** > **Credentials** in the left sidebar
+4. Click **+ Create Credentials** > **OAuth 2.0 Client ID**
+5. Choose **Application type: Web application**
+6. Under **Authorized redirect URIs**, add:
+   ```
+   https://<your-project-ref>.supabase.co/auth/v1/callback
+   ```
+   Replace `<your-project-ref>` with your Supabase project reference (found in Project Settings > API).
+7. Click **Create**
+8. Copy your **Client ID** and **Client Secret**
+
+### Step 2: Enable Google in Supabase Dashboard
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard) > your project
+2. Navigate to **Authentication** > **Providers**
+3. Find **Google** and toggle it **Enabled**
+4. Paste your **Client ID** and **Client Secret**
+5. Click **Save**
+
+### Step 3: Set Environment Variables
+
+Add these to your `.env.local` and to your Vercel project settings:
+
+```bash
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+```
+
+---
+
+## 2. Apple Sign-In Setup
+
+> **IMPORTANT — 6-Month Secret Rotation Required**
+>
+> Apple Sign-In uses a JWT client secret generated from a `.p8` private key.
+> **Apple invalidates this secret after 6 months maximum.**
+> You must regenerate and rotate the secret before expiry or Apple OAuth will silently fail.
+>
+> **Action**: Set a calendar reminder for 5 months from today to regenerate your Apple client secret.
+
+### Step 1: Apple Developer Portal — Create App ID
+
+1. Go to [Apple Developer Portal](https://developer.apple.com/account)
+2. Navigate to **Certificates, Identifiers & Profiles** > **Identifiers**
+3. Click **+** to register a new identifier
+4. Choose **App IDs**, then **App**
+5. Enter a **Description** and **Bundle ID** (e.g., `com.yourcompany.yourapp`)
+6. Under **Capabilities**, check **Sign in with Apple**
+7. Click **Continue**, then **Register**
+
+### Step 2: Create Services ID (this becomes `APPLE_CLIENT_ID`)
+
+1. In **Identifiers**, click **+** again
+2. Choose **Services IDs**
+3. Enter a description and a unique identifier (e.g., `com.yourcompany.yourapp.service`)
+4. Click **Continue**, then **Register**
+5. Click on the Services ID you just created
+6. Check **Sign in with Apple** and click **Configure**
+7. Under **Return URLs**, add:
+   ```
+   https://<your-project-ref>.supabase.co/auth/v1/callback
+   ```
+8. Click **Save**, then **Continue**, then **Save**
+
+The Services ID value (e.g., `com.yourcompany.yourapp.service`) is your **`APPLE_CLIENT_ID`**.
+
+### Step 3: Create a Sign-In Key (downloads the `.p8` file)
+
+1. Navigate to **Keys** in the left sidebar
+2. Click **+** to create a new key
+3. Enter a **Key Name** (e.g., `Sign in with Apple Key`)
+4. Check **Sign in with Apple** and click **Configure**
+5. Select your **Primary App ID** from the dropdown
+6. Click **Save**, then **Continue**, then **Register**
+7. **Download the `.p8` key file** (you can only download this once — store it securely)
+8. Note your **Key ID** (shown on the key detail page)
+
+### Step 4: Generate the Apple Client Secret JWT
+
+Apple does not store a client secret — you generate a JWT signed with the `.p8` key.
+
+Use the Supabase [Generate a secret](https://supabase.com/docs/guides/auth/social-login/auth-apple#generate-a-client-secret) tool, or run this script:
+
+```bash
+# Required: ruby gem jwt
+gem install jwt
+
+# Fill in your values:
+KEY_ID="<your-10-char-key-id>"
+TEAM_ID="<your-10-char-team-id>"           # Found in Apple Developer top-right corner
+CLIENT_ID="<your-services-id>"             # e.g., com.yourcompany.yourapp.service
+KEY_FILE="<path-to-your-key.p8>"
+
+ruby - <<'RUBY'
+require 'jwt'
+require 'openssl'
+
+key_file = ENV['KEY_FILE'] || raise("Set KEY_FILE env var")
+key_id   = ENV['KEY_ID']   || raise("Set KEY_ID env var")
+team_id  = ENV['TEAM_ID']  || raise("Set TEAM_ID env var")
+client_id = ENV['CLIENT_ID'] || raise("Set CLIENT_ID env var")
+
+ecdsa_key = OpenSSL::PKey::EC.new(File.read(key_file))
+headers = { kid: key_id }
+claims = {
+  iss: team_id,
+  iat: Time.now.to_i,
+  exp: Time.now.to_i + 15777000,  # 6 months (Apple maximum)
+  aud: 'https://appleid.apple.com',
+  sub: client_id,
+}
+
+token = JWT.encode(claims, ecdsa_key, 'ES256', headers)
+puts "APPLE_CLIENT_SECRET=#{token}"
+RUBY
+```
+
+> **Rotation reminder**: This secret expires in **6 months**. When it expires, Apple OAuth
+> will fail silently. Set a calendar reminder for 5 months from the generation date.
+> Run this script again and update your environment variables.
+
+### Step 5: Enable Apple in Supabase Dashboard
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard) > your project
+2. Navigate to **Authentication** > **Providers**
+3. Find **Apple** and toggle it **Enabled**
+4. Fill in:
+   - **Services ID**: your Services ID (e.g., `com.yourcompany.yourapp.service`)
+   - **Secret Key**: the JWT you generated in Step 4
+5. Click **Save**
+
+### Step 6: Set Environment Variables
+
+```bash
+APPLE_CLIENT_ID=<your-services-id>
+APPLE_CLIENT_SECRET=<your-generated-jwt>
+```
+
+---
+
+## 3. Supabase Redirect URL Allowlist
+
+> **Common error**: `"Redirect URL not in allowed list"`
+> This occurs when the OAuth callback URL is not explicitly allowed in Supabase.
+
+### Add Redirect URLs
+
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard) > your project
+2. Navigate to **Authentication** > **URL Configuration**
+3. Under **Redirect URLs**, add:
+   - For local development: `http://localhost:3000/**`
+   - For production: `https://<your-vercel-domain>/**`
+   - For Vercel preview deployments: `https://*-<your-team>.vercel.app/**`
+
+The `**` wildcard matches any path under that domain, which covers the `/auth/callback?returnTo=...` redirect.
+
+---
+
+## 4. Verification Checklist
+
+After completing the setup above:
+
+- [ ] Run `npm run dev` and go to `http://localhost:3000/auth/login`
+- [ ] Click **Sign in with Google** — you should be redirected to Google's login page
+- [ ] Complete the Google sign-in flow and verify you land back on the app
+- [ ] Check **Supabase Dashboard** > **Authentication** > **Users** — your user should appear
+- [ ] Click **Sign in with Apple** and repeat the verification
+- [ ] Test sign out at `/auth/signout` — verify your session is cleared
+
+### Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `Redirect URL not in allowed list` | Missing URL in Supabase allowlist | Add `http://localhost:3000/**` to URL Configuration |
+| `invalid_grant` on Apple | Expired client secret (>6 months) | Regenerate the `.p8`-signed JWT and update `APPLE_CLIENT_SECRET` |
+| `provider is not enabled` | Provider not enabled in Supabase | Authentication > Providers > enable the provider |
+| Redirect loop on `/auth/login` | Middleware intercepting `/auth/callback` | Ensure middleware excludes `/auth/*` paths |
+
+---
+
+## Environment Variable Reference
+
+| Variable | Where to Get | Notes |
+|----------|--------------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard > Settings > API | Public — safe for client-side |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard > Settings > API | Public — safe for client-side |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard > Settings > API | **Secret** — never expose to client |
+| `GOOGLE_CLIENT_ID` | Google Cloud Console > Credentials | **Secret** — keep in server env only |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud Console > Credentials | **Secret** — keep in server env only |
+| `APPLE_CLIENT_ID` | Apple Developer Portal > Services IDs | The Services ID string |
+| `APPLE_CLIENT_SECRET` | Generated from `.p8` key | **Expires in 6 months** — set rotation reminder |

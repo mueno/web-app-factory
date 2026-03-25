@@ -1,0 +1,54 @@
+import { redirect } from 'next/navigation'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+async function signOut(): Promise<never> {
+  'use server'
+  const cookieStore = await cookies()
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+  // Global scope signs out all sessions on all devices (per locked decision)
+  await supabase.auth.signOut({ scope: 'global' })
+  redirect('/')
+}
+
+export default function SignOutPage(): React.ReactElement {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-8 shadow-sm text-center">
+        <h1 className="text-2xl font-semibold text-gray-900">Sign out</h1>
+        <p className="text-sm text-gray-500">
+          This will sign you out of all sessions on all devices.
+        </p>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-red-600 px-6 py-3 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            Sign Out
+          </button>
+        </form>
+        <a
+          href="/"
+          className="text-sm text-gray-500 underline hover:text-gray-700"
+        >
+          Cancel
+        </a>
+      </div>
+    </div>
+  )
+}
