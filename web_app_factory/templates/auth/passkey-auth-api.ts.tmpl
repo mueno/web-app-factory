@@ -1,0 +1,200 @@
+// src/app/api/auth/passkey/authenticate/route.ts
+// WebAuthn authentication ceremony server endpoint.
+//
+// Two-phase flow:
+//   Phase 1 (POST with email/userId): Look up the user's registered credentials,
+//     generate authentication options with allowCredentials, and store the challenge
+//     in a short-lived cookie.
+//   Phase 2 (POST with assertion): Verify the browser's assertion against the stored
+//     credential, update the credential counter, then create a Supabase session via
+//     the passkey hooks module and return it to the client.
+
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse,
+} from '@simplewebauthn/server'
+import type {
+  GenerateAuthenticationOptionsOpts,
+  VerifyAuthenticationResponseOpts,
+} from '@simplewebauthn/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { createPasskeySession } from '@/lib/auth/passkey-hooks'
+
+const RP_ID = process.env.NEXT_PUBLIC_DOMAIN ?? 'localhost'
+const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN ?? `https://${RP_ID}`
+
+const CHALLENGE_COOKIE = 'passkey_auth_challenge'
+const USER_ID_COOKIE = 'passkey_auth_userid'
+
+function createAdminClient() {
+  const cookieStore = cookies()
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options)
+          }
+        },
+      },
+    }
+  )
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const body = await request.json().catch(() => ({}))
+
+  // -----------------------------------------------------------------------
+  // Phase 2: assertion present — verify and create Supabase session
+  // -----------------------------------------------------------------------
+  if (body.response) {
+    const challenge = request.cookies.get(CHALLENGE_COOKIE)?.value
+    const userId = request.cookies.get(USER_ID_COOKIE)?.value
+
+    if (!challenge || !userId) {
+      return NextResponse.json(
+        { error: 'Authentication session not found. Please restart sign-in.' },
+        { status: 400 }
+      )
+    }
+
+    const supabase = createAdminClient()
+
+    // Retrieve the specific credential being used
+    const credentialId = body.response.id
+    const { data: credRow, error: credError } = await supabase
+      .from('passkey_credentials')
+      .select('credential_id, public_key, counter, transports')
+      .eq('credential_id', credentialId)
+      .eq('user_id', userId)
+      .single()
+
+    if (credError || !credRow) {
+      return NextResponse.json({ error: 'Credential not found' }, { status: 404 })
+    }
+
+    let verification: Awaited<ReturnType<typeof verifyAuthenticationResponse>>
+
+    try {
+      const opts: VerifyAuthenticationResponseOpts = {
+        response: body.response,
+        expectedChallenge: challenge,
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
+        credential: {
+          id: credRow.credential_id,
+          publicKey: Buffer.from(credRow.public_key, 'base64url'),
+          counter: credRow.counter,
+          transports: credRow.transports,
+        },
+        requireUserVerification: true,
+      }
+      verification = await verifyAuthenticationResponse(opts)
+    } catch (err) {
+      console.error('[passkey-auth] Verification failed:', (err as Error).message)
+      return NextResponse.json({ error: 'Passkey authentication failed' }, { status: 400 })
+    }
+
+    if (!verification.verified || !verification.authenticationInfo) {
+      return NextResponse.json({ error: 'Passkey authentication could not be verified' }, { status: 400 })
+    }
+
+    // Update the credential counter (anti-replay protection)
+    await supabase
+      .from('passkey_credentials')
+      .update({ counter: verification.authenticationInfo.newCounter })
+      .eq('credential_id', credentialId)
+
+    // Bridge WebAuthn verification into a Supabase session
+    const sessionData = await createPasskeySession(userId)
+
+    const response = NextResponse.json({ verified: true, session: sessionData })
+    response.cookies.delete(CHALLENGE_COOKIE)
+    response.cookies.delete(USER_ID_COOKIE)
+    return response
+  }
+
+  // -----------------------------------------------------------------------
+  // Phase 1: no assertion — look up credentials and generate options
+  // -----------------------------------------------------------------------
+  const email: string | undefined = body.email
+  const userId: string | undefined = body.userId
+
+  if (!email && !userId) {
+    return NextResponse.json(
+      { error: 'email or userId is required to start authentication' },
+      { status: 400 }
+    )
+  }
+
+  const supabase = createAdminClient()
+
+  // Resolve userId from email if not provided directly
+  let resolvedUserId = userId
+  if (!resolvedUserId && email) {
+    const { data: userRow } = await supabase
+      .from('passkey_credentials')
+      .select('user_id')
+      .eq('user_id', (
+        // sub-select: look up auth.users by email using admin API
+        await supabase.auth.admin.listUsers().then(({ data }) =>
+          data?.users?.find((u) => u.email === email)?.id ?? ''
+        )
+      ))
+      .limit(1)
+      .maybeSingle()
+    resolvedUserId = userRow?.user_id
+  }
+
+  if (!resolvedUserId) {
+    return NextResponse.json(
+      { error: 'No registered passkeys found for this account' },
+      { status: 404 }
+    )
+  }
+
+  // Fetch all registered credentials for this user
+  const { data: userCreds } = await supabase
+    .from('passkey_credentials')
+    .select('credential_id, transports')
+    .eq('user_id', resolvedUserId)
+
+  if (!userCreds || userCreds.length === 0) {
+    return NextResponse.json(
+      { error: 'No passkeys registered for this account' },
+      { status: 404 }
+    )
+  }
+
+  const allowCredentials = userCreds.map((cred) => ({
+    id: cred.credential_id,
+    transports: cred.transports,
+  }))
+
+  const opts: GenerateAuthenticationOptionsOpts = {
+    rpID: RP_ID,
+    allowCredentials,
+    userVerification: 'required',
+  }
+
+  const authenticationOptions = await generateAuthenticationOptions(opts)
+
+  // Store challenge and userId in short-lived HttpOnly cookies
+  const response = NextResponse.json(authenticationOptions)
+  const cookieOpts = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: 300, // 5 minutes
+    path: '/',
+  }
+  response.cookies.set(CHALLENGE_COOKIE, authenticationOptions.challenge, cookieOpts)
+  response.cookies.set(USER_ID_COOKIE, resolvedUserId, cookieOpts)
+
+  return response
+}

@@ -1,0 +1,99 @@
+// src/lib/auth/passkey-hooks.ts
+// Supabase session bridge for passkey (WebAuthn) authentication.
+//
+// SECURITY: This file must only run server-side.
+// It uses the SUPABASE_SERVICE_ROLE_KEY for admin operations.
+// Never import this module from client components or expose it to the browser.
+//
+// Pattern: After a WebAuthn ceremony is successfully verified by @simplewebauthn/server,
+// call createPasskeySession(userId) to issue a real Supabase session for the user.
+// This bridges the external WebAuthn auth into the Supabase session ecosystem so that
+// all existing Supabase RLS policies and session management work seamlessly.
+
+import { createClient } from '@supabase/supabase-js'
+
+// Admin client — ONLY created server-side, NEVER exposed to the browser
+function createAdminSupabaseClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // SUPABASE_SERVICE_ROLE_KEY must NEVER be exposed to the client
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  )
+}
+
+export interface PasskeySessionResult {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  userId: string
+}
+
+/**
+ * Creates a Supabase session for a user who has been verified via WebAuthn.
+ *
+ * Strategy: Use the admin generateLink API to produce a one-time magic link URL,
+ * then extract the token from it and exchange it for a full session. This is the
+ * recommended bridge pattern for external auth providers (WebAuthn, TOTP, etc.)
+ * that don't have native Supabase support.
+ *
+ * @param userId - The Supabase auth.users UUID of the verified user
+ * @returns Session tokens that the client can use to authenticate
+ */
+export async function createPasskeySession(userId: string): Promise<PasskeySessionResult> {
+  const supabase = createAdminSupabaseClient()
+
+  // Retrieve the user record to get their email (required for generateLink)
+  const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId)
+
+  if (userError || !userData.user?.email) {
+    throw new Error(`Could not retrieve user for passkey session: ${userError?.message ?? 'no email'}`)
+  }
+
+  const userEmail = userData.user.email
+
+  // Generate a one-time magic link for this user
+  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    type: 'magiclink',
+    email: userEmail,
+  })
+
+  if (linkError || !linkData?.properties) {
+    throw new Error(`Failed to generate passkey session link: ${linkError?.message ?? 'no link data'}`)
+  }
+
+  // Extract the one-time token (hashed_token) from the generated link properties
+  const { hashed_token } = linkData.properties
+
+  if (!hashed_token) {
+    throw new Error('generateLink did not return a hashed_token')
+  }
+
+  // Exchange the token for a real session using the public API
+  // (this mirrors what the magic link click would do in a browser)
+  const anonClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const { data: sessionData, error: sessionError } = await anonClient.auth.verifyOtp({
+    token_hash: hashed_token,
+    type: 'magiclink',
+  })
+
+  if (sessionError || !sessionData.session) {
+    throw new Error(`Failed to exchange passkey token for session: ${sessionError?.message ?? 'no session'}`)
+  }
+
+  return {
+    accessToken: sessionData.session.access_token,
+    refreshToken: sessionData.session.refresh_token,
+    expiresIn: sessionData.session.expires_in,
+    userId,
+  }
+}

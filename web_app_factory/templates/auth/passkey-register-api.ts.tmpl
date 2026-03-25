@@ -1,0 +1,177 @@
+// src/app/api/auth/passkey/register/route.ts
+// WebAuthn registration ceremony server endpoint.
+//
+// Two-phase flow:
+//   Phase 1 (POST without attestation body): Generate registration options and
+//     return them to the browser. The challenge is stored in a short-lived
+//     cookie so it survives the round-trip.
+//   Phase 2 (POST with attestation): Verify the browser's response, store the
+//     new credential in the passkey_credentials table, and return success.
+//
+// NOTE: A Supabase migration is required to create the passkey_credentials table:
+//   create table if not exists passkey_credentials (
+//     credential_id text primary key,
+//     user_id uuid not null references auth.users(id) on delete cascade,
+//     public_key text not null,        -- base64url-encoded COSE public key
+//     counter bigint not null default 0,
+//     transports text[],
+//     created_at timestamptz not null default now()
+//   );
+//   alter table passkey_credentials enable row level security;
+//   create policy "Users can manage their own credentials"
+//     on passkey_credentials for all using (auth.uid() = user_id);
+
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+} from '@simplewebauthn/server'
+import type {
+  GenerateRegistrationOptionsOpts,
+  VerifyRegistrationResponseOpts,
+} from '@simplewebauthn/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+// RP (Relying Party) configuration — customise for your deployment
+const RP_NAME = process.env.NEXT_PUBLIC_APP_NAME ?? 'My App'
+const RP_ID = process.env.NEXT_PUBLIC_DOMAIN ?? 'localhost'
+const ORIGIN = process.env.NEXT_PUBLIC_ORIGIN ?? `https://${RP_ID}`
+
+// Cookie name used to persist the challenge between Phase 1 and Phase 2
+const CHALLENGE_COOKIE = 'passkey_register_challenge'
+
+function createAdminClient() {
+  const cookieStore = cookies()
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    // Service role key — ONLY used server-side for admin credential storage
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        setAll: (cookiesToSet) => {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options)
+          }
+        },
+      },
+    }
+  )
+}
+
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const body = await request.json().catch(() => ({}))
+
+  // -----------------------------------------------------------------------
+  // Phase 2: attestation is present — verify and store the credential
+  // -----------------------------------------------------------------------
+  if (body.response) {
+    const challenge = request.cookies.get(CHALLENGE_COOKIE)?.value
+    if (!challenge) {
+      return NextResponse.json(
+        { error: 'Registration challenge not found. Please restart registration.' },
+        { status: 400 }
+      )
+    }
+
+    const userId: string | undefined = body.userId
+    const userEmail: string | undefined = body.email
+    if (!userId) {
+      return NextResponse.json({ error: 'userId is required' }, { status: 400 })
+    }
+
+    let verification: Awaited<ReturnType<typeof verifyRegistrationResponse>>
+
+    try {
+      const opts: VerifyRegistrationResponseOpts = {
+        response: body.response,
+        expectedChallenge: challenge,
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
+        requireUserVerification: true,
+      }
+      verification = await verifyRegistrationResponse(opts)
+    } catch (err) {
+      console.error('[passkey-register] Verification failed:', (err as Error).message)
+      return NextResponse.json({ error: 'Passkey verification failed' }, { status: 400 })
+    }
+
+    if (!verification.verified || !verification.registrationInfo) {
+      return NextResponse.json({ error: 'Passkey registration could not be verified' }, { status: 400 })
+    }
+
+    const { credential } = verification.registrationInfo
+
+    // Persist credential in Supabase using service_role key (bypasses RLS for insert)
+    const supabase = createAdminClient()
+    const { error: dbError } = await supabase.from('passkey_credentials').insert({
+      credential_id: credential.id,
+      user_id: userId,
+      public_key: Buffer.from(credential.publicKey).toString('base64url'),
+      counter: credential.counter,
+      transports: body.response.response?.transports ?? [],
+    })
+
+    if (dbError) {
+      console.error('[passkey-register] DB insert failed:', dbError.message)
+      return NextResponse.json({ error: 'Failed to save passkey credential' }, { status: 500 })
+    }
+
+    // Clear the challenge cookie
+    const response = NextResponse.json({ verified: true })
+    response.cookies.delete(CHALLENGE_COOKIE)
+    return response
+  }
+
+  // -----------------------------------------------------------------------
+  // Phase 1: No attestation — generate registration options
+  // -----------------------------------------------------------------------
+  const userID: string | undefined = body.userId
+  const userName: string | undefined = body.email ?? body.userName
+  if (!userID || !userName) {
+    return NextResponse.json(
+      { error: 'userId and email (or userName) are required to start registration' },
+      { status: 400 }
+    )
+  }
+
+  // Fetch any existing credentials for this user to exclude from re-registration
+  const supabase = createAdminClient()
+  const { data: existingCreds } = await supabase
+    .from('passkey_credentials')
+    .select('credential_id, transports')
+    .eq('user_id', userID)
+
+  const excludeCredentials = (existingCreds ?? []).map((cred) => ({
+    id: cred.credential_id,
+    transports: cred.transports,
+  }))
+
+  const opts: GenerateRegistrationOptionsOpts = {
+    rpName: RP_NAME,
+    rpID: RP_ID,
+    userID: Buffer.from(userID),
+    userName,
+    attestationType: 'none',
+    excludeCredentials,
+    authenticatorSelection: {
+      residentKey: 'required',
+      userVerification: 'required',
+    },
+  }
+
+  const registrationOptions = await generateRegistrationOptions(opts)
+
+  // Store challenge in an HttpOnly cookie (short TTL: 5 minutes)
+  const response = NextResponse.json(registrationOptions)
+  response.cookies.set(CHALLENGE_COOKIE, registrationOptions.challenge, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 300, // 5 minutes
+    path: '/',
+  })
+
+  return response
+}
