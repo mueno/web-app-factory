@@ -95,7 +95,11 @@ Plans:
   3. All generated error responses have the shape { error: string, code: string } — no naked Error objects or raw exception messages
   4. GET /api/health always returns 200 with a valid response body in every generated app
   5. The BackendSpecValidator gate catches string concatenation in query chains and fails the build before deployment
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 18-01-PLAN.md — Create BackendSpecValidator gate and backend TypeScript templates
+- [ ] 18-02-PLAN.md — Extend Phase 1b to produce backend-spec.json with cross-validation
+- [ ] 18-03-PLAN.md — Add generate_api_routes sub-step to Phase 2b and wire gate into pipeline
 
 ### Phase 19: Supabase Auth Scaffolding
 **Goal**: Generated apps have complete email/password authentication working on first run — users can sign up, sign in, stay logged in across sessions, and are redirected to login when accessing protected routes without a session
@@ -154,8 +158,8 @@ Plans:
 | 14. Wire Interactive Gate Approval | v2.0 | 2/2 | Complete | 2026-03-24 |
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
 | 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
-| 17. Supabase Provisioning | 4/4 | Complete    | 2026-03-24 | - |
-| 18. Backend API Generation | v3.0 | 0/? | Not started | - |
+| 17. Supabase Provisioning | v3.0 | 4/4 | Complete | 2026-03-24 |
+| 18. Backend API Generation | v3.0 | 0/3 | Not started | - |
 | 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |
 | 21. OpenAI Apps Distribution | v3.0 | 0/? | Not started | - |
