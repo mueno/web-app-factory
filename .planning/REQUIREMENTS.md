@@ -26,10 +26,10 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 ### Backend API Generation
 
 - [x] **BGEN-01**: Phase 1b produces `backend-spec.json` (entities, relationships, endpoints) alongside `screen-spec.json`
-- [ ] **BGEN-02**: Phase 2b `generate_api_routes` sub-step creates Next.js Route Handlers from `backend-spec.json`
-- [ ] **BGEN-03**: Every generated API route includes Zod input validation — no route without schema validation
-- [ ] **BGEN-04**: Standardized error response shape `{ error: string, code: string }` in all generated routes
-- [ ] **BGEN-05**: Health endpoint (`GET /api/health`) always generated — matches allnew-baas pattern
+- [x] **BGEN-02**: Phase 2b `generate_api_routes` sub-step creates Next.js Route Handlers from `backend-spec.json`
+- [x] **BGEN-03**: Every generated API route includes Zod input validation — no route without schema validation
+- [x] **BGEN-04**: Standardized error response shape `{ error: string, code: string }` in all generated routes
+- [x] **BGEN-05**: Health endpoint (`GET /api/health`) always generated — matches allnew-baas pattern
 - [x] **BGEN-06**: `BackendSpecValidator` gate scans generated routes for missing Zod imports, raw secrets, and unvalidated inputs
 - [x] **BGEN-07**: `templates/backend/` directory extracted from allnew-baas patterns (CORS, rate-limit, auth helpers)
 
@@ -112,10 +112,10 @@ Deferred to future release.
 | SECG-01 | Phase 17 | Complete |
 | SECG-02 | Phase 17 | Complete |
 | BGEN-01 | Phase 18 | Complete |
-| BGEN-02 | Phase 18 | Pending |
-| BGEN-03 | Phase 18 | Pending |
-| BGEN-04 | Phase 18 | Pending |
-| BGEN-05 | Phase 18 | Pending |
+| BGEN-02 | Phase 18 | Complete |
+| BGEN-03 | Phase 18 | Complete |
+| BGEN-04 | Phase 18 | Complete |
+| BGEN-05 | Phase 18 | Complete |
 | BGEN-06 | Phase 18 | Complete |
 | BGEN-07 | Phase 18 | Complete |
 | SECG-03 | Phase 18 | Complete |
