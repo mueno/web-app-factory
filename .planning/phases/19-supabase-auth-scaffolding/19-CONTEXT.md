@@ -18,13 +18,15 @@
 ### 認証方式
 - **パスキー認証を主要方式**として採用 — メール/パスワードは使用しない
 - **Google OAuth + Apple Sign-In** を代替手段として提供
-- @supabase/auth-ui-react を使用してパスキー登録/認証 + OAuth ボタンを表示
-- Supabase の WebAuthn/Passkeys サポートの調査が必要（リサーチャーに委託）
+- **リサーチ結果による変更（ユーザー承認済み 2026-03-25）:**
+  - @supabase/auth-ui-react は 2025年10月にアーカイブ済み → **カスタム OAuth ボタン（signInWithOAuth）を使用**
+  - Supabase ネイティブパスキー非対応 → **@simplewebauthn/browser + @simplewebauthn/server でパスキーを実装**
+  - カスタム Supabase JWT フックで simplewebauthn をセッション管理に統合
 
 ### Auth UI ページ
-- @supabase/auth-ui-react で UI を構築（カスタムフォームではなく公式コンポーネント）
-- テーマは生成アプリの Tailwind カラーで ThemeSupa をオーバーライド — アプリごとにブランド一貫
-- ページ構成: /auth/login, /auth/signup, /auth/signout を app/auth/ 配下に生成
+- **カスタム認証ページ**を生成（@supabase/auth-ui-react はアーカイブ済みのため使用不可）
+- パスキー登録/認証 UI + Google/Apple OAuth ボタンを Tailwind でスタイリング
+- ページ構成: /auth/login, /auth/signup, /auth/signout, /auth/callback を app/auth/ 配下に生成
 
 ### 保護ルート戦略
 - **デフォルト保護** — 全ルートがデフォルトで認証必須。auth_required: false のエンドポイント（/api/health 等）のみ公開
