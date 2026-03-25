@@ -25,7 +25,7 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 ### Backend API Generation
 
-- [ ] **BGEN-01**: Phase 1b produces `backend-spec.json` (entities, relationships, endpoints) alongside `screen-spec.json`
+- [x] **BGEN-01**: Phase 1b produces `backend-spec.json` (entities, relationships, endpoints) alongside `screen-spec.json`
 - [ ] **BGEN-02**: Phase 2b `generate_api_routes` sub-step creates Next.js Route Handlers from `backend-spec.json`
 - [ ] **BGEN-03**: Every generated API route includes Zod input validation — no route without schema validation
 - [ ] **BGEN-04**: Standardized error response shape `{ error: string, code: string }` in all generated routes
@@ -111,7 +111,7 @@ Deferred to future release.
 | SUPA-06 | Phase 17 | Complete |
 | SECG-01 | Phase 17 | Complete |
 | SECG-02 | Phase 17 | Complete |
-| BGEN-01 | Phase 18 | Pending |
+| BGEN-01 | Phase 18 | Complete |
 | BGEN-02 | Phase 18 | Pending |
 | BGEN-03 | Phase 18 | Pending |
 | BGEN-04 | Phase 18 | Pending |

@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-03-25T00:50:07.049Z"
+stopped_at: Completed 18-02-PLAN.md (Phase 1b backend-spec extension)
+last_updated: "2026-03-25T00:53:08.602Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 97
 ---
 
@@ -69,6 +69,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 17-supabase-provisioning]: asyncio.run() bridge for async SupabaseProvisioner in synchronous Phase 3 executor — consistent with deploy_agent_runner pattern
 - [Phase 18-backend-api-generation]: Health endpoint excluded from Zod validation check: health route has no user inputs so Zod import requirement is skipped for src/app/api/health/route.ts
 - [Phase 18-backend-api-generation]: Graceful skip for apps without backend: if src/app/api/ does not exist gate returns passed=True — frontend-only apps not penalized
+- [Phase 18]: backend-spec sub-steps are OPTIONAL: absence of backend-spec.json results in skip, not failure
+- [Phase 18]: Phase 1b cross-validates backend-spec.json used_by_screens against screen-spec.json routes
 
 ### Pending Todos
 
@@ -91,6 +93,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T00:50:07.047Z
-Stopped at: Completed 18-01-PLAN.md
+Last session: 2026-03-25T00:53:08.599Z
+Stopped at: Completed 18-02-PLAN.md (Phase 1b backend-spec extension)
 Resume file: None
