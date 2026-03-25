@@ -30,8 +30,8 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 - [ ] **BGEN-03**: Every generated API route includes Zod input validation — no route without schema validation
 - [ ] **BGEN-04**: Standardized error response shape `{ error: string, code: string }` in all generated routes
 - [ ] **BGEN-05**: Health endpoint (`GET /api/health`) always generated — matches allnew-baas pattern
-- [ ] **BGEN-06**: `BackendSpecValidator` gate scans generated routes for missing Zod imports, raw secrets, and unvalidated inputs
-- [ ] **BGEN-07**: `templates/backend/` directory extracted from allnew-baas patterns (CORS, rate-limit, auth helpers)
+- [x] **BGEN-06**: `BackendSpecValidator` gate scans generated routes for missing Zod imports, raw secrets, and unvalidated inputs
+- [x] **BGEN-07**: `templates/backend/` directory extracted from allnew-baas patterns (CORS, rate-limit, auth helpers)
 
 ### Supabase Auth
 
@@ -64,7 +64,7 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 - [x] **SECG-01**: Env exposure gate extended to scan for `NEXT_PUBLIC_*SERVICE*ROLE*` patterns (Supabase service_role leak)
 - [x] **SECG-02**: RLS gate scans every migration file — rejects if any `CREATE TABLE` lacks immediate `ENABLE ROW LEVEL SECURITY`
-- [ ] **SECG-03**: Backend route gate scans for string concatenation in query chains (SQL injection prevention)
+- [x] **SECG-03**: Backend route gate scans for string concatenation in query chains (SQL injection prevention)
 - [ ] **SECG-04**: Cross-user write test generated for every RLS-protected table (policy violation assertion)
 
 ## v4.0 Requirements
@@ -116,9 +116,9 @@ Deferred to future release.
 | BGEN-03 | Phase 18 | Pending |
 | BGEN-04 | Phase 18 | Pending |
 | BGEN-05 | Phase 18 | Pending |
-| BGEN-06 | Phase 18 | Pending |
-| BGEN-07 | Phase 18 | Pending |
-| SECG-03 | Phase 18 | Pending |
+| BGEN-06 | Phase 18 | Complete |
+| BGEN-07 | Phase 18 | Complete |
+| SECG-03 | Phase 18 | Complete |
 | AUTH-01 | Phase 19 | Pending |
 | AUTH-02 | Phase 19 | Pending |
 | AUTH-03 | Phase 19 | Pending |

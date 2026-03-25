@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Phase 18 context gathered
-last_updated: "2026-03-24T23:21:57.335Z"
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-03-25T00:50:07.049Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 6
-  completed_plans: 6
+  total_plans: 9
+  completed_plans: 7
   percent: 97
 ---
 
@@ -67,6 +67,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 17-supabase-provisioning]: Advisory vs blocking separation: network errors become advisories; missing RLS on tables and missing Vercel env vars are always blocking
 - [Phase 17-supabase-provisioning]: Lazy imports for all Supabase deps in phase_3_executor: non-Supabase pipelines never pay httpx/banto/provisioner import cost
 - [Phase 17-supabase-provisioning]: asyncio.run() bridge for async SupabaseProvisioner in synchronous Phase 3 executor — consistent with deploy_agent_runner pattern
+- [Phase 18-backend-api-generation]: Health endpoint excluded from Zod validation check: health route has no user inputs so Zod import requirement is skipped for src/app/api/health/route.ts
+- [Phase 18-backend-api-generation]: Graceful skip for apps without backend: if src/app/api/ does not exist gate returns passed=True — frontend-only apps not penalized
 
 ### Pending Todos
 
@@ -89,6 +91,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-24T23:21:57.330Z
-Stopped at: Phase 18 context gathered
-Resume file: .planning/phases/18-backend-api-generation/18-CONTEXT.md
+Last session: 2026-03-25T00:50:07.047Z
+Stopped at: Completed 18-01-PLAN.md
+Resume file: None
