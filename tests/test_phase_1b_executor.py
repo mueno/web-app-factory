@@ -538,3 +538,208 @@ def test_phase_1a_tech_feasibility_rendering_strategy_injected_into_prompt(
     assert "ISR" in captured_prompts[0], (
         "tech-feasibility-memo.json rendering_strategy ('ISR') not found in run_spec_agent prompt"
     )
+
+
+# ── Tests: backend-spec.json generation (BGEN-01) ────────────────────────────
+
+# Backend-spec JSON with all endpoints referencing screens in VALID_SCREEN_SPEC_JSON
+VALID_BACKEND_SPEC_JSON = {
+    "entities": [
+        {
+            "name": "Invoice",
+            "table": "invoices",
+            "fields": [
+                {"name": "id", "type": "uuid", "primary_key": True},
+                {"name": "title", "type": "string", "required": True, "max_length": 255},
+                {"name": "user_id", "type": "uuid", "required": True},
+            ],
+        }
+    ],
+    "relationships": [
+        {"from": "Invoice", "to": "User", "type": "belongs_to", "via": "user_id"}
+    ],
+    "endpoints": [
+        {
+            "path": "/api/invoices",
+            "methods": ["GET", "POST"],
+            "entity": "Invoice",
+            "auth_required": True,
+            "used_by_screens": ["/dashboard"],
+        },
+        {
+            "path": "/api/invoices/[id]",
+            "methods": ["GET", "PUT", "DELETE"],
+            "entity": "Invoice",
+            "auth_required": True,
+            "used_by_screens": ["/dashboard"],
+        },
+        {
+            "path": "/api/health",
+            "methods": ["GET"],
+            "entity": None,
+            "auth_required": False,
+            "used_by_screens": [],
+        },
+    ],
+}
+
+# Backend-spec where an endpoint references a screen not in VALID_SCREEN_SPEC_JSON
+INVALID_BACKEND_SPEC_JSON = {
+    "entities": [],
+    "relationships": [],
+    "endpoints": [
+        {
+            "path": "/api/invoices",
+            "methods": ["GET", "POST"],
+            "entity": "Invoice",
+            "auth_required": True,
+            "used_by_screens": ["/nonexistent-screen"],
+        },
+        {
+            "path": "/api/health",
+            "methods": ["GET"],
+            "entity": None,
+            "auth_required": False,
+            "used_by_screens": [],
+        },
+    ],
+}
+
+
+def test_sub_steps_include_backend_spec():
+    """Phase1bSpecExecutor.sub_steps includes derive_backend_spec and cross_validate_backend."""
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    steps = executor.sub_steps
+    assert "derive_backend_spec" in steps, "sub_steps missing 'derive_backend_spec'"
+    assert "cross_validate_backend" in steps, "sub_steps missing 'cross_validate_backend'"
+
+
+def test_backend_spec_path_constant():
+    """_BACKEND_SPEC_PATH constant equals Path('docs') / 'pipeline' / 'backend-spec.json'."""
+    mod = _import_executor()
+    expected = Path("docs") / "pipeline" / "backend-spec.json"
+    assert mod._BACKEND_SPEC_PATH == expected, (
+        f"_BACKEND_SPEC_PATH is {mod._BACKEND_SPEC_PATH!r}, expected {expected!r}"
+    )
+
+
+def test_backend_spec_cross_validation_passes(
+    project_dir_with_deliverables, make_ctx, mock_agent_query
+):
+    """When backend-spec.json endpoints reference screens in screen-spec.json, cross-validation passes."""
+    pipeline_dir = project_dir_with_deliverables / "docs" / "pipeline"
+    (pipeline_dir / "backend-spec.json").write_text(
+        json.dumps(VALID_BACKEND_SPEC_JSON, indent=2), encoding="utf-8"
+    )
+
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    ctx = make_ctx(project_dir=project_dir_with_deliverables)
+
+    result = executor.execute(ctx)
+
+    assert result.success is True, f"Expected success but got error: {result.error}"
+
+
+def test_backend_spec_cross_validation_fails_bad_screen_ref(
+    tmp_project_dir, make_ctx, mock_agent_query
+):
+    """When backend-spec.json has endpoint referencing nonexistent screen, cross_validate returns failure."""
+    pipeline_dir = tmp_project_dir / "docs" / "pipeline"
+    pipeline_dir.mkdir(parents=True, exist_ok=True)
+
+    # Valid prd.md and screen-spec.json
+    (pipeline_dir / "prd.md").write_text(VALID_PRD_MD, encoding="utf-8")
+    (pipeline_dir / "screen-spec.json").write_text(
+        json.dumps(VALID_SCREEN_SPEC_JSON, indent=2), encoding="utf-8"
+    )
+    # backend-spec.json with an endpoint referencing /nonexistent-screen
+    (pipeline_dir / "backend-spec.json").write_text(
+        json.dumps(INVALID_BACKEND_SPEC_JSON, indent=2), encoding="utf-8"
+    )
+
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    ctx = make_ctx(project_dir=tmp_project_dir)
+
+    result = executor.execute(ctx)
+
+    assert result.success is False, "Expected failure for orphaned screen reference"
+    assert result.error is not None
+
+
+def test_backend_spec_skipped_when_not_produced(
+    project_dir_with_deliverables, make_ctx, mock_agent_query
+):
+    """When no backend-spec.json is produced (simple static app), Phase 1b still succeeds."""
+    # Ensure backend-spec.json does NOT exist
+    backend_spec_path = project_dir_with_deliverables / "docs" / "pipeline" / "backend-spec.json"
+    assert not backend_spec_path.exists(), "Test setup error: backend-spec.json should not exist"
+
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    ctx = make_ctx(project_dir=project_dir_with_deliverables)
+
+    result = executor.execute(ctx)
+
+    assert result.success is True, (
+        f"Phase 1b should succeed when backend-spec.json is absent. Error: {result.error}"
+    )
+
+
+def test_spec_agent_prompt_includes_backend_instructions():
+    """SPEC_AGENT system prompt contains 'backend-spec.json' instruction text."""
+    from agents.definitions import SPEC_AGENT
+
+    prompt_lower = SPEC_AGENT.system_prompt.lower()
+    assert "backend-spec" in prompt_lower, (
+        "SPEC_AGENT system prompt does not contain 'backend-spec' instructions"
+    )
+
+
+def test_backend_spec_user_prompt_includes_crud_instruction(
+    project_dir_with_deliverables, make_ctx, mock_agent_query
+):
+    """User prompt sent to spec agent includes CRUD auto-expansion instruction."""
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    ctx = make_ctx(project_dir=project_dir_with_deliverables)
+
+    captured_prompts = []
+
+    def capture_run_spec_agent(prompt, system_prompt, project_dir, **kwargs):
+        captured_prompts.append(prompt)
+        return "mocked result"
+
+    with patch.object(mod, "run_spec_agent", side_effect=capture_run_spec_agent):
+        executor.execute(ctx)
+
+    assert captured_prompts, "run_spec_agent was not called"
+    prompt_lower = captured_prompts[0].lower()
+    assert "crud" in prompt_lower or "backend-spec" in prompt_lower, (
+        "User prompt does not include CRUD or backend-spec instruction"
+    )
+
+
+def test_backend_spec_user_prompt_mentions_health_endpoint(
+    project_dir_with_deliverables, make_ctx, mock_agent_query
+):
+    """User prompt sent to spec agent mentions /api/health as mandatory endpoint."""
+    mod = _import_executor()
+    executor = mod.Phase1bSpecExecutor()
+    ctx = make_ctx(project_dir=project_dir_with_deliverables)
+
+    captured_prompts = []
+
+    def capture_run_spec_agent(prompt, system_prompt, project_dir, **kwargs):
+        captured_prompts.append(prompt)
+        return "mocked result"
+
+    with patch.object(mod, "run_spec_agent", side_effect=capture_run_spec_agent):
+        executor.execute(ctx)
+
+    assert captured_prompts, "run_spec_agent was not called"
+    assert "/api/health" in captured_prompts[0], (
+        "User prompt does not mention '/api/health' as mandatory endpoint"
+    )
