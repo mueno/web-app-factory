@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-03-25T02:48:11.436Z"
-last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
+stopped_at: Completed 19-03-PLAN.md
+last_updated: "2026-03-25T03:02:27Z"
+last_activity: 2026-03-25 — Phase 19 Plan 03 complete (AUTH-01 to AUTH-05 satisfied)
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 13
-  completed_plans: 11
-  percent: 97
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-25)
 
 ## Current Position
 
-Phase: 17 — Supabase Provisioning
-Plan: 3 of 4 complete
+Phase: 19 — Supabase Auth Scaffolding
+Plan: 3 of 3 complete
 Status: In progress
-Last activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
+Last activity: 2026-03-25 — Phase 19 Plan 03 complete (AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05 satisfied)
 
-Progress: [██████████] 97% (v3.0 milestone — plan 3/4 of phase 17)
+Progress: [██████████] 100% (v3.0 milestone — all 13 plans complete)
 
 ## Phase Summary
 
@@ -39,7 +39,7 @@ Progress: [██████████] 97% (v3.0 milestone — plan 3/4 of p
 | 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | ✓ Complete (2026-03-24) |
 | 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | ✓ Complete (2026-03-24) |
 | 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | ✓ Complete (2026-03-25) |
-| 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | Not started |
+| 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | In progress (3/3 plans done) |
 | 20 | iOS Backend Generation | IOSB-01 to IOSB-07 (7) | Not started |
 | 21 | OpenAI Apps Distribution | OAPI-01 to OAPI-05, SECG-04 (6) | Not started |
 
@@ -80,6 +80,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 19-supabase-auth-scaffolding]: Custom OAuth buttons not auth-ui-react: archived Feb 2024, no passkey support; signInWithOAuth() is the only maintained path
 - [Phase 19-supabase-auth-scaffolding]: getUser() exclusively in server context: getSession() does not validate against Supabase server and misses revoked sessions
 - [Phase 19-supabase-auth-scaffolding]: Anon key in middleware not service_role: middleware only refreshes sessions, violating SECG-01 otherwise
+- [Phase 19]: Supabase session bridge uses admin generateLink (magiclink) + verifyOtp for WebAuthn sessions
+- [Phase 19]: Passkey credentials stored in custom passkey_credentials table (Supabase Auth does not natively support WebAuthn)
+- [Phase 19]: PasskeyButtons rendered above OAuth buttons in login/signup (passkey is primary auth per product decision)
 
 ### Pending Todos
 
@@ -102,6 +105,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T02:48:11.434Z
-Stopped at: Completed 19-01-PLAN.md
+Last session: 2026-03-25T03:02:27Z
+Stopped at: Completed 19-03-PLAN.md
 Resume file: None
