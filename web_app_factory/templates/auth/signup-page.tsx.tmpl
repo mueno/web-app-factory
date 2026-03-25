@@ -2,6 +2,7 @@
 
 import { useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import PasskeyButtons from '@/components/auth/passkey-buttons'
 
 function createClient() {
   return createBrowserClient(
@@ -12,6 +13,7 @@ function createClient() {
 
 // For OAuth-only flows, sign-up is the same as sign-in.
 // The provider creates the account on first sign-in automatically.
+// For passkey flows, use the PasskeyButtons component with showRegister=true.
 export default function SignupPage(): React.ReactElement {
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') || '/'
@@ -45,6 +47,18 @@ export default function SignupPage(): React.ReactElement {
         <p className="text-center text-sm text-gray-500">
           Get started with your preferred account
         </p>
+
+        {/* Primary auth method: Passkey registration (WebAuthn) */}
+        <PasskeyButtons returnTo={returnTo} showRegister={true} />
+
+        {/* Divider */}
+        <div className="flex items-center gap-2">
+          <div className="h-px flex-1 bg-gray-200" />
+          <span className="text-sm text-gray-500">or</span>
+          <div className="h-px flex-1 bg-gray-200" />
+        </div>
+
+        {/* OAuth fallback buttons */}
         <button
           onClick={handleGoogleSignUp}
           className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300"

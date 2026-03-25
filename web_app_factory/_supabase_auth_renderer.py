@@ -1,16 +1,21 @@
 # SPDX-License-Identifier: MIT
 """Supabase auth template renderer.
 
-Renders the six auth template files (middleware, login, signup, signout,
-callback, and AUTH_SETUP.md) into the generated app output directory.
+Renders the ten auth template files (middleware, login, signup, signout,
+callback, AUTH_SETUP.md, and four passkey/WebAuthn templates) into the
+generated app output directory.
 
 Template-to-output mapping:
-  auth-middleware.ts.tmpl      -> src/middleware.ts
-  auth/login-page.tsx.tmpl     -> src/app/auth/login/page.tsx
-  auth/signup-page.tsx.tmpl    -> src/app/auth/signup/page.tsx
-  auth/signout-page.tsx.tmpl   -> src/app/auth/signout/page.tsx
-  auth/callback-route.ts.tmpl  -> src/app/auth/callback/route.ts
-  auth/AUTH_SETUP.md.tmpl      -> AUTH_SETUP.md  (project root, not src/)
+  auth-middleware.ts.tmpl                  -> src/middleware.ts
+  auth/login-page.tsx.tmpl                 -> src/app/auth/login/page.tsx
+  auth/signup-page.tsx.tmpl                -> src/app/auth/signup/page.tsx
+  auth/signout-page.tsx.tmpl               -> src/app/auth/signout/page.tsx
+  auth/callback-route.ts.tmpl              -> src/app/auth/callback/route.ts
+  auth/AUTH_SETUP.md.tmpl                  -> AUTH_SETUP.md  (project root, not src/)
+  auth/passkey-register-api.ts.tmpl        -> src/app/api/auth/passkey/register/route.ts
+  auth/passkey-auth-api.ts.tmpl            -> src/app/api/auth/passkey/authenticate/route.ts
+  auth/passkey-hooks.ts.tmpl               -> src/lib/auth/passkey-hooks.ts
+  auth/passkey-client.tsx.tmpl             -> src/components/auth/passkey-buttons.tsx
 
 Security note: Template files are read from a fixed TEMPLATE_DIR inside the
 package. Output is written to paths under output_dir which is provided by the
@@ -32,27 +37,38 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 # Template paths are relative to TEMPLATE_DIR.
 # Output paths are relative to output_dir.
 _AUTH_TEMPLATE_MAPPINGS: list[tuple[str, str]] = [
+    # Original 6 OAuth/session templates
     ("auth-middleware.ts.tmpl", "src/middleware.ts"),
     ("auth/login-page.tsx.tmpl", "src/app/auth/login/page.tsx"),
     ("auth/signup-page.tsx.tmpl", "src/app/auth/signup/page.tsx"),
     ("auth/signout-page.tsx.tmpl", "src/app/auth/signout/page.tsx"),
     ("auth/callback-route.ts.tmpl", "src/app/auth/callback/route.ts"),
     ("auth/AUTH_SETUP.md.tmpl", "AUTH_SETUP.md"),
+    # 4 passkey (WebAuthn) templates — passkey is the primary auth method
+    ("auth/passkey-register-api.ts.tmpl", "src/app/api/auth/passkey/register/route.ts"),
+    ("auth/passkey-auth-api.ts.tmpl", "src/app/api/auth/passkey/authenticate/route.ts"),
+    ("auth/passkey-hooks.ts.tmpl", "src/lib/auth/passkey-hooks.ts"),
+    ("auth/passkey-client.tsx.tmpl", "src/components/auth/passkey-buttons.tsx"),
 ]
 
 
 def render_auth_templates(output_dir: Union[str, Path]) -> list[str]:
     """Render Supabase auth templates into the generated app output directory.
 
-    Reads the six auth template files from TEMPLATE_DIR and writes them to
+    Reads all ten auth template files from TEMPLATE_DIR and writes them to
     their target paths under output_dir. Parent directories are created
     automatically (equivalent to mkdir -p).
+
+    The ten templates comprise six OAuth/session templates (middleware, login,
+    signup, signout, callback, AUTH_SETUP.md) and four passkey (WebAuthn)
+    templates (register API route, authenticate API route, session hooks, and
+    the client PasskeyButtons component).
 
     Args:
         output_dir: Root of the generated app (e.g., output/{app-name}/nextjs/).
 
     Returns:
-        List of absolute path strings for the six created files, in the same
+        List of absolute path strings for the ten created files, in the same
         order as _AUTH_TEMPLATE_MAPPINGS.
 
     Raises:

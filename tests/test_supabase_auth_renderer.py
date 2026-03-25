@@ -1,17 +1,19 @@
 """Tests for web_app_factory/_supabase_auth_renderer.py.
 
-Verifies that render_auth_templates() correctly renders all 6 auth templates
-into the correct output paths within a generated app directory.
+Verifies that render_auth_templates() correctly renders all 10 auth templates
+(6 OAuth + 4 passkey) into the correct output paths within a generated app directory.
 """
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
 import pytest
 
 from web_app_factory._supabase_auth_renderer import render_auth_templates
+from web_app_factory._supabase_template_renderer import add_passkey_deps
 
 # Template directory for integrity checks
 TEMPLATES_DIR = Path(__file__).parent.parent / "web_app_factory" / "templates"
@@ -56,15 +58,41 @@ class TestRenderAuthTemplatesOutputPaths:
         expected = tmp_path / "AUTH_SETUP.md"
         assert expected.exists(), f"Expected {expected} to exist after rendering"
 
+    # --- Passkey template output paths ---
+
+    def test_renders_passkey_register_route(self, tmp_path):
+        """render_auth_templates must create src/app/api/auth/passkey/register/route.ts."""
+        render_auth_templates(tmp_path)
+        expected = tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "register" / "route.ts"
+        assert expected.exists(), f"Expected {expected} to exist after rendering"
+
+    def test_renders_passkey_authenticate_route(self, tmp_path):
+        """render_auth_templates must create src/app/api/auth/passkey/authenticate/route.ts."""
+        render_auth_templates(tmp_path)
+        expected = tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "authenticate" / "route.ts"
+        assert expected.exists(), f"Expected {expected} to exist after rendering"
+
+    def test_renders_passkey_hooks_lib(self, tmp_path):
+        """render_auth_templates must create src/lib/auth/passkey-hooks.ts."""
+        render_auth_templates(tmp_path)
+        expected = tmp_path / "src" / "lib" / "auth" / "passkey-hooks.ts"
+        assert expected.exists(), f"Expected {expected} to exist after rendering"
+
+    def test_renders_passkey_buttons_component(self, tmp_path):
+        """render_auth_templates must create src/components/auth/passkey-buttons.tsx."""
+        render_auth_templates(tmp_path)
+        expected = tmp_path / "src" / "components" / "auth" / "passkey-buttons.tsx"
+        assert expected.exists(), f"Expected {expected} to exist after rendering"
+
 
 class TestRenderAuthTemplatesReturnValue:
     """Tests for the return value of render_auth_templates()."""
 
-    def test_returns_list_of_six_paths(self, tmp_path):
-        """render_auth_templates must return a list of exactly 6 paths."""
+    def test_returns_list_of_ten_paths(self, tmp_path):
+        """render_auth_templates must return a list of exactly 10 paths (6 OAuth + 4 passkey)."""
         result = render_auth_templates(tmp_path)
         assert isinstance(result, list), f"Expected list, got {type(result)}"
-        assert len(result) == 6, f"Expected 6 paths, got {len(result)}: {result}"
+        assert len(result) == 10, f"Expected 10 paths, got {len(result)}: {result}"
 
     def test_returns_absolute_paths(self, tmp_path):
         """render_auth_templates must return absolute path strings."""
@@ -83,18 +111,24 @@ class TestRenderAuthTemplatesReturnValue:
                 f"Returned path does not exist: {path_str}"
             )
 
-    def test_all_six_output_files_in_returned_list(self, tmp_path):
-        """All 6 expected output files must appear in the returned list."""
+    def test_all_ten_output_files_in_returned_list(self, tmp_path):
+        """All 10 expected output files must appear in the returned list."""
         result = render_auth_templates(tmp_path)
         result_set = set(result)
 
         expected_files = [
+            # Original 6 OAuth templates
             tmp_path / "src" / "middleware.ts",
             tmp_path / "src" / "app" / "auth" / "login" / "page.tsx",
             tmp_path / "src" / "app" / "auth" / "signup" / "page.tsx",
             tmp_path / "src" / "app" / "auth" / "signout" / "page.tsx",
             tmp_path / "src" / "app" / "auth" / "callback" / "route.ts",
             tmp_path / "AUTH_SETUP.md",
+            # 4 passkey templates
+            tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "register" / "route.ts",
+            tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "authenticate" / "route.ts",
+            tmp_path / "src" / "lib" / "auth" / "passkey-hooks.ts",
+            tmp_path / "src" / "components" / "auth" / "passkey-buttons.tsx",
         ]
 
         for expected in expected_files:
@@ -148,6 +182,11 @@ class TestRenderAuthTemplatesDirectoryCreation:
         assert (tmp_path / "src" / "app" / "auth" / "login").is_dir()
         assert (tmp_path / "src" / "app" / "auth" / "signup").is_dir()
         assert (tmp_path / "src" / "app" / "auth" / "signout").is_dir()
+        # Passkey directories
+        assert (tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "register").is_dir()
+        assert (tmp_path / "src" / "app" / "api" / "auth" / "passkey" / "authenticate").is_dir()
+        assert (tmp_path / "src" / "lib" / "auth").is_dir()
+        assert (tmp_path / "src" / "components" / "auth").is_dir()
 
     def test_works_with_existing_directories(self, tmp_path):
         """render_auth_templates must not fail if output directories already exist."""
@@ -160,7 +199,7 @@ class TestRenderAuthTemplatesDirectoryCreation:
     def test_accepts_string_output_dir(self, tmp_path):
         """render_auth_templates must accept a string path (not just Path objects)."""
         result = render_auth_templates(str(tmp_path))
-        assert len(result) == 6
+        assert len(result) == 10
 
 
 class TestRenderAuthTemplatesErrorHandling:
@@ -175,3 +214,119 @@ class TestRenderAuthTemplatesErrorHandling:
 
         with pytest.raises(FileNotFoundError):
             render_auth_templates(tmp_path / "output")
+
+
+# ---------------------------------------------------------------------------
+# Tests for add_passkey_deps()
+# ---------------------------------------------------------------------------
+
+class TestAddPasskeyDeps:
+    """Tests for add_passkey_deps() in _supabase_template_renderer.py."""
+
+    def _make_package_json(self, tmp_path: Path, extra_deps: dict | None = None) -> Path:
+        """Helper: create a minimal package.json and return its path."""
+        data = {
+            "name": "test-app",
+            "version": "0.1.0",
+            "dependencies": extra_deps or {},
+        }
+        p = tmp_path / "package.json"
+        p.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        return p
+
+    def test_adds_simplewebauthn_browser(self, tmp_path):
+        """add_passkey_deps must add @simplewebauthn/browser to dependencies."""
+        pkg = self._make_package_json(tmp_path)
+        add_passkey_deps(pkg)
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        assert "@simplewebauthn/browser" in data["dependencies"], (
+            "@simplewebauthn/browser must be added to dependencies"
+        )
+
+    def test_adds_simplewebauthn_server(self, tmp_path):
+        """add_passkey_deps must add @simplewebauthn/server to dependencies."""
+        pkg = self._make_package_json(tmp_path)
+        add_passkey_deps(pkg)
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        assert "@simplewebauthn/server" in data["dependencies"], (
+            "@simplewebauthn/server must be added to dependencies"
+        )
+
+    def test_preserves_existing_dependencies(self, tmp_path):
+        """add_passkey_deps must not remove existing dependencies."""
+        pkg = self._make_package_json(tmp_path, extra_deps={"react": "^18", "next": "14.0.0"})
+        add_passkey_deps(pkg)
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        assert data["dependencies"]["react"] == "^18"
+        assert data["dependencies"]["next"] == "14.0.0"
+
+    def test_does_not_overwrite_existing_version(self, tmp_path):
+        """add_passkey_deps must preserve existing @simplewebauthn version if already set."""
+        pkg = self._make_package_json(
+            tmp_path,
+            extra_deps={"@simplewebauthn/browser": "^8.0.0"}
+        )
+        add_passkey_deps(pkg)
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        # Existing version should be preserved (not overwritten)
+        assert data["dependencies"]["@simplewebauthn/browser"] == "^8.0.0"
+
+    def test_creates_dependencies_key_if_missing(self, tmp_path):
+        """add_passkey_deps must create the dependencies key if it does not exist."""
+        data = {"name": "test-app", "version": "0.1.0"}
+        pkg = tmp_path / "package.json"
+        pkg.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        add_passkey_deps(pkg)
+        result = json.loads(pkg.read_text(encoding="utf-8"))
+        assert "dependencies" in result
+        assert "@simplewebauthn/browser" in result["dependencies"]
+
+    def test_accepts_string_path(self, tmp_path):
+        """add_passkey_deps must accept a string path (not just Path objects)."""
+        pkg = self._make_package_json(tmp_path)
+        add_passkey_deps(str(pkg))  # Should not raise
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        assert "@simplewebauthn/browser" in data["dependencies"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for login-page.tsx.tmpl including PasskeyButtons
+# ---------------------------------------------------------------------------
+
+class TestLoginPagePasskeyIntegration:
+    """Tests that login-page.tsx.tmpl includes the PasskeyButtons component."""
+
+    LOGIN_TMPL = TEMPLATES_DIR / "auth" / "login-page.tsx.tmpl"
+
+    def test_login_page_imports_passkey_buttons(self):
+        """login-page.tsx.tmpl must import the PasskeyButtons component."""
+        content = self.LOGIN_TMPL.read_text(encoding="utf-8")
+        assert "PasskeyButtons" in content, (
+            "login-page.tsx.tmpl must import or reference the PasskeyButtons component"
+        )
+
+    def test_login_page_renders_passkey_buttons(self):
+        """login-page.tsx.tmpl must render <PasskeyButtons> in JSX."""
+        content = self.LOGIN_TMPL.read_text(encoding="utf-8")
+        assert "<PasskeyButtons" in content, (
+            "login-page.tsx.tmpl must render <PasskeyButtons in JSX"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests for signup-page.tsx.tmpl including passkey registration option
+# ---------------------------------------------------------------------------
+
+class TestSignupPagePasskeyIntegration:
+    """Tests that signup-page.tsx.tmpl includes passkey registration option."""
+
+    SIGNUP_TMPL = TEMPLATES_DIR / "auth" / "signup-page.tsx.tmpl"
+
+    def test_signup_page_includes_passkey_reference(self):
+        """signup-page.tsx.tmpl must include PasskeyButtons or passkey registration."""
+        content = self.SIGNUP_TMPL.read_text(encoding="utf-8")
+        has_passkey_buttons = "PasskeyButtons" in content
+        has_passkey_ref = "passkey" in content.lower()
+        assert has_passkey_buttons or has_passkey_ref, (
+            "signup-page.tsx.tmpl must include passkey registration option"
+        )
