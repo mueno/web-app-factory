@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-24)
+See: .planning/PROJECT.md (updated 2026-03-25)
 
 **Core value:** A single command takes a web app idea from concept to deployed, production-quality web application — now with full-stack backend, database, authentication, iOS backend support, and ChatGPT distribution
-**Current focus:** Phase 17 — Supabase Provisioning
+**Current focus:** Phase 19 — Supabase Auth Scaffolding
 
 ## Current Position
 
@@ -37,8 +37,8 @@ Progress: [██████████] 97% (v3.0 milestone — plan 3/4 of p
 | Phase | Name | Requirements | Status |
 |-------|------|--------------|--------|
 | 16 | MCP Infrastructure Hardening | MCPH-01 to MCPH-04 (4) | ✓ Complete (2026-03-24) |
-| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | In progress (3/4 plans) |
-| 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | Not started |
+| 17 | Supabase Provisioning | SUPA-01 to SUPA-06, SECG-01, SECG-02 (8) | ✓ Complete (2026-03-24) |
+| 18 | Backend API Generation | BGEN-01 to BGEN-07, SECG-03 (8) | ✓ Complete (2026-03-25) |
 | 19 | Supabase Auth Scaffolding | AUTH-01 to AUTH-06 (6) | Not started |
 | 20 | iOS Backend Generation | IOSB-01 to IOSB-07 (7) | Not started |
 | 21 | OpenAI Apps Distribution | OAPI-01 to OAPI-05, SECG-04 (6) | Not started |
@@ -73,6 +73,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 18]: Phase 1b cross-validates backend-spec.json used_by_screens against screen-spec.json routes
 - [Phase 18]: generate_api_routes positioned after generate_pages and before generate_integration — Supabase server client available when API routes are created
 - [Phase 18]: API routes prompt excludes prd.md and screen-spec.json (Pitfall 2) — only backend-spec.json embedded
+- [Phase 18]: phase_1b_executor.py at 643 lines (warning range) — recommended split: extract backend_spec validation to separate module
 
 ### Pending Todos
 
@@ -95,6 +96,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T01:01:38.508Z
-Stopped at: Completed 18-03-PLAN.md (Phase 2b API route generation + gate wiring)
+Last session: 2026-03-25
+Stopped at: Phase 18 complete, ready to plan Phase 19
 Resume file: None

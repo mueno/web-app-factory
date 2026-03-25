@@ -57,10 +57,11 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 - ✓ Phase 2b three-sub-step decomposition with checkpoint resume — v2.0
 - ✓ E2E Playwright form flow gate — v2.0
 
+- ✓ Backend API generation (REST endpoints from backend-spec.json → Next.js Route Handlers) — v3.0 Phase 18
+- ✓ Supabase DB provisioning (PostgreSQL + Realtime) — v3.0 Phase 17
+
 ### Active
 
-- [ ] Backend API generation (REST endpoints from natural language)
-- [ ] Supabase DB provisioning (PostgreSQL + Realtime)
 - [ ] Supabase Auth scaffolding (Apple/Google/Email sign-in)
 - [ ] allnew-mobile-baas integration into WAF
 - [ ] iOS backend generation (server-side API for iOS apps)
@@ -123,6 +124,9 @@ v2.0 shipped 2026-03-24. Web-app-factory is now a distributable MCP App.
 | allnew-baas integration (v3) | Consolidate backend infrastructure under WAF; avoid per-app BaaS proliferation | — Pending |
 | Impl layer pattern (v3) | _tool_impls.py holds all tool business logic; transports are thin wrappers delegating via `return await impl_*()` | ✓ Phase 16 |
 | Dual transport architecture (v3) | stdio + HTTP servers as separate FastMCP instances, never cross-import, both import _tool_impls.py only | ✓ Phase 16 |
+| Backend-spec optional sub-steps (v3) | Absence of backend-spec.json = graceful skip, not failure; frontend-only apps not penalized | ✓ Phase 18 |
+| Pitfall 2 avoidance (v3) | API routes prompt embeds ONLY backend-spec.json, never prd.md or screen-spec.json — prevents agent from re-generating page files | ✓ Phase 18 |
+| All backend gate issues blocking (v3) | No advisories — every detected issue (missing Zod, SQL injection, secrets, no health endpoint) is hard-blocking | ✓ Phase 18 |
 
 ---
-*Last updated: 2026-03-24 after Phase 16*
+*Last updated: 2026-03-25 after Phase 18*
