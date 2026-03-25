@@ -112,7 +112,7 @@ Plans:
   4. middleware.ts calls getUser() on every request — session tokens are automatically refreshed without user action
   5. SPEC_AGENT and BUILD_AGENT system prompts produce Supabase Auth when Supabase DB is in use — no mixing of auth providers
   6. AUTH_SETUP.md is generated with Google Cloud Console, Apple Developer Portal, and Supabase redirect URL allowlist instructions
-**Plans:** 1/4 plans executed
+**Plans:** 2/4 plans executed
 Plans:
 - [ ] 19-01-PLAN.md — Create auth TypeScript templates (middleware, login, signup, signout, callback), AUTH_SETUP.md README, and renderer module
 - [ ] 19-02-PLAN.md — Extend SupabaseProvisioner with OAuth config, add env checks, update agent prompts
@@ -166,6 +166,6 @@ Plans:
 | 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
 | 17. Supabase Provisioning | v3.0 | 4/4 | Complete | 2026-03-24 |
 | 18. Backend API Generation | v3.0 | 3/3 | Complete | 2026-03-25 |
-| 19. Supabase Auth Scaffolding | 1/4 | In Progress|  | - |
+| 19. Supabase Auth Scaffolding | 2/4 | In Progress|  | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |
 | 21. OpenAI Apps Distribution | v3.0 | 0/? | Not started | - |

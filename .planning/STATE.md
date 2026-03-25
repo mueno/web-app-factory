@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Completed 19-02-PLAN.md
-last_updated: "2026-03-25T02:46:55.069Z"
+stopped_at: Completed 19-01-PLAN.md
+last_updated: "2026-03-25T02:48:11.436Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 97
 ---
 
@@ -77,6 +77,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 19]: OAuth advisories not blocking — Google/Apple OAuth is optional; users can add later without blocking deployment
 - [Phase 19]: configure_oauth_providers skips PATCH entirely when all params None — avoids empty PATCH that could reset auth config
 - [Phase 19]: BUILD_AGENT auth-ui-react explicit ban (archived Feb 2024) — prevents agents from generating deprecated Supabase auth UI
+- [Phase 19-supabase-auth-scaffolding]: Custom OAuth buttons not auth-ui-react: archived Feb 2024, no passkey support; signInWithOAuth() is the only maintained path
+- [Phase 19-supabase-auth-scaffolding]: getUser() exclusively in server context: getSession() does not validate against Supabase server and misses revoked sessions
+- [Phase 19-supabase-auth-scaffolding]: Anon key in middleware not service_role: middleware only refreshes sessions, violating SECG-01 otherwise
 
 ### Pending Todos
 
@@ -99,6 +102,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T02:46:55.066Z
-Stopped at: Completed 19-02-PLAN.md
+Last session: 2026-03-25T02:48:11.434Z
+Stopped at: Completed 19-01-PLAN.md
 Resume file: None

@@ -35,10 +35,10 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 
 ### Supabase Auth
 
-- [ ] **AUTH-01**: Generated apps include `@supabase/ssr` with `createBrowserClient` / `createServerClient` pattern
-- [ ] **AUTH-02**: `middleware.ts` with `updateSession()` generated for cookie-based auth in Next.js App Router
-- [ ] **AUTH-03**: Sign-in / sign-up / sign-out pages generated under `app/auth/`
-- [ ] **AUTH-04**: Protected route pattern generated — server component checks session, redirects to login if absent
+- [x] **AUTH-01**: Generated apps include `@supabase/ssr` with `createBrowserClient` / `createServerClient` pattern
+- [x] **AUTH-02**: `middleware.ts` with `updateSession()` generated for cookie-based auth in Next.js App Router
+- [x] **AUTH-03**: Sign-in / sign-up / sign-out pages generated under `app/auth/`
+- [x] **AUTH-04**: Protected route pattern generated — server component checks session, redirects to login if absent
 - [x] **AUTH-05**: Google OAuth scaffold generated with code + README manual steps (not automated provisioning)
 - [x] **AUTH-06**: `SPEC_AGENT` and `BUILD_AGENT` system prompts updated to prefer Supabase Auth when Supabase DB is in use
 
@@ -119,10 +119,10 @@ Deferred to future release.
 | BGEN-06 | Phase 18 | Complete |
 | BGEN-07 | Phase 18 | Complete |
 | SECG-03 | Phase 18 | Complete |
-| AUTH-01 | Phase 19 | Pending |
-| AUTH-02 | Phase 19 | Pending |
-| AUTH-03 | Phase 19 | Pending |
-| AUTH-04 | Phase 19 | Pending |
+| AUTH-01 | Phase 19 | Complete |
+| AUTH-02 | Phase 19 | Complete |
+| AUTH-03 | Phase 19 | Complete |
+| AUTH-04 | Phase 19 | Complete |
 | AUTH-05 | Phase 19 | Complete |
 | AUTH-06 | Phase 19 | Complete |
 | IOSB-01 | Phase 20 | Pending |
