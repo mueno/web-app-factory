@@ -102,16 +102,20 @@ Plans:
 - [ ] 18-03-PLAN.md — Add generate_api_routes sub-step to Phase 2b and wire gate into pipeline
 
 ### Phase 19: Supabase Auth Scaffolding
-**Goal**: Generated apps have complete email/password authentication working on first run — users can sign up, sign in, stay logged in across sessions, and are redirected to login when accessing protected routes without a session
+**Goal**: Generated apps have complete OAuth authentication (Google + Apple) working on first run — users can sign in via OAuth, stay logged in across sessions, and are redirected to login when accessing protected routes without a session
 **Depends on**: Phase 17 (needs provisioned Supabase project), Phase 18 (auth integrated into backend spec)
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06
 **Success Criteria** (what must be TRUE):
-  1. A user can create an account with email/password, sign in, and have their session persist across page reloads using cookie-based auth
+  1. A user can sign in via Google or Apple OAuth, and have their session persist across page reloads using cookie-based auth
   2. Accessing a protected route without a session redirects to the login page — the server component performs this check, not the client
-  3. Generated app has /auth/login, /auth/signup, and /auth/signout pages under the app/auth/ directory
-  4. middleware.ts calls updateSession() on every request — session tokens are automatically refreshed without user action
+  3. Generated app has /auth/login, /auth/signup, /auth/signout, and /auth/callback pages under the app/auth/ directory
+  4. middleware.ts calls getUser() on every request — session tokens are automatically refreshed without user action
   5. SPEC_AGENT and BUILD_AGENT system prompts produce Supabase Auth when Supabase DB is in use — no mixing of auth providers
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 19-01-PLAN.md — Create auth TypeScript templates (middleware, login, signup, signout, callback) and renderer module
+- [ ] 19-02-PLAN.md — Extend SupabaseProvisioner with OAuth config, add env checks, update agent prompts
+- [ ] 19-03-PLAN.md — Wire auth templates into Phase 2b and OAuth config into Phase 3 executors
 
 ### Phase 20: iOS Backend Generation
 **Goal**: Running `waf_generate_app` with app_type="ios-backend" generates a standalone Vercel Functions API (no Next.js app) that an iOS client can consume via bearer token auth — without breaking existing allnew-baas deployments used by LyricsSnap
@@ -159,7 +163,7 @@ Plans:
 | 15. Declare Playwright Dependency | v2.0 | 1/1 | Complete | 2026-03-24 |
 | 16. MCP Infrastructure Hardening | v3.0 | 2/2 | Complete | 2026-03-24 |
 | 17. Supabase Provisioning | v3.0 | 4/4 | Complete | 2026-03-24 |
-| 18. Backend API Generation | 3/3 | Complete    | 2026-03-25 | - |
-| 19. Supabase Auth Scaffolding | v3.0 | 0/? | Not started | - |
+| 18. Backend API Generation | v3.0 | 3/3 | Complete | 2026-03-25 |
+| 19. Supabase Auth Scaffolding | v3.0 | 0/3 | Not started | - |
 | 20. iOS Backend Generation | v3.0 | 0/? | Not started | - |
 | 21. OpenAI Apps Distribution | v3.0 | 0/? | Not started | - |
