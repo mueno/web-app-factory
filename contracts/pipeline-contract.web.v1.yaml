@@ -77,6 +77,14 @@ phases:
           - "Interactive states (loading, error, empty, populated) are specified for every screen with data dependencies"
           - "Mobile layout differences from desktop are explicitly called out for each screen"
 
+      - name: "Backend Specification"
+        path: "docs/pipeline/backend-spec.json"
+        optional: true
+        quality_criteria:
+          - "Entities define table name, fields with types, and required/optional constraints"
+          - "Every non-health endpoint has used_by_screens referencing routes from screen-spec.json"
+          - "CRUD endpoints are auto-expanded for each entity (GET list, POST create, GET/PUT/DELETE by ID)"
+
     gates:
       - type: "artifact"
         description: "Required deliverable files are generated"
@@ -157,6 +165,19 @@ phases:
               pattern: "NEXT_PUBLIC_.*KEY|NEXT_PUBLIC_.*SECRET|NEXT_PUBLIC_.*TOKEN"
               scope: "src/"
               must_not_match: true
+
+      - type: "backend_spec"
+        description: "All API routes have Zod validation, no SQL injection patterns, no raw secrets, health endpoint exists"
+        conditions:
+          checks:
+            - name: "zod_validation_present"
+              description: "Every route file (except health) imports Zod and calls safeParse"
+            - name: "no_sql_injection"
+              description: "No string concatenation in Supabase RPC or raw SQL"
+            - name: "no_raw_secrets"
+              description: "No hardcoded API keys or tokens"
+            - name: "health_endpoint_exists"
+              description: "src/app/api/health/route.ts exists"
 
       - type: "e2e_form_flow"
         description: "E2E form submission flow: form page navigates to result page and renders content"

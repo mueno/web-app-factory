@@ -82,6 +82,10 @@
           "type": "string",
           "description": "Relative path where the deliverable is produced"
         },
+        "optional": {
+          "type": "boolean",
+          "description": "When true, this deliverable is conditionally generated (e.g., backend-spec.json for apps that need a backend)"
+        },
         "quality_criteria": {
           "type": "array",
           "minItems": 1,
@@ -113,7 +117,8 @@
             "deployment",
             "mcp_approval",
             "legal",
-            "e2e_form_flow"
+            "e2e_form_flow",
+            "backend_spec"
           ],
           "description": "Gate type determines which gate runner handles validation"
         },

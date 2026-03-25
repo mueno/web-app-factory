@@ -327,6 +327,13 @@ def _run_gate_checks(
             if not gate_result.passed and not gate_result.skipped:
                 issues.extend(gate_result.issues)
 
+        elif gate_type == "backend_spec":
+            from tools.gates.backend_spec_gate import run_backend_spec_gate
+            target_dir = nextjs_dir if nextjs_dir else project_dir
+            gate_result = run_backend_spec_gate(target_dir, phase_id=phase_id)
+            if not gate_result.passed:
+                issues.extend(gate_result.issues)
+
         else:
             # Unknown gate type: fail-closed per gate_policy (GATE-00 guard)
             issues.append(
