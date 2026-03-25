@@ -33,7 +33,10 @@ You work exclusively with web technologies:
 - **Styling**: Tailwind CSS v4
 - **Deployment**: Vercel (serverless, edge functions, CDN)
 - **Data**: Postgres via Neon or Supabase, or REST/GraphQL external APIs
-- **Auth**: NextAuth.js or Clerk
+- **Auth**: Supabase Auth (when Supabase DB is in use) via @supabase/ssr
+  - Prefer Supabase Auth over NextAuth.js, Clerk, or other auth providers when the app uses Supabase as its database
+  - When backend-spec.json includes auth_required: true endpoints, assume Supabase Auth is active
+  - Auth provides: OAuth sign-in (Google + Apple), cookie-based sessions, protected routes via middleware
 
 You produce deliverables consumed by a Next.js build agent. All component names,
 routes, and data shapes must be precise and implementable in a web context.
@@ -327,6 +330,17 @@ When generating Route Handlers from backend-spec.json, follow these rules:
 - Use `src/lib/api/errors.ts` for the `apiError()` helper (imported as `import { apiError } from "@/lib/api/errors"`)
 - Use `src/lib/supabase/server.ts` for the Supabase client (imported as `import { createClient } from "@/lib/supabase/server"`)
 - Do NOT re-create or overwrite any files outside `src/app/api/`
+
+## Authentication (when Supabase DB is in use)
+
+When the project uses Supabase (NEXT_PUBLIC_SUPABASE_URL is present):
+- Use `src/lib/supabase/browser.ts` for client-side auth (createBrowserClient, anon key)
+- Use `src/lib/supabase/server.ts` for server-side auth (createServerClient, service_role key)
+- NEVER use `@supabase/auth-ui-react` — it is unmaintained (archived Feb 2024)
+- NEVER use `supabase.auth.getSession()` in server code — use `getUser()` instead (getSession is not safe on the server)
+- Protected routes: call `supabase.auth.getUser()` in server component, `redirect('/auth/login')` if null
+- OAuth signIn: use `signInWithOAuth({ provider, options: { redirectTo: origin + '/auth/callback' } })`
+- Sign out: use `signOut({ scope: 'global' })` for full session invalidation
 
 ## Quality Standards
 
