@@ -312,6 +312,22 @@ Encryption key is read from `DATABASE_ENCRYPTION_KEY` env var (documented in
 5. If data storage is required, generate `src/lib/crypto.ts` with encrypt/decrypt helpers
 6. Verify TypeScript types compile before reporting completion
 
+## API Route Generation from backend-spec.json (BGEN-02/03/04/05)
+
+When generating Route Handlers from backend-spec.json, follow these rules:
+
+- Place all routes under `src/app/api/` using Next.js App Router conventions
+- Use `src/app/api/[entity]/route.ts` for collection endpoints (GET list, POST create)
+- Use `src/app/api/[entity]/[id]/route.ts` for item endpoints (GET single, PUT update, DELETE)
+- ALWAYS `import { z } from "zod"` and define schemas BEFORE handler functions
+- ALWAYS use `schema.safeParse()` (never `schema.parse()`) for every input source
+- ALWAYS return `{ error: string, code: string }` on all error paths
+- ALWAYS `await params` before reading dynamic route segments (Next.js 15 requirement)
+- ALWAYS generate `src/app/api/health/route.ts` returning `{ ok: true, service, timestamp }`
+- Use `src/lib/api/errors.ts` for the `apiError()` helper (imported as `import { apiError } from "@/lib/api/errors"`)
+- Use `src/lib/supabase/server.ts` for the Supabase client (imported as `import { createClient } from "@/lib/supabase/server"`)
+- Do NOT re-create or overwrite any files outside `src/app/api/`
+
 ## Quality Standards
 
 Generate output that satisfies every quality criterion provided. Do not optimize

@@ -65,6 +65,7 @@ _DEFAULT_CONTRACT_PATH = (
 # Phase 1b output paths relative to project_dir
 _PRD_PATH = Path("docs") / "pipeline" / "prd.md"
 _SCREEN_SPEC_PATH = Path("docs") / "pipeline" / "screen-spec.json"
+_BACKEND_SPEC_PATH = Path("docs") / "pipeline" / "backend-spec.json"
 
 # Baseline create-next-app packages (always present — not "extra")
 _SCAFFOLD_PACKAGES = frozenset({
@@ -228,6 +229,57 @@ Do NOT re-implement components or pages.
 """
 
 
+# Sub-step 4 (new): API route generation from backend-spec.json
+# CRITICAL: Do NOT embed prd.md or screen-spec.json content here (RESEARCH.md Pitfall 2).
+# Only backend-spec.json content is embedded — this keeps the prompt focused on
+# API route structure and avoids the agent re-generating already-created files.
+_API_ROUTES_PROMPT_TEMPLATE = """\
+You are executing Phase 2b Step 3: API Route Generation.
+
+App name: {app_name}
+App idea: {idea}
+
+The shared components and pages have already been generated in the previous steps.
+Do NOT re-create or overwrite any existing files.
+Your ONLY task is to create API Route Handlers under `src/app/api/`.
+
+## Backend Specification
+
+```json
+{backend_spec_content}
+```
+
+## Generation Instructions
+
+For each endpoint in the backend specification above, create the corresponding
+Next.js Route Handler file under `src/app/api/`:
+
+**File placement:**
+- Collection endpoints (GET list, POST create): `src/app/api/[entity]/route.ts`
+- Item endpoints (GET single, PUT update, DELETE): `src/app/api/[entity]/[id]/route.ts`
+
+**Mandatory rules for EVERY route file (except health):**
+1. Import Zod at the top: `import {{ z }} from "zod";`
+2. Define schemas BEFORE handler functions
+3. ALWAYS use `schema.safeParse()` (never `schema.parse()`) for all inputs
+4. On validation failure, return: `{{ error: string, code: string }}` with status 422
+5. On server error, return: `{{ error: string, code: string }}` with status 500
+6. `await params` before reading dynamic route segments (Next.js 15 requirement)
+
+**Always generate the health endpoint:**
+Create `src/app/api/health/route.ts` returning:
+```typescript
+return Response.json({{ ok: true, service: "{app_name}", timestamp: new Date().toISOString() }});
+```
+
+**Use these existing utilities (already generated):**
+- Supabase client: `import {{ createClient }} from "@/lib/supabase/server";`
+- Error helper: `import {{ apiError }} from "@/lib/api/errors";` (if the file exists)
+
+Generate all API route files from the backend specification now.
+"""
+
+
 # ---------------------------------------------------------------------------
 # Phase 2b Executor
 # ---------------------------------------------------------------------------
@@ -248,11 +300,12 @@ class Phase2bBuildExecutor(PhaseExecutor):
 
     @property
     def sub_steps(self) -> list:
-        """Ordered sub-steps for Phase 2b (5 steps, QUAL-01)."""
+        """Ordered sub-steps for Phase 2b (6 steps, QUAL-01 + BGEN-02)."""
         return [
             "load_spec",
             "generate_shared_components",
             "generate_pages",
+            "generate_api_routes",
             "generate_integration",
             "validate_packages",
         ]
@@ -264,8 +317,10 @@ class Phase2bBuildExecutor(PhaseExecutor):
           Return failure immediately if either is missing.
         Step 2: Generate shared components only via focused prompt.
         Step 3: Generate pages route-by-route (references existing components).
-        Step 4: Verify integration — fix URLSearchParams cross-page contracts.
-        Step 5: Validate npm packages extracted from package.json against registry.
+        Step 4: Generate API routes from backend-spec.json (BGEN-02).
+          Skipped gracefully if docs/pipeline/backend-spec.json does not exist.
+        Step 5: Verify integration — fix URLSearchParams cross-page contracts.
+        Step 6: Validate npm packages extracted from package.json against registry.
           Log results but do NOT fail — build gate catches real failures.
 
         Resume: ctx.resume_sub_step causes _start_index() to skip earlier sub-steps.
@@ -309,8 +364,8 @@ class Phase2bBuildExecutor(PhaseExecutor):
         # ── Determine resume start index ──────────────────────────────────
         # _start_index() maps ctx.resume_sub_step to the sub_steps list index.
         # sub_steps indices: 0=load_spec, 1=generate_shared_components,
-        #                    2=generate_pages, 3=generate_integration,
-        #                    4=validate_packages
+        #                    2=generate_pages, 3=generate_api_routes,
+        #                    4=generate_integration, 5=validate_packages
         start_idx = self._start_index(ctx)
 
         # ── Step 2: Generate shared components ────────────────────────────
@@ -389,8 +444,72 @@ class Phase2bBuildExecutor(PhaseExecutor):
                 )
             )
 
-        # ── Step 4: Generate integration ──────────────────────────────────
+        # ── Step 4: Generate API routes from backend-spec.json (BGEN-02) ──
+        # Conditional: skip gracefully if backend-spec.json does not exist.
+        # This ensures apps without a backend (frontend-only) are not penalized.
         if start_idx <= 3:
+            backend_spec_path = ctx.project_dir / _BACKEND_SPEC_PATH
+            if backend_spec_path.exists():
+                try:
+                    backend_spec_content = backend_spec_path.read_text(encoding="utf-8")
+                except OSError as exc:
+                    logger.warning(
+                        "Phase 2b: Failed to read backend-spec.json (%s) — skipping API route generation",
+                        type(exc).__name__,
+                    )
+                    backend_spec_content = None
+
+                if backend_spec_content:
+                    api_routes_prompt = _API_ROUTES_PROMPT_TEMPLATE.format(
+                        app_name=ctx.app_name,
+                        idea=ctx.idea,
+                        backend_spec_content=backend_spec_content,
+                    )
+                    api_routes_result = run_build_agent(
+                        prompt=api_routes_prompt,
+                        system_prompt=system_prompt,
+                        project_dir=str(nextjs_dir),
+                    )
+
+                    if not api_routes_result:
+                        sub_step_results.append(
+                            SubStepResult(
+                                sub_step_id="generate_api_routes",
+                                success=False,
+                                error="Build agent returned empty result during API route generation",
+                            )
+                        )
+                        return PhaseResult(
+                            phase_id="2b",
+                            success=False,
+                            error="Build agent returned empty result during API route generation",
+                            sub_steps=sub_step_results,
+                            resume_point="generate_api_routes",
+                        )
+
+                    sub_step_results.append(
+                        SubStepResult(
+                            sub_step_id="generate_api_routes",
+                            success=True,
+                            artifacts=[str(nextjs_dir / "src" / "app" / "api")],
+                            notes="Build agent generated API routes from backend-spec.json",
+                        )
+                    )
+            else:
+                logger.info(
+                    "Phase 2b: No backend-spec.json found at %s — skipping API route generation",
+                    backend_spec_path,
+                )
+                sub_step_results.append(
+                    SubStepResult(
+                        sub_step_id="generate_api_routes",
+                        success=True,
+                        notes="Skipped — no backend-spec.json found (frontend-only app)",
+                    )
+                )
+
+        # ── Step 5: Generate integration ──────────────────────────────────
+        if start_idx <= 4:
             integration_prompt = _INTEGRATION_PROMPT_TEMPLATE.format(
                 app_name=ctx.app_name,
                 idea=ctx.idea,
@@ -426,7 +545,7 @@ class Phase2bBuildExecutor(PhaseExecutor):
                 )
             )
 
-        # ── Step 5: Validate npm packages ─────────────────────────────────
+        # ── Step 6: Validate npm packages ─────────────────────────────────
         npm_results = self._validate_extra_npm_packages(nextjs_dir)
         sub_step_results.append(
             SubStepResult(

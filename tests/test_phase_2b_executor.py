@@ -117,6 +117,7 @@ class TestPhase2bBuildExecutorBasic:
             "load_spec",
             "generate_shared_components",
             "generate_pages",
+            "generate_api_routes",
             "generate_integration",
             "validate_packages",
         ]
@@ -480,8 +481,8 @@ class TestPhase2bSubStepCheckpoints:
         from tools.phase_executors.registry import _clear_registry
         _clear_registry()
 
-    def test_sub_steps_is_five_elements(self):
-        """executor.sub_steps must be the exact 5-element list."""
+    def test_sub_steps_is_six_elements(self):
+        """executor.sub_steps must be the exact 6-element list (BGEN-02 adds generate_api_routes)."""
         import importlib
         import tools.phase_executors.phase_2b_executor as mod
         importlib.reload(mod)
@@ -490,6 +491,7 @@ class TestPhase2bSubStepCheckpoints:
             "load_spec",
             "generate_shared_components",
             "generate_pages",
+            "generate_api_routes",
             "generate_integration",
             "validate_packages",
         ]
@@ -679,3 +681,196 @@ class TestPhase2bSubStepPrompts:
 
         # Integration prompt must reference types.ts or cross-page contracts
         assert "types.ts" in third_prompt or "parameter" in third_prompt.lower() or "URLSearchParams" in third_prompt
+
+
+# ---------------------------------------------------------------------------
+# TestPhase2bApiRoutes — TDD for generate_api_routes sub-step (18-03)
+# ---------------------------------------------------------------------------
+
+
+def _create_backend_spec(project_dir: Path) -> None:
+    """Create a minimal backend-spec.json in the test project."""
+    docs_pipeline = project_dir / "docs" / "pipeline"
+    docs_pipeline.mkdir(parents=True, exist_ok=True)
+
+    backend_spec = {
+        "entities": [
+            {
+                "name": "Todo",
+                "table": "todos",
+                "fields": [
+                    {"name": "id", "type": "uuid", "primary_key": True},
+                    {"name": "title", "type": "text", "required": True, "max_length": 255},
+                ],
+            }
+        ],
+        "relationships": [],
+        "endpoints": [
+            {"path": "/api/todos", "methods": ["GET", "POST"], "entity": "Todo", "auth_required": False, "used_by_screens": ["/"]},
+            {"path": "/api/health", "methods": ["GET"], "entity": None, "auth_required": False, "used_by_screens": []},
+        ],
+    }
+    (docs_pipeline / "backend-spec.json").write_text(
+        json.dumps(backend_spec, indent=2), encoding="utf-8"
+    )
+
+
+class TestPhase2bApiRoutesSubStep:
+    """Tests for the new generate_api_routes sub-step (Plan 18-03)."""
+
+    def setup_method(self):
+        from tools.phase_executors.registry import _clear_registry
+        _clear_registry()
+
+    def test_sub_steps_include_generate_api_routes(self):
+        """Phase 2b sub_steps list must include 'generate_api_routes' (6 total)."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        executor = mod.Phase2bBuildExecutor()
+        assert "generate_api_routes" in executor.sub_steps
+        assert len(executor.sub_steps) == 6
+
+    def test_backend_spec_path_constant(self):
+        """_BACKEND_SPEC_PATH must equal Path('docs') / 'pipeline' / 'backend-spec.json'."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+        from pathlib import Path
+        expected = Path("docs") / "pipeline" / "backend-spec.json"
+        assert mod._BACKEND_SPEC_PATH == expected
+
+    def test_generate_api_routes_runs_when_backend_spec_exists(self, tmp_path):
+        """When backend-spec.json exists, generate_api_routes calls run_build_agent with API routes prompt."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        _create_backend_spec(ctx.project_dir)
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output for call {len(captured)}"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        # With backend-spec.json present, there should be 4 agent calls (components, pages, api_routes, integration)
+        assert result.success is True
+        assert len(captured) == 4
+        # API routes prompt should be the 3rd call (index 2)
+        api_routes_prompt = captured[2]
+        assert "src/app/api/" in api_routes_prompt or "api" in api_routes_prompt.lower()
+
+    def test_generate_api_routes_skipped_when_no_backend_spec(self, tmp_path):
+        """When backend-spec.json does not exist, generate_api_routes sub-step is skipped (not a failure)."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        # Do NOT create backend-spec.json
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output for call {len(captured)}"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            result = mod.Phase2bBuildExecutor().execute(ctx)
+
+        # Without backend-spec.json, only 3 agent calls (no api_routes step)
+        assert result.success is True
+        assert len(captured) == 3
+
+    def test_api_routes_prompt_contains_zod_instructions(self, tmp_path):
+        """API routes prompt template must contain 'zod' and 'safeParse' instructions."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        _create_backend_spec(ctx.project_dir)
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            mod.Phase2bBuildExecutor().execute(ctx)
+
+        # API routes prompt is the 3rd call (index 2)
+        assert len(captured) == 4
+        api_routes_prompt = captured[2]
+        assert "zod" in api_routes_prompt.lower() or "Zod" in api_routes_prompt
+        assert "safeParse" in api_routes_prompt
+
+    def test_api_routes_prompt_contains_health_endpoint(self, tmp_path):
+        """API routes prompt template must contain instruction to generate api/health endpoint."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        _create_backend_spec(ctx.project_dir)
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert len(captured) == 4
+        api_routes_prompt = captured[2]
+        assert "health" in api_routes_prompt.lower() or "api/health" in api_routes_prompt
+
+    def test_api_routes_prompt_excludes_prd_content(self, tmp_path):
+        """API routes prompt must NOT contain prd.md content (Pitfall 2 mitigation)."""
+        import importlib
+        import tools.phase_executors.phase_2b_executor as mod
+        importlib.reload(mod)
+
+        ctx = _make_ctx(tmp_path)
+        _create_spec_files(ctx.project_dir)
+        _create_backend_spec(ctx.project_dir)
+
+        captured: list[str] = []
+
+        def fake_agent(prompt: str, system_prompt: str, project_dir: str, **kwargs) -> str:
+            captured.append(prompt)
+            return f"output"
+
+        with patch("tools.phase_executors.phase_2b_executor.run_build_agent", side_effect=fake_agent), \
+             patch("tools.phase_executors.phase_2b_executor.validate_npm_packages", return_value={}):
+            mod.Phase2bBuildExecutor().execute(ctx)
+
+        assert len(captured) == 4
+        api_routes_prompt = captured[2]
+        # The PRD fixture contains '## Component Inventory' — must NOT appear in API routes prompt
+        assert "## Component Inventory" not in api_routes_prompt
+        # screen-spec content (route "/dashboard") must NOT appear either
+        assert '"route": "/dashboard"' not in api_routes_prompt
+
+    def test_build_agent_prompt_includes_route_handler_instructions(self):
+        """BUILD_AGENT system prompt must contain 'Route Handler' or 'backend-spec' instruction text."""
+        from agents.definitions import BUILD_AGENT
+        system_prompt = BUILD_AGENT.system_prompt
+        # Must mention Route Handler patterns or backend-spec
+        assert "Route Handler" in system_prompt or "backend-spec" in system_prompt or "route handler" in system_prompt.lower()
