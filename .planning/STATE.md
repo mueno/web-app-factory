@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v3.0
 milestone_name: Full Stack
 status: executing
-stopped_at: Phase 19 context gathered
-last_updated: "2026-03-25T02:00:45.249Z"
+stopped_at: Completed 19-02-PLAN.md
+last_updated: "2026-03-25T02:46:55.069Z"
 last_activity: 2026-03-24 — Phase 17 Plan 03 complete (SUPA-01, SUPA-02, SUPA-03, SECG-02 satisfied)
 progress:
   total_phases: 6
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 13
+  completed_plans: 10
   percent: 97
 ---
 
@@ -74,6 +74,9 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - [Phase 18]: generate_api_routes positioned after generate_pages and before generate_integration — Supabase server client available when API routes are created
 - [Phase 18]: API routes prompt excludes prd.md and screen-spec.json (Pitfall 2) — only backend-spec.json embedded
 - [Phase 18]: phase_1b_executor.py at 643 lines (warning range) — recommended split: extract backend_spec validation to separate module
+- [Phase 19]: OAuth advisories not blocking — Google/Apple OAuth is optional; users can add later without blocking deployment
+- [Phase 19]: configure_oauth_providers skips PATCH entirely when all params None — avoids empty PATCH that could reset auth config
+- [Phase 19]: BUILD_AGENT auth-ui-react explicit ban (archived Feb 2024) — prevents agents from generating deprecated Supabase auth UI
 
 ### Pending Todos
 
@@ -96,6 +99,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ## Session Continuity
 
-Last session: 2026-03-25T02:00:45.244Z
-Stopped at: Phase 19 context gathered
-Resume file: .planning/phases/19-supabase-auth-scaffolding/19-CONTEXT.md
+Last session: 2026-03-25T02:46:55.066Z
+Stopped at: Completed 19-02-PLAN.md
+Resume file: None

@@ -39,8 +39,8 @@ Requirements for Full Stack milestone. Each maps to roadmap phases.
 - [ ] **AUTH-02**: `middleware.ts` with `updateSession()` generated for cookie-based auth in Next.js App Router
 - [ ] **AUTH-03**: Sign-in / sign-up / sign-out pages generated under `app/auth/`
 - [ ] **AUTH-04**: Protected route pattern generated — server component checks session, redirects to login if absent
-- [ ] **AUTH-05**: Google OAuth scaffold generated with code + README manual steps (not automated provisioning)
-- [ ] **AUTH-06**: `SPEC_AGENT` and `BUILD_AGENT` system prompts updated to prefer Supabase Auth when Supabase DB is in use
+- [x] **AUTH-05**: Google OAuth scaffold generated with code + README manual steps (not automated provisioning)
+- [x] **AUTH-06**: `SPEC_AGENT` and `BUILD_AGENT` system prompts updated to prefer Supabase Auth when Supabase DB is in use
 
 ### iOS Backend
 
@@ -123,8 +123,8 @@ Deferred to future release.
 | AUTH-02 | Phase 19 | Pending |
 | AUTH-03 | Phase 19 | Pending |
 | AUTH-04 | Phase 19 | Pending |
-| AUTH-05 | Phase 19 | Pending |
-| AUTH-06 | Phase 19 | Pending |
+| AUTH-05 | Phase 19 | Complete |
+| AUTH-06 | Phase 19 | Complete |
 | IOSB-01 | Phase 20 | Pending |
 | IOSB-02 | Phase 20 | Pending |
 | IOSB-03 | Phase 20 | Pending |
