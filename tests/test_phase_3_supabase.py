@@ -813,3 +813,174 @@ class TestSupabaseFailureCases:
 
         assert result.success is False
         assert result.error is not None
+
+
+# ---------------------------------------------------------------------------
+# Task 3 (19-03): supabase_oauth_config integration in Phase 3
+# ---------------------------------------------------------------------------
+
+
+class TestSupabaseOauthConfigInPhase3:
+    """Tests for supabase_oauth_config wired into Phase 3 execution (19-03)."""
+
+    def test_sub_steps_include_supabase_oauth_config(self) -> None:
+        """Phase 3 sub_steps list contains 'supabase_oauth_config'."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+
+        executor = Phase3ShipExecutor()
+        assert "supabase_oauth_config" in executor.sub_steps
+
+    def test_supabase_oauth_config_after_supabase_provision(self) -> None:
+        """supabase_oauth_config appears after supabase_provision in sub_steps."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+
+        executor = Phase3ShipExecutor()
+        steps = executor.sub_steps
+        provision_idx = steps.index("supabase_provision")
+        oauth_idx = steps.index("supabase_oauth_config")
+        assert oauth_idx > provision_idx
+
+    def test_supabase_oauth_config_before_supabase_render(self) -> None:
+        """supabase_oauth_config appears before supabase_render in sub_steps."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+
+        executor = Phase3ShipExecutor()
+        steps = executor.sub_steps
+        oauth_idx = steps.index("supabase_oauth_config")
+        render_idx = steps.index("supabase_render")
+        assert oauth_idx < render_idx
+
+    def _run_with_supabase_patches(
+        self,
+        tmp_path: Path,
+        mock_provisioner: MagicMock,
+        extra_env: dict | None = None,
+        clear_env: bool = False,
+    ) -> "PhaseResult":
+        """Run Phase 3 executor with all required Supabase + pipeline mocks."""
+        from tools.phase_executors.phase_3_executor import Phase3ShipExecutor
+
+        executor = Phase3ShipExecutor()
+        ctx = _make_context(
+            tmp_path,
+            extra={
+                "deploy_target": "vercel",
+                "supabase_enabled": True,
+                "nextjs_dir": str(tmp_path),
+            },
+        )
+
+        env_patch = extra_env or {}
+
+        with (
+            patch(
+                "tools.phase_executors.phase_3_executor.get_provider",
+                return_value=_make_mock_provider(tmp_path),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_legal_gate",
+                return_value=_make_passing_gate_result("legal"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_lighthouse_gate",
+                return_value=_make_passing_gate_result("lighthouse"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_accessibility_gate",
+                return_value=_make_passing_gate_result("accessibility"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_security_headers_gate",
+                return_value=_make_passing_gate_result("security_headers"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_link_integrity_gate",
+                return_value=_make_passing_gate_result("link_integrity"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_mcp_approval_gate",
+                return_value=_make_passing_gate_result("mcp_approval"),
+            ),
+            patch(
+                "tools.phase_executors.phase_3_executor.run_deploy_agent",
+                return_value="legal docs generated",
+            ),
+            patch(
+                "web_app_factory._keychain.get_credential",
+                side_effect=lambda key: "mock-token" if key else None,
+            ),
+            patch(
+                "web_app_factory._supabase_provisioner.SupabaseProvisioner",
+                return_value=mock_provisioner,
+            ),
+            patch(
+                "web_app_factory._supabase_template_renderer.render_supabase_templates",
+                return_value=["/mock/browser.ts", "/mock/server.ts"],
+            ),
+            patch(
+                "web_app_factory._supabase_template_renderer.add_supabase_deps",
+                return_value=None,
+            ),
+            patch(
+                "tools.gates.supabase_gate.run_supabase_gate",
+                return_value=_make_passing_gate_result("supabase"),
+            ),
+            patch.dict("os.environ", env_patch, clear=clear_env),
+        ):
+            return executor.execute(ctx)
+
+    def test_oauth_config_called_when_supabase_enabled_and_creds_present(self, tmp_path: Path) -> None:
+        """configure_oauth_providers is called when supabase_enabled=True and OAuth env vars set."""
+        mock_provisioner = _make_mock_provisioner()
+
+        result = self._run_with_supabase_patches(
+            tmp_path,
+            mock_provisioner,
+            extra_env={"GOOGLE_CLIENT_ID": "gid", "GOOGLE_CLIENT_SECRET": "gsec"},
+        )
+
+        mock_provisioner.configure_oauth_providers.assert_called_once()
+        assert result.success is True
+
+    def test_oauth_config_skipped_when_no_creds_present(self, tmp_path: Path) -> None:
+        """supabase_oauth_config skipped (advisory) when no OAuth env vars set."""
+        mock_provisioner = _make_mock_provisioner()
+
+        # Clear all OAuth env vars
+        result = self._run_with_supabase_patches(
+            tmp_path,
+            mock_provisioner,
+            extra_env={},
+            clear_env=True,
+        )
+
+        mock_provisioner.configure_oauth_providers.assert_not_called()
+        assert result.success is True
+
+    def test_oauth_config_substep_in_result(self, tmp_path: Path) -> None:
+        """supabase_oauth_config sub-step appears in PhaseResult.sub_steps."""
+        mock_provisioner = _make_mock_provisioner()
+
+        result = self._run_with_supabase_patches(tmp_path, mock_provisioner)
+
+        sub_step_ids = [s.sub_step_id for s in result.sub_steps]
+        assert "supabase_oauth_config" in sub_step_ids
+
+    def test_oauth_config_api_failure_is_non_blocking(self, tmp_path: Path) -> None:
+        """OAuth API failure returns success=True (advisory, non-blocking)."""
+        mock_provisioner = _make_mock_provisioner()
+        mock_provisioner.configure_oauth_providers = AsyncMock(
+            side_effect=RuntimeError("OAuth API unreachable")
+        )
+
+        result = self._run_with_supabase_patches(
+            tmp_path,
+            mock_provisioner,
+            extra_env={"GOOGLE_CLIENT_ID": "gid", "GOOGLE_CLIENT_SECRET": "gsec"},
+        )
+
+        assert result.success is True
+        sub_steps = {s.sub_step_id: s for s in result.sub_steps}
+        oauth_step = sub_steps.get("supabase_oauth_config")
+        assert oauth_step is not None
+        assert oauth_step.success is True
