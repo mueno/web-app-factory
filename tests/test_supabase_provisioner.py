@@ -458,3 +458,187 @@ class TestInjectVercelEnv:
         assert "api.vercel.com" in call_url
         assert "prj_abc123" in call_url
         assert "env" in call_url
+
+
+# ---------------------------------------------------------------------------
+# configure_oauth_providers tests
+# ---------------------------------------------------------------------------
+
+
+class TestConfigureOAuthProviders:
+    @pytest.mark.asyncio
+    async def test_google_only_sends_correct_patch(self, provisioner):
+        """configure_oauth_providers with Google credentials PATCHes with external_google_* fields."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+
+        patched_payloads: list[dict] = []
+
+        async def capture_patch(url, **kwargs):
+            patched_payloads.append(kwargs.get("json", {}))
+            return mock_response
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(side_effect=capture_patch)
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            await provisioner.configure_oauth_providers(
+                ref="proj123",
+                google_client_id="gid",
+                google_secret="gsecret",
+                apple_client_id=None,
+                apple_secret=None,
+            )
+
+        assert len(patched_payloads) == 1
+        payload = patched_payloads[0]
+        assert payload.get("external_google_enabled") is True
+        assert payload.get("external_google_client_id") == "gid"
+        assert payload.get("external_google_secret") == "gsecret"
+        assert "external_apple_enabled" not in payload
+
+    @pytest.mark.asyncio
+    async def test_apple_only_sends_correct_patch(self, provisioner):
+        """configure_oauth_providers with Apple credentials PATCHes with external_apple_* fields."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+
+        patched_payloads: list[dict] = []
+
+        async def capture_patch(url, **kwargs):
+            patched_payloads.append(kwargs.get("json", {}))
+            return mock_response
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(side_effect=capture_patch)
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            await provisioner.configure_oauth_providers(
+                ref="proj123",
+                google_client_id=None,
+                google_secret=None,
+                apple_client_id="aid",
+                apple_secret="asecret",
+            )
+
+        assert len(patched_payloads) == 1
+        payload = patched_payloads[0]
+        assert payload.get("external_apple_enabled") is True
+        assert payload.get("external_apple_client_id") == "aid"
+        assert payload.get("external_apple_secret") == "asecret"
+        assert "external_google_enabled" not in payload
+
+    @pytest.mark.asyncio
+    async def test_both_providers_in_one_patch(self, provisioner):
+        """configure_oauth_providers with both Google and Apple sends all fields in one PATCH."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+
+        patched_payloads: list[dict] = []
+
+        async def capture_patch(url, **kwargs):
+            patched_payloads.append(kwargs.get("json", {}))
+            return mock_response
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(side_effect=capture_patch)
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            await provisioner.configure_oauth_providers(
+                ref="proj123",
+                google_client_id="gid",
+                google_secret="gsecret",
+                apple_client_id="aid",
+                apple_secret="asecret",
+            )
+
+        # Only one PATCH call with both providers
+        assert len(patched_payloads) == 1
+        payload = patched_payloads[0]
+        assert payload.get("external_google_enabled") is True
+        assert payload.get("external_google_client_id") == "gid"
+        assert payload.get("external_apple_enabled") is True
+        assert payload.get("external_apple_client_id") == "aid"
+
+    @pytest.mark.asyncio
+    async def test_no_credentials_skips_api_call(self, provisioner):
+        """configure_oauth_providers with all None skips the API call entirely."""
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock()
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            await provisioner.configure_oauth_providers(
+                ref="proj123",
+                google_client_id=None,
+                google_secret=None,
+                apple_client_id=None,
+                apple_secret=None,
+            )
+
+        mock_client.patch.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_credential_values_not_logged(self, provisioner, caplog):
+        """configure_oauth_providers must never log credential values — only key names."""
+        import logging
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(return_value=mock_response)
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            with caplog.at_level(logging.DEBUG, logger="web_app_factory._supabase_provisioner"):
+                await provisioner.configure_oauth_providers(
+                    ref="proj123",
+                    google_client_id="super-secret-gid",
+                    google_secret="super-secret-gsecret",
+                    apple_client_id="super-secret-aid",
+                    apple_secret="super-secret-asecret",
+                )
+
+        # Credential values must NOT appear in any log record
+        all_log_text = " ".join(r.getMessage() for r in caplog.records)
+        assert "super-secret-gid" not in all_log_text
+        assert "super-secret-gsecret" not in all_log_text
+        assert "super-secret-aid" not in all_log_text
+        assert "super-secret-asecret" not in all_log_text
+
+    @pytest.mark.asyncio
+    async def test_patch_uses_correct_endpoint(self, provisioner):
+        """configure_oauth_providers PATCHes /v1/projects/{ref}/config/auth."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.raise_for_status = MagicMock()
+
+        mock_client = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+        mock_client.patch = AsyncMock(return_value=mock_response)
+
+        with patch("web_app_factory._supabase_provisioner.httpx.AsyncClient", return_value=mock_client):
+            await provisioner.configure_oauth_providers(
+                ref="myref456",
+                google_client_id="gid",
+                google_secret="gsecret",
+                apple_client_id=None,
+                apple_secret=None,
+            )
+
+        call_url = mock_client.patch.call_args.args[0]
+        assert "myref456" in call_url
+        assert "config/auth" in call_url

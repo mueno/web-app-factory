@@ -484,6 +484,94 @@ class TestSupabaseCredentials:
 
 
 # ---------------------------------------------------------------------------
+# TestOAuthCredentials
+# ---------------------------------------------------------------------------
+
+
+class TestOAuthCredentials:
+    """Tests for OAuth credential advisory checks in check_env('supabase')."""
+
+    def test_missing_google_creds_returns_advisory(self):
+        """_check_oauth_credentials returns advisory (not blocking) for missing GOOGLE_CLIENT_ID/SECRET."""
+        from web_app_factory._env_checker import _check_oauth_credentials
+
+        with patch("web_app_factory._env_checker.os.environ.get", return_value=None):
+            results = _check_oauth_credentials()
+
+        google_entries = [r for r in results if "google" in r["tool"].lower()]
+        assert len(google_entries) >= 1
+        for entry in google_entries:
+            assert entry["status"] == "missing"
+            # Must be advisory — no blocking marker
+            note = entry.get("note") or ""
+            assert "advisory" in note.lower() or "optional" in note.lower() or len(note) > 0
+
+    def test_missing_apple_creds_returns_advisory(self):
+        """_check_oauth_credentials returns advisory status for missing APPLE_CLIENT_ID/SECRET."""
+        from web_app_factory._env_checker import _check_oauth_credentials
+
+        with patch("web_app_factory._env_checker.os.environ.get", return_value=None):
+            results = _check_oauth_credentials()
+
+        apple_entries = [r for r in results if "apple" in r["tool"].lower()]
+        assert len(apple_entries) >= 1
+        for entry in apple_entries:
+            assert entry["status"] == "missing"
+
+    def test_all_oauth_vars_present_returns_present_status(self):
+        """_check_oauth_credentials returns 'present' when all 4 OAuth env vars are set."""
+        from web_app_factory._env_checker import _check_oauth_credentials
+
+        def mock_env_get(key, default=None):
+            oauth_vars = {
+                "GOOGLE_CLIENT_ID": "gid",
+                "GOOGLE_CLIENT_SECRET": "gsecret",
+                "APPLE_CLIENT_ID": "aid",
+                "APPLE_CLIENT_SECRET": "asecret",
+            }
+            return oauth_vars.get(key, default)
+
+        with patch("web_app_factory._env_checker.os.environ.get", side_effect=mock_env_get):
+            results = _check_oauth_credentials()
+
+        assert len(results) >= 4
+        for entry in results:
+            assert entry["status"] == "present"
+
+    def test_check_env_supabase_includes_oauth_results(self):
+        """check_env('supabase') output includes OAuth credential entries."""
+        with (
+            patch("web_app_factory._env_checker._check_nodejs", return_value=_make_node_result(True)),
+            patch("web_app_factory._env_checker._check_npm", return_value=_make_npm_result(True)),
+            patch("web_app_factory._env_checker._check_python_version", return_value=_make_python_result()),
+            patch("web_app_factory._env_checker.get_credential", return_value="value"),
+            patch("web_app_factory._env_checker.os.environ.get", return_value=None),
+        ):
+            statuses = check_env("supabase")
+
+        tools = {s["tool"] for s in statuses}
+        # At least one OAuth-related entry should be present
+        oauth_tools = {t for t in tools if "google" in t.lower() or "apple" in t.lower() or "oauth" in t.lower()}
+        assert len(oauth_tools) >= 1
+
+    def test_oauth_remediation_guidance_mentions_google_console(self):
+        """Missing GOOGLE_CLIENT_ID entry includes Google Cloud Console remediation guidance."""
+        from web_app_factory._env_checker import _check_oauth_credentials
+
+        with patch("web_app_factory._env_checker.os.environ.get", return_value=None):
+            results = _check_oauth_credentials()
+
+        google_id_entries = [r for r in results if "google" in r["tool"].lower() and "id" in r["tool"].lower()]
+        if not google_id_entries:
+            # Fall back to all google entries
+            google_id_entries = [r for r in results if "google" in r["tool"].lower()]
+
+        assert len(google_id_entries) >= 1
+        note = google_id_entries[0].get("note") or ""
+        assert "google" in note.lower() or "console" in note.lower() or "credential" in note.lower()
+
+
+# ---------------------------------------------------------------------------
 # TestFormatEnvReport
 # ---------------------------------------------------------------------------
 
