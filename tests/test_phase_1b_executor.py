@@ -233,6 +233,8 @@ def test_sub_steps_returns_expected_list():
         "write_prd",
         "derive_screen_spec",
         "cross_validate",
+        "derive_backend_spec",
+        "cross_validate_backend",
     ]
 
 

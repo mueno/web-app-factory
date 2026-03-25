@@ -4,6 +4,8 @@
 Calls the spec agent via the Claude Agent SDK to produce:
 - docs/pipeline/prd.md           (MoSCoW-labeled PRD with component inventory and route structure)
 - docs/pipeline/screen-spec.json (machine-readable screen specification derived from prd.md)
+- docs/pipeline/backend-spec.json (optional — entities, relationships, CRUD endpoints; skipped
+                                   for purely static apps that don't need a backend)
 
 Phase 1a output (idea-validation.md, tech-feasibility-memo.json) is loaded as
 context and its CONTENT is embedded directly into the agent prompt so the agent
@@ -11,6 +13,9 @@ can refer to competitor analysis and tech constraints when writing the PRD.
 
 The executor cross-validates that every component name listed in screen-spec.json
 appears in prd.md's Component Inventory section, returning failure if names diverge.
+
+When backend-spec.json is produced, the executor also cross-validates that every
+screen path referenced in endpoint used_by_screens exists in screen-spec.json.
 
 Self-registers in the executor registry at module import time so
 contract_pipeline_runner.py only needs to import this module once.
@@ -52,6 +57,7 @@ _DEFAULT_CONTRACT_PATH = (
 # Expected deliverable paths relative to project_dir
 _PRD_PATH = Path("docs") / "pipeline" / "prd.md"
 _SCREEN_SPEC_PATH = Path("docs") / "pipeline" / "screen-spec.json"
+_BACKEND_SPEC_PATH = Path("docs") / "pipeline" / "backend-spec.json"
 
 # Phase 1a context paths relative to project_dir
 _IDEA_VALIDATION_PATH = Path("docs") / "pipeline" / "idea-validation.md"
@@ -69,6 +75,8 @@ class Phase1bSpecExecutor(PhaseExecutor):
     Uses the spec agent to produce a structured Product Requirements Document
     and a machine-readable screen specification JSON, using Phase 1a output
     as context for informed design decisions.
+
+    Optionally produces backend-spec.json when the app requires a backend.
     """
 
     @property
@@ -84,19 +92,23 @@ class Phase1bSpecExecutor(PhaseExecutor):
             "write_prd",
             "derive_screen_spec",
             "cross_validate",
+            "derive_backend_spec",
+            "cross_validate_backend",
         ]
 
     def execute(self, ctx: PhaseContext) -> PhaseResult:
-        """Execute Phase 1b: produce prd.md and screen-spec.json.
+        """Execute Phase 1b: produce prd.md, screen-spec.json, and optionally backend-spec.json.
 
         Orchestrates the spec agent to:
         1. Load Phase 1a context (idea-validation.md, tech-feasibility-memo.json)
         2. Build augmented system prompt from SPEC_AGENT + quality criteria
         3. Construct user prompt with embedded Phase 1a content
-        4. Call run_spec_agent() to produce both deliverables
+        4. Call run_spec_agent() to produce both deliverables (and optionally backend-spec.json)
         5. Validate deliverables exist on disk
         6. Cross-validate component names between prd.md and screen-spec.json
-        7. Generate quality self-assessment
+        7. Validate backend-spec.json structure if present (skipped if absent)
+        8. Cross-validate backend-spec.json used_by_screens against screen-spec.json routes
+        9. Generate quality self-assessment
 
         Args:
             ctx: Phase execution context with idea, app_name, project_dir.
@@ -208,12 +220,86 @@ class Phase1bSpecExecutor(PhaseExecutor):
             )
         )
 
+        # ── Step 7: Validate backend-spec.json structure (optional) ────────
+        backend_spec_path = ctx.project_dir / _BACKEND_SPEC_PATH
+        backend_spec_exists = backend_spec_path.exists()
+
+        if backend_spec_exists:
+            backend_valid, backend_error = self._validate_backend_spec(ctx.project_dir)
+            if not backend_valid:
+                sub_step_results.append(
+                    SubStepResult(
+                        sub_step_id="derive_backend_spec",
+                        success=False,
+                        error=backend_error,
+                    )
+                )
+                return PhaseResult(
+                    phase_id="1b",
+                    success=False,
+                    error=f"backend-spec.json is invalid: {backend_error}",
+                    sub_steps=sub_step_results,
+                )
+            sub_step_results.append(
+                SubStepResult(
+                    sub_step_id="derive_backend_spec",
+                    success=True,
+                    artifacts=[str(backend_spec_path)],
+                )
+            )
+        else:
+            sub_step_results.append(
+                SubStepResult(
+                    sub_step_id="derive_backend_spec",
+                    success=True,
+                    notes="backend-spec.json not produced — static app (skipped)",
+                )
+            )
+
+        # ── Step 8: Cross-validate backend-spec.json used_by_screens ───────
+        if backend_spec_exists:
+            xval_ok, orphaned_screens = self._cross_validate_backend_spec(ctx.project_dir)
+            if not xval_ok:
+                sub_step_results.append(
+                    SubStepResult(
+                        sub_step_id="cross_validate_backend",
+                        success=False,
+                        error=f"Orphaned screen references in backend-spec.json: {orphaned_screens}",
+                    )
+                )
+                return PhaseResult(
+                    phase_id="1b",
+                    success=False,
+                    error=(
+                        f"backend-spec.json endpoints reference screens not in screen-spec.json: "
+                        f"{orphaned_screens}"
+                    ),
+                    sub_steps=sub_step_results,
+                )
+            sub_step_results.append(
+                SubStepResult(
+                    sub_step_id="cross_validate_backend",
+                    success=True,
+                    notes="All backend-spec.json used_by_screens found in screen-spec.json",
+                )
+            )
+        else:
+            sub_step_results.append(
+                SubStepResult(
+                    sub_step_id="cross_validate_backend",
+                    success=True,
+                    notes="backend-spec.json absent — cross-validation skipped",
+                )
+            )
+
         # ── Return success ─────────────────────────────────────────────────
         # Quality self-assessment is generated by contract_pipeline_runner (CONT-04)
         artifacts = [
             str(ctx.project_dir / _PRD_PATH),
             str(ctx.project_dir / _SCREEN_SPEC_PATH),
         ]
+        if backend_spec_exists:
+            artifacts.append(str(backend_spec_path))
 
         return PhaseResult(
             phase_id="1b",
@@ -262,7 +348,8 @@ class Phase1bSpecExecutor(PhaseExecutor):
 
         Embeds Phase 1a content directly into the prompt text so the agent
         can use competitor analysis and tech constraints when writing the PRD.
-        Instructs prd.md to be written FIRST, then screen-spec.json derived.
+        Instructs prd.md to be written FIRST, then screen-spec.json derived,
+        then backend-spec.json derived when the app requires a backend.
 
         Args:
             ctx: Phase execution context.
@@ -272,11 +359,11 @@ class Phase1bSpecExecutor(PhaseExecutor):
             Formatted user prompt string.
         """
         parts = [
-            f"You are executing Phase 1b: PRD and Screen Specification.",
-            f"",
+            "You are executing Phase 1b: PRD and Screen Specification.",
+            "",
             f"App idea: {ctx.idea}",
             f"App name: {ctx.app_name}",
-            f"",
+            "",
         ]
 
         # Embed Phase 1a context directly so the agent has full content
@@ -340,6 +427,23 @@ class Phase1bSpecExecutor(PhaseExecutor):
             "",
             "Every screen must have all six keys: route, layout, components, states, responsive.",
             "Write substantive content — the downstream build agent depends on this specification.",
+            "",
+            "### Task 3: Derive docs/pipeline/backend-spec.json from prd.md (if backend needed)",
+            "",
+            "Decide whether this app requires server-side data persistence or API logic.",
+            "If YES: write docs/pipeline/backend-spec.json as valid JSON with this structure:",
+            "",
+            "- 'entities': list of data entities derived from the PRD data model. For each entity,",
+            "  auto-expand CRUD endpoints (list+create at /api/{entity}, single+update+delete at",
+            "  /api/{entity}/[id]). Limit to 10 or fewer fields per entity.",
+            "- 'relationships': foreign-key relationships between entities.",
+            "- 'endpoints': all API endpoints. For EVERY non-health endpoint, at least one entry",
+            "  in used_by_screens MUST reference a route that exists in screen-spec.json.",
+            "- Always include /api/health with entity=null, auth_required=false, used_by_screens=[].",
+            "",
+            "CRITICAL: used_by_screens values MUST exactly match route values from screen-spec.json.",
+            "",
+            "If NO (purely static app with no database or API): do not create backend-spec.json.",
         ])
 
         return "\n".join(parts)
@@ -439,6 +543,94 @@ class Phase1bSpecExecutor(PhaseExecutor):
         # Extract bold-formatted names: **ComponentName**, **myComponent**, **My_Component**
         bold_names = re.findall(r"\*\*([A-Za-z][A-Za-z0-9_-]*)\*\*", section_text)
         return set(bold_names)
+
+    def _validate_backend_spec(
+        self, project_dir: Path
+    ) -> tuple[bool, str]:
+        """Validate that backend-spec.json is valid JSON with required top-level keys.
+
+        Checks that the file parses as valid JSON and contains both 'entities'
+        and 'endpoints' top-level keys. Relationships is optional (some apps
+        have no inter-entity relationships).
+
+        Args:
+            project_dir: Root of the project being built.
+
+        Returns:
+            Tuple of (valid: bool, error_message: str). error_message is empty
+            string when valid=True.
+        """
+        spec_path = project_dir / _BACKEND_SPEC_PATH
+        try:
+            spec_data: dict[str, Any] = json.loads(
+                spec_path.read_text(encoding="utf-8")
+            )
+        except json.JSONDecodeError as exc:
+            return (False, f"JSON parse error: {type(exc).__name__}")
+        except OSError as exc:
+            return (False, f"File read error: {type(exc).__name__}")
+
+        missing_keys = [k for k in ("entities", "endpoints") if k not in spec_data]
+        if missing_keys:
+            return (False, f"Missing required top-level keys: {missing_keys}")
+
+        return (True, "")
+
+    def _cross_validate_backend_spec(
+        self, project_dir: Path
+    ) -> tuple[bool, list[str]]:
+        """Validate that every used_by_screens entry in backend-spec.json exists in screen-spec.json.
+
+        Reads backend-spec.json and extracts all screen paths from endpoint
+        used_by_screens arrays. Reads screen-spec.json and collects all route values.
+        Returns failure with orphaned paths if any used_by_screens path is absent
+        from screen-spec.json routes.
+
+        Health endpoint (path /api/health) with empty used_by_screens is exempt.
+
+        Args:
+            project_dir: Root of the project being built.
+
+        Returns:
+            Tuple of (passed: bool, orphaned_screens: list[str]).
+        """
+        backend_spec_path = project_dir / _BACKEND_SPEC_PATH
+        screen_spec_path = project_dir / _SCREEN_SPEC_PATH
+
+        if not backend_spec_path.exists() or not screen_spec_path.exists():
+            return (False, ["required files missing"])
+
+        # Parse backend-spec.json
+        try:
+            backend_data: dict[str, Any] = json.loads(
+                backend_spec_path.read_text(encoding="utf-8")
+            )
+        except (json.JSONDecodeError, OSError) as exc:
+            return (False, [f"backend-spec.json parse error: {type(exc).__name__}"])
+
+        # Parse screen-spec.json and collect all route values
+        try:
+            screen_data: dict[str, Any] = json.loads(
+                screen_spec_path.read_text(encoding="utf-8")
+            )
+        except (json.JSONDecodeError, OSError) as exc:
+            return (False, [f"screen-spec.json parse error: {type(exc).__name__}"])
+
+        screen_routes: set[str] = {
+            screen.get("route", "")
+            for screen in screen_data.get("screens", [])
+            if isinstance(screen.get("route"), str)
+        }
+
+        # Collect all used_by_screens references from endpoint lists
+        orphaned: list[str] = []
+        for endpoint in backend_data.get("endpoints", []):
+            used_by = endpoint.get("used_by_screens", [])
+            for screen_path in used_by:
+                if isinstance(screen_path, str) and screen_path not in screen_routes:
+                    orphaned.append(screen_path)
+
+        return (len(orphaned) == 0, sorted(set(orphaned)))
 
 
 # ---------------------------------------------------------------------------

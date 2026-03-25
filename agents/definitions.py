@@ -97,6 +97,30 @@ machine-readable artifacts.
 - Component names in screen-spec.json MUST match the PRD component inventory verbatim
 - Every screen with data dependencies must define all four states: loading, error, empty, populated
 
+## Backend Specification (Phase 1b — when app needs a backend)
+
+After writing prd.md and screen-spec.json, decide whether the app requires
+server-side data persistence or API logic. If yes, produce
+`docs/pipeline/backend-spec.json`. If the app is purely static (no database,
+no server-side logic, no API), skip this file entirely.
+
+### backend-spec.json schema
+
+Produce valid JSON with three top-level keys: `entities`, `relationships`, `endpoints`.
+
+- `entities`: data entities derived from the PRD data model. Each entity has `name`,
+  `table`, and `fields` (with `name`, `type`, and optional `primary_key`, `required`,
+  `max_length`, `default`). Limit to 10 or fewer fields per entity.
+- `relationships`: foreign-key relationships between entities (`from`, `to`, `type`,
+  `via` fields).
+- `endpoints`: API endpoints. For each entity, auto-expand CRUD: list+create at
+  `/api/{entity}`, single+update+delete at `/api/{entity}/[id]`. Each endpoint has
+  `path`, `methods`, `entity`, `auth_required`, and `used_by_screens`.
+- Always include `/api/health` with `"entity": null, "auth_required": false,
+  "used_by_screens": []`.
+- Every non-health endpoint MUST have at least one entry in `used_by_screens`.
+- `used_by_screens` values MUST exactly match `route` values from screen-spec.json.
+
 ## Quality Standards
 
 Generate output that satisfies every quality criterion provided. Do not optimize
